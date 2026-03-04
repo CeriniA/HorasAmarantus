@@ -78,6 +78,27 @@ export const Reports = () => {
     }
   };
 
+  // Función para obtener una unidad y todas sus sub-unidades
+  const getUnitAndChildren = (unitId) => {
+    const result = [unitId];
+    const selectedUnitData = units.find(u => u.id === unitId);
+    
+    if (!selectedUnitData) return result;
+    
+    // Buscar todas las unidades que tengan esta como padre (directa o indirectamente)
+    const findChildren = (parentId) => {
+      units.forEach(unit => {
+        if (unit.parent_id === parentId && !result.includes(unit.id)) {
+          result.push(unit.id);
+          findChildren(unit.id); // Recursivo para sub-sub-unidades
+        }
+      });
+    };
+    
+    findChildren(unitId);
+    return result;
+  };
+
   const loadReportData = async () => {
     try {
       setLoading(true);
@@ -99,7 +120,9 @@ export const Reports = () => {
       }
 
       if (selectedUnit !== 'all') {
-        filteredEntries = filteredEntries.filter(e => e.organizational_unit_id === selectedUnit);
+        // Obtener la unidad seleccionada y todas sus sub-unidades
+        const unitIds = getUnitAndChildren(selectedUnit);
+        filteredEntries = filteredEntries.filter(e => unitIds.includes(e.organizational_unit_id));
       }
 
       // Procesar datos
@@ -125,14 +148,18 @@ export const Reports = () => {
         .sort((a, b) => b.hours - a.hours)
         .slice(0, 10);
 
-      // Agrupar por unidad organizacional
+      // Agrupar por unidad organizacional con jerarquía
       const byUnitMap = {};
       filteredEntries.forEach(entry => {
         const unitId = entry.organizational_unit_id;
         if (!byUnitMap[unitId]) {
+          const unitData = units.find(u => u.id === unitId);
           byUnitMap[unitId] = {
+            id: unitId,
             name: entry.organizational_units?.name || 'Sin unidad',
             type: entry.organizational_units?.type || '',
+            level: unitData?.level || 0,
+            parent_id: unitData?.parent_id || null,
             hours: 0,
             entries: 0
           };
@@ -141,9 +168,14 @@ export const Reports = () => {
         byUnitMap[unitId].entries += 1;
       });
 
+      // Ordenar por jerarquía (nivel) y luego por horas
       const byUnit = Object.values(byUnitMap)
-        .sort((a, b) => b.hours - a.hours)
-        .slice(0, 10);
+        .sort((a, b) => {
+          // Primero por nivel (padres antes que hijos)
+          if (a.level !== b.level) return a.level - b.level;
+          // Luego por horas (mayor a menor)
+          return b.hours - a.hours;
+        });
 
       // Agrupar por día
       const byDayMap = {};
@@ -294,6 +326,32 @@ export const Reports = () => {
         </div>
       </Card>
 
+      {/* Indicador de filtro activo */}
+      {selectedUnit !== 'all' && (
+        <Card>
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <Filter className="h-5 w-5 text-blue-400" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Filtro Activo: Vista Jerárquica
+                </h3>
+                <div className="mt-2 text-sm text-blue-700">
+                  <p>
+                    Mostrando <strong>{units.find(u => u.id === selectedUnit)?.name}</strong> y todos sus procesos internos (sub-unidades).
+                  </p>
+                  <p className="mt-1 text-xs">
+                    {reportData.byUnit.length} unidad(es) incluida(s) en el reporte
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Métricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -410,14 +468,18 @@ export const Reports = () => {
         </Card>
       </div>
 
-      {/* Tabla detallada por unidad */}
-      <Card title="Detalle por Unidad Organizacional">
+      {/* Tabla detallada por unidad con jerarquía */}
+      <Card title={
+        selectedUnit !== 'all' 
+          ? `Detalle Jerárquico - ${units.find(u => u.id === selectedUnit)?.name || 'Unidad'} (incluye procesos internos)`
+          : "Detalle por Unidad Organizacional"
+      }>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Unidad
+                  Unidad / Proceso
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Tipo
@@ -431,29 +493,82 @@ export const Reports = () => {
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                   Promedio
                 </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                  % del Total
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {reportData.byUnit.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                    {item.name}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {item.type}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 text-right">
-                    {item.entries}
-                  </td>
-                  <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
-                    {item.hours.toFixed(2)}h
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 text-right">
-                    {(item.hours / item.entries).toFixed(2)}h
-                  </td>
-                </tr>
-              ))}
+              {reportData.byUnit.map((item, index) => {
+                const indentLevel = item.level || 0;
+                const indentPx = indentLevel * 24; // 24px por nivel
+                const percentage = reportData.totalHours > 0 
+                  ? (item.hours / reportData.totalHours * 100).toFixed(1)
+                  : 0;
+                
+                return (
+                  <tr key={index} className={`hover:bg-gray-50 ${indentLevel > 0 ? 'bg-gray-25' : ''}`}>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                      <div style={{ paddingLeft: `${indentPx}px` }} className="flex items-center">
+                        {indentLevel > 0 && (
+                          <span className="text-gray-400 mr-2">
+                            {'└─ '.repeat(1)}
+                          </span>
+                        )}
+                        <span className={indentLevel === 0 ? 'font-bold' : ''}>
+                          {item.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        item.type === 'empresa' ? 'bg-purple-100 text-purple-800' :
+                        item.type === 'sector' ? 'bg-blue-100 text-blue-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {item.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 text-right">
+                      {item.entries}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-gray-900 text-right">
+                      {item.hours.toFixed(2)}h
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 text-right">
+                      {(item.hours / item.entries).toFixed(2)}h
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500 text-right">
+                      <span className={`font-medium ${indentLevel === 0 ? 'text-primary-600' : ''}`}>
+                        {percentage}%
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
+            <tfoot className="bg-gray-50 font-semibold">
+              <tr>
+                <td colSpan="2" className="px-6 py-4 text-sm text-gray-900">
+                  TOTAL
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900 text-right">
+                  {reportData.totalEntries}
+                </td>
+                <td className="px-6 py-4 text-sm text-primary-600 text-right">
+                  {reportData.totalHours.toFixed(2)}h
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900 text-right">
+                  {reportData.totalEntries > 0 
+                    ? (reportData.totalHours / reportData.totalEntries).toFixed(2)
+                    : '0.00'
+                  }h
+                </td>
+                <td className="px-6 py-4 text-sm text-primary-600 text-right">
+                  100%
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </Card>
