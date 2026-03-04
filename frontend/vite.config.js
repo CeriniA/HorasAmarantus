@@ -66,13 +66,13 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+            urlPattern: /^http:\/\/localhost:3001\/api\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'supabase-cache',
+              cacheName: 'api-cache',
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 // 24 horas
+                maxAgeSeconds: 60 * 60 // 1 hora
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -84,7 +84,7 @@ export default defineConfig({
     })
   ],
   server: {
-    port: 3000,
+    port: 5173,
     open: true
   },
   build: {

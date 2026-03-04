@@ -44,7 +44,7 @@ export const Navbar = () => {
               >
                 Registrar Horas
               </Link>
-              {(user?.role === 'admin' || user?.role === 'supervisor') && (
+              {(user?.role === 'admin' || user?.role === 'superadmin') && (
                 <>
                   <Link
                     to="/organizational-units"
@@ -58,15 +58,13 @@ export const Navbar = () => {
                   >
                     Reportes
                   </Link>
+                  <Link
+                    to="/admin/users"
+                    className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  >
+                    Usuarios
+                  </Link>
                 </>
-              )}
-              {user?.role === 'admin' && (
-                <Link
-                  to="/users"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                >
-                  Usuarios
-                </Link>
               )}
             </div>
           </div>
@@ -177,7 +175,7 @@ export const Navbar = () => {
             >
               Registrar Horas
             </Link>
-            {(user?.role === 'admin' || user?.role === 'supervisor') && (
+            {(user?.role === 'admin' || user?.role === 'superadmin') && (
               <>
                 <Link
                   to="/organizational-units"

@@ -1,2 +1,5 @@
 User-agent: *
-Allow: /
+Disallow: /
+
+# Bloquear indexación de Google, Bing, etc.
+# Esta es una aplicación privada interna

@@ -7,6 +7,7 @@ import Modal from '../components/common/Modal';
 import Input from '../components/common/Input';
 import Select from '../components/common/Select';
 import Alert from '../components/common/Alert';
+import HierarchicalSelect from '../components/common/HierarchicalSelect';
 
 const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -327,19 +328,54 @@ export const OrganizationalUnits = () => {
             <Select
               label="Tipo"
               value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                type: e.target.value,
+                parent_id: e.target.value === 'area' ? null : formData.parent_id // Resetear si es área
+              })}
               options={typeOptions}
               disabled={!!parentUnit}
             />
 
-            {!parentUnit && modalMode === 'create' && (
-              <Select
-                label="Unidad Padre (opcional)"
-                value={formData.parent_id || ''}
-                onChange={(e) => setFormData({ ...formData, parent_id: e.target.value || null })}
-                options={units.map(u => ({ value: u.id, label: `${u.name} (${u.type})` }))}
-                placeholder="Ninguna (será una unidad raíz)"
-              />
+            {!parentUnit && modalMode === 'create' && formData.type !== 'area' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Unidad Padre {formData.type === 'proceso' ? '(Área)' : formData.type === 'subproceso' ? '(Proceso)' : '(Subproceso)'}
+                </label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="no-parent"
+                      checked={!formData.parent_id}
+                      onChange={(e) => setFormData({ ...formData, parent_id: e.target.checked ? null : '' })}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <label htmlFor="no-parent" className="text-sm text-gray-700">
+                      Sin padre (será una unidad raíz)
+                    </label>
+                  </div>
+                  
+                  {formData.parent_id !== null && (
+                    <HierarchicalSelect
+                      units={units.filter(u => {
+                        // Filtrar según el tipo que estamos creando
+                        if (formData.type === 'proceso') return u.type === 'area';
+                        if (formData.type === 'subproceso') return u.type === 'area' || u.type === 'proceso';
+                        if (formData.type === 'tarea') return u.type === 'area' || u.type === 'proceso' || u.type === 'subproceso';
+                        return false;
+                      })}
+                      value={formData.parent_id || ''}
+                      onChange={(unitId) => setFormData({ ...formData, parent_id: unitId || null })}
+                    />
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  {formData.type === 'proceso' && 'Selecciona el área a la que pertenece este proceso'}
+                  {formData.type === 'subproceso' && 'Selecciona el proceso al que pertenece este subproceso'}
+                  {formData.type === 'tarea' && 'Selecciona el subproceso al que pertenece esta tarea'}
+                </p>
+              </div>
             )}
 
             <div className="bg-gray-50 p-4 rounded-lg">

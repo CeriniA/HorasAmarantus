@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Download, Filter, Calendar } from 'lucide-react';
-import { supabase } from '../config/supabase';
+import { Download, Filter } from 'lucide-react';
+import { timeEntriesService, usersService, orgUnitsService } from '../services/api';
 import { useAuthContext } from '../context/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Select from '../components/common/Select';
 import Input from '../components/common/Input';
+import HierarchicalSelect from '../components/common/HierarchicalSelect';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -63,22 +64,14 @@ export const Reports = () => {
 
   const loadFilters = async () => {
     try {
-      // Cargar usuarios
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('id, name, email')
-        .eq('is_active', true)
-        .order('name');
-
-      setUsers(usersData || []);
+      // Cargar usuarios (solo si es admin/superadmin)
+      if (user?.role === 'admin' || user?.role === 'superadmin') {
+        const { users: usersData } = await usersService.getAll();
+        setUsers(usersData || []);
+      }
 
       // Cargar unidades organizacionales
-      const { data: unitsData } = await supabase
-        .from('organizational_units')
-        .select('id, name, type')
-        .eq('is_active', true)
-        .order('name');
-
+      const { organizationalUnits: unitsData } = await orgUnitsService.getAll();
       setUnits(unitsData || []);
     } catch (error) {
       console.error('Error loading filters:', error);
@@ -89,37 +82,33 @@ export const Reports = () => {
     try {
       setLoading(true);
 
-      // Construir query
-      let query = supabase
-        .from('time_entries')
-        .select(`
-          *,
-          users (id, name, email),
-          organizational_units (id, name, type)
-        `)
-        .eq('status', 'completed')
-        .gte('start_time', `${startDate}T00:00:00`)
-        .lte('start_time', `${endDate}T23:59:59`);
+      // Obtener todos los registros del backend
+      const { timeEntries: entries } = await timeEntriesService.getAll();
+
+      // Filtrar por fechas y criterios
+      let filteredEntries = entries.filter(entry => {
+        const entryDate = new Date(entry.start_time);
+        const start = new Date(`${startDate}T00:00:00`);
+        const end = new Date(`${endDate}T23:59:59`);
+        
+        return entryDate >= start && entryDate <= end && entry.status === 'completed';
+      });
 
       if (selectedUser !== 'all') {
-        query = query.eq('user_id', selectedUser);
+        filteredEntries = filteredEntries.filter(e => e.user_id === selectedUser);
       }
 
       if (selectedUnit !== 'all') {
-        query = query.eq('organizational_unit_id', selectedUnit);
+        filteredEntries = filteredEntries.filter(e => e.organizational_unit_id === selectedUnit);
       }
 
-      const { data: entries, error } = await query;
-
-      if (error) throw error;
-
       // Procesar datos
-      const totalHours = entries.reduce((sum, e) => sum + (e.total_hours || 0), 0);
-      const totalEntries = entries.length;
+      const totalHours = filteredEntries.reduce((sum, e) => sum + (e.total_hours || 0), 0);
+      const totalEntries = filteredEntries.length;
 
       // Agrupar por usuario
       const byUserMap = {};
-      entries.forEach(entry => {
+      filteredEntries.forEach(entry => {
         const userId = entry.user_id;
         if (!byUserMap[userId]) {
           byUserMap[userId] = {
@@ -138,7 +127,7 @@ export const Reports = () => {
 
       // Agrupar por unidad organizacional
       const byUnitMap = {};
-      entries.forEach(entry => {
+      filteredEntries.forEach(entry => {
         const unitId = entry.organizational_unit_id;
         if (!byUnitMap[unitId]) {
           byUnitMap[unitId] = {
@@ -158,7 +147,7 @@ export const Reports = () => {
 
       // Agrupar por día
       const byDayMap = {};
-      entries.forEach(entry => {
+      filteredEntries.forEach(entry => {
         const day = format(new Date(entry.start_time), 'yyyy-MM-dd');
         if (!byDayMap[day]) {
           byDayMap[day] = {
@@ -275,15 +264,33 @@ export const Reports = () => {
             ]}
           />
 
-          <Select
-            label="Unidad Organizacional"
-            value={selectedUnit}
-            onChange={(e) => setSelectedUnit(e.target.value)}
-            options={[
-              { value: 'all', label: 'Todas' },
-              ...units.map(u => ({ value: u.id, label: `${u.name} (${u.type})` }))
-            ]}
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Unidad Organizacional
+            </label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="all-units"
+                  checked={selectedUnit === 'all'}
+                  onChange={(e) => setSelectedUnit(e.target.checked ? 'all' : '')}
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="all-units" className="text-sm text-gray-700">
+                  Todas las unidades
+                </label>
+              </div>
+              
+              {selectedUnit !== 'all' && (
+                <HierarchicalSelect
+                  units={units}
+                  value={selectedUnit === 'all' ? '' : selectedUnit}
+                  onChange={(unitId) => setSelectedUnit(unitId || 'all')}
+                />
+              )}
+            </div>
+          </div>
         </div>
       </Card>
 

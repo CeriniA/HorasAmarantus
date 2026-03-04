@@ -9,16 +9,16 @@ import Select from '../components/common/Select';
 import Input from '../components/common/Input';
 import Modal from '../components/common/Modal';
 import Alert from '../components/common/Alert';
+import HierarchicalSelect from '../components/common/HierarchicalSelect';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { supabase } from '../config/supabase';
-import { db } from '../db/indexedDB';
 
 export const TimeEntries = () => {
   const { user } = useAuthContext();
   const { 
     timeEntries, 
     loading, 
+    createEntry,
     updateEntry,
     deleteEntry 
   } = useTimeEntries(user?.id);
@@ -77,55 +77,31 @@ export const TimeEntries = () => {
       const startDateTime = `${formData.date}T${formData.start_time}:00`;
       const endDateTime = `${formData.date}T${formData.end_time}:00`;
 
-      const newEntry = {
-        user_id: user.id,
+      const entryData = {
         organizational_unit_id: formData.organizational_unit_id,
         start_time: startDateTime,
         end_time: endDateTime,
-        total_hours: totalHours,
-        description: formData.description || null,
-        status: 'completed'
+        description: formData.description || null
       };
 
-      // Intentar guardar en Supabase
-      const { data, error } = await supabase
-        .from('time_entries')
-        .insert([newEntry])
-        .select()
-        .single();
+      // Usar el hook para crear
+      const result = await createEntry(entryData);
 
-      if (error) {
-        // Si falla, guardar offline
-        console.log('Guardando offline:', error);
-        const clientId = `temp_${Date.now()}`;
-        await db.timeEntries.add({
-          ...newEntry,
-          client_id: clientId,
-          synced: false
-        });
-        
-        await db.syncQueue.add({
-          table: 'time_entries',
-          action: 'insert',
-          data: newEntry,
-          client_id: clientId,
-          timestamp: new Date().toISOString()
-        });
-
-        setAlert({ type: 'success', message: 'Registro guardado offline. Se sincronizará cuando haya conexión.' });
-      } else {
+      if (result.success) {
         setAlert({ type: 'success', message: 'Registro creado correctamente' });
+        
+        // Resetear formulario
+        setFormData({
+          date: format(new Date(), 'yyyy-MM-dd'),
+          start_time: '08:00',
+          end_time: '17:00',
+          organizational_unit_id: '',
+          description: ''
+        });
+        setShowCreateModal(false);
+      } else {
+        setAlert({ type: 'error', message: result.error || 'Error al crear el registro' });
       }
-
-      // Resetear formulario
-      setFormData({
-        date: format(new Date(), 'yyyy-MM-dd'),
-        start_time: '08:00',
-        end_time: '17:00',
-        organizational_unit_id: '',
-        description: ''
-      });
-      setShowCreateModal(false);
 
     } catch (error) {
       console.error('Error creating entry:', error);
@@ -362,12 +338,10 @@ export const TimeEntries = () => {
               </div>
             )}
 
-            <Select
-              label="Unidad Organizacional"
+            <HierarchicalSelect
+              units={units}
               value={formData.organizational_unit_id}
-              onChange={(e) => setFormData({ ...formData, organizational_unit_id: e.target.value })}
-              options={unitOptions}
-              placeholder="Selecciona una unidad..."
+              onChange={(unitId) => setFormData({ ...formData, organizational_unit_id: unitId })}
               required
             />
 
@@ -445,14 +419,13 @@ export const TimeEntries = () => {
               </div>
             )}
 
-            <Select
-              label="Unidad Organizacional"
+            <HierarchicalSelect
+              units={units}
               value={editingEntry.organizational_unit_id}
-              onChange={(e) => setEditingEntry({
+              onChange={(unitId) => setEditingEntry({
                 ...editingEntry,
-                organizational_unit_id: e.target.value
+                organizational_unit_id: unitId
               })}
-              options={unitOptions}
               required
             />
 

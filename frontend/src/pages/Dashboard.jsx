@@ -207,7 +207,7 @@ export const Dashboard = () => {
             Registrar Horas
           </Button>
           
-          {(user?.role === 'admin' || user?.role === 'supervisor') && (
+          {(user?.role === 'admin' || user?.role === 'superadmin') && (
             <>
               <Button
                 variant="outline"

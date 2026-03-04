@@ -10,7 +10,8 @@
     "hash": "node scripts/generateHash.js",
     "verify": "node scripts/verifyHash.js",
     "create-superadmin": "node scripts/createSuperadmin.js",
-    "debug-hierarchy": "node scripts/debugHierarchy.js"
+    "debug-hierarchy": "node scripts/debugHierarchy.js",
+    "generate-jwt": "node scripts/generateJwtSecret.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
@@ -25,5 +26,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

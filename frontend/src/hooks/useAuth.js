@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../config/supabase';
-import { db } from '../db/indexedDB';
+import { authService, api } from '../services/api';
+import { db } from '../offline/core/db.js';
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -9,49 +9,73 @@ export const useAuth = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Obtener sesión inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        loadUserProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Escuchar cambios de autenticación
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-        loadUserProfile(session.user.id);
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    // Verificar si hay token guardado
+    const token = api.getToken();
+    if (token) {
+      loadUserProfile();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
-  const loadUserProfile = async (userId) => {
+  const loadUserProfile = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
-      setUser(data);
-      
-      // Guardar en cache local
-      await db.users.put(data);
+      if (navigator.onLine) {
+        // Online: cargar desde backend
+        const { user: userData } = await authService.getMe();
+        setUser(userData);
+        setSession({ user: userData });
+        
+        // Guardar en cache local
+        await db.users.put(userData);
+      } else {
+        // Offline: cargar desde cache
+        const token = api.getToken();
+        if (token) {
+          // Intentar decodificar el token para obtener el user_id
+          try {
+            const payload = JSON.parse(window.atob(token.split('.')[1]));
+            const userId = payload.id; // El token usa 'id', no 'userId'
+            
+            if (import.meta.env.DEV) {
+              console.log('Loading user from cache (offline):', userId);
+            }
+            
+            const cachedUser = await db.users.get(userId);
+            
+            if (cachedUser) {
+              setUser(cachedUser);
+              setSession({ user: cachedUser });
+              if (import.meta.env.DEV) {
+                console.log('User loaded from cache:', cachedUser.email);
+              }
+            } else {
+              if (import.meta.env.DEV) {
+                console.warn('Usuario no encontrado en cache, ID:', userId);
+              }
+              throw new Error('Usuario no encontrado en cache');
+            }
+          } catch (decodeError) {
+            if (import.meta.env.DEV) {
+              console.error('Error decodificando token:', decodeError);
+            }
+            // No limpiar token si estamos offline, puede ser error temporal
+            if (navigator.onLine) {
+              api.removeToken();
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error('Error loading user profile:', err);
       setError(err.message);
+      
+      // Solo limpiar token si estamos online (error real del servidor)
+      if (navigator.onLine) {
+        api.removeToken();
+        setUser(null);
+        setSession(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -62,14 +86,24 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Verificar conexión
+      if (!navigator.onLine) {
+        throw new Error('No hay conexión a internet. El login requiere conexión.');
+      }
 
-      if (error) throw error;
+      const { token, user: userData } = await authService.login(email, password);
+      
+      // Guardar token
+      api.setToken(token);
+      
+      // Actualizar estado
+      setUser(userData);
+      setSession({ user: userData });
+      
+      // Guardar en cache local
+      await db.users.put(userData);
 
-      return { success: true, data };
+      return { success: true, user: userData };
     } catch (err) {
       setError(err.message);
       return { success: false, error: err.message };
@@ -83,28 +117,15 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
 
-      // Crear usuario en Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      await authService.register({
         email,
         password,
+        name: userData.name,
+        role: userData.role || 'operario',
+        organizational_unit_id: userData.organizational_unit_id || null,
       });
 
-      if (authError) throw authError;
-
-      // Crear perfil de usuario
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email,
-          name: userData.name,
-          role: userData.role || 'operario',
-          organizational_unit_id: userData.organizational_unit_id || null,
-        });
-
-      if (profileError) throw profileError;
-
-      return { success: true, data: authData };
+      return { success: true };
     } catch (err) {
       setError(err.message);
       return { success: false, error: err.message };
@@ -118,11 +139,11 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
 
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-
-      // Limpiar datos locales (opcional, comentar si quieres mantener cache)
-      // await clearLocalDatabase();
+      await authService.logout();
+      
+      // Limpiar estado
+      setUser(null);
+      setSession(null);
 
       return { success: true };
     } catch (err) {
@@ -138,19 +159,12 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', user.id)
-        .select()
-        .single();
+      const { user: updatedUser } = await api.put(`/users/${user.id}`, updates);
 
-      if (error) throw error;
+      setUser(updatedUser);
+      await db.users.put(updatedUser);
 
-      setUser(data);
-      await db.users.put(data);
-
-      return { success: true, data };
+      return { success: true, data: updatedUser };
     } catch (err) {
       setError(err.message);
       return { success: false, error: err.message };
@@ -164,8 +178,7 @@ export const useAuth = () => {
       setLoading(true);
       setError(null);
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw error;
+      await api.post('/auth/reset-password', { email }, { auth: false });
 
       return { success: true };
     } catch (err) {
@@ -187,8 +200,8 @@ export const useAuth = () => {
     updateProfile,
     resetPassword,
     isAuthenticated: !!session,
+    isSuperadmin: user?.role === 'superadmin',
     isAdmin: user?.role === 'admin',
-    isSupervisor: user?.role === 'supervisor',
     isOperario: user?.role === 'operario',
   };
 };

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/layout/Layout';
@@ -7,8 +8,19 @@ import Dashboard from './pages/Dashboard';
 import TimeEntries from './pages/TimeEntries';
 import OrganizationalUnits from './pages/OrganizationalUnits';
 import Reports from './pages/Reports';
+import UserManagement from './pages/UserManagement';
+import { syncManager } from './offline/index.js';
 
 function App() {
+  // Iniciar sincronización automática
+  useEffect(() => {
+    syncManager.startAutoSync(30000); // Cada 30 segundos
+
+    return () => {
+      syncManager.stopAutoSync();
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -42,7 +54,7 @@ function App() {
           <Route
             path="/organizational-units"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+              <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
                 <Layout>
                   <OrganizationalUnits />
                 </Layout>
@@ -53,9 +65,20 @@ function App() {
           <Route
             path="/reports"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'supervisor']}>
+              <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
                 <Layout>
                   <Reports />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
+                <Layout>
+                  <UserManagement />
                 </Layout>
               </ProtectedRoute>
             }

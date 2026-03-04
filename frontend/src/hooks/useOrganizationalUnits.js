@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../config/supabase';
-import { db, cacheOrganizationalUnits, getLocalOrganizationalUnits } from '../db/indexedDB';
+import { orgUnitsService } from '../services/api';
+import { orgUnitRepository, syncQueue } from '../offline/index.js';
+import { generateUUID } from '../utils/uuid';
 
 export const useOrganizationalUnits = () => {
   const [units, setUnits] = useState([]);
@@ -17,36 +18,34 @@ export const useOrganizationalUnits = () => {
       setError(null);
 
       if (navigator.onLine) {
-        // Online: cargar desde Supabase
-        const { data, error: supabaseError } = await supabase
-          .from('organizational_units')
-          .select('*')
-          .eq('is_active', true)
-          .order('path');
-
-        if (supabaseError) throw supabaseError;
+        // Online: cargar desde backend
+        const { organizationalUnits: data } = await orgUnitsService.getAll();
 
         setUnits(data);
         
         // Guardar en cache local
-        await cacheOrganizationalUnits(data);
+        await orgUnitRepository.saveMany(data);
 
       } else {
         // Offline: cargar desde IndexedDB
-        const localUnits = await getLocalOrganizationalUnits();
+        const localUnits = await orgUnitRepository.findAll();
         setUnits(localUnits);
       }
 
     } catch (err) {
-      console.error('Error loading organizational units:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error loading organizational units:', err);
+      }
       setError(err.message);
 
       // Fallback a datos locales
       try {
-        const localUnits = await getLocalOrganizationalUnits();
+        const localUnits = await orgUnitRepository.findAll();
         setUnits(localUnits);
       } catch (localErr) {
-        console.error('Error loading local units:', localErr);
+        if (import.meta.env.DEV) {
+          console.error('Error loading local units:', localErr);
+        }
       }
     } finally {
       setLoading(false);
@@ -58,20 +57,69 @@ export const useOrganizationalUnits = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error: supabaseError } = await supabase
-        .from('organizational_units')
-        .insert(unitData)
-        .select()
-        .single();
+      if (navigator.onLine) {
+        // Online: crear en backend
+        const response = await orgUnitsService.create(unitData);
+        
+        if (import.meta.env.DEV) {
+          console.log('Response from backend:', response);
+        }
+        
+        const organizationalUnit = response.organizationalUnit;
+        
+        if (!organizationalUnit || !organizationalUnit.id) {
+          if (import.meta.env.DEV) {
+            console.error('Respuesta inválida:', response);
+          }
+          throw new Error('Respuesta inválida del servidor');
+        }
 
-      if (supabaseError) throw supabaseError;
+        setUnits(prev => [...prev, organizationalUnit]);
+        
+        // Guardar en IndexedDB con manejo de errores
+        try {
+          await orgUnitRepository.save(organizationalUnit);
+        } catch (dbError) {
+          if (import.meta.env.DEV) {
+            console.error('Error guardando en IndexedDB:', dbError);
+            console.error('Objeto a guardar:', organizationalUnit);
+          }
+          // No fallar si IndexedDB falla, solo logear
+        }
 
-      setUnits(prev => [...prev, data]);
-      await db.organizational_units.put(data);
+        return { success: true, data: organizationalUnit };
+      } else {
+        // Offline: guardar localmente
+        const localUnit = {
+          ...unitData,
+          id: generateUUID(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_active: true,
+          pending_sync: true
+        };
 
-      return { success: true, data };
+        if (import.meta.env.DEV) {
+          console.log('Guardando unidad offline:', localUnit);
+        }
+
+        try {
+          await orgUnitRepository.save(localUnit);
+          await syncQueue.add('organizational_units', localUnit.id, 'create', localUnit);
+          setUnits(prev => [...prev, localUnit]);
+          return { success: true, data: localUnit };
+        } catch (dbError) {
+          if (import.meta.env.DEV) {
+            console.error('Error guardando en IndexedDB offline:', dbError);
+            console.error('Objeto:', localUnit);
+          }
+          throw new Error('No se pudo guardar offline');
+        }
+      }
     } catch (err) {
-      console.error('Error creating unit:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error creating unit:', err);
+      }
       setError(err.message);
       return { success: false, error: err.message };
     } finally {
@@ -84,21 +132,36 @@ export const useOrganizationalUnits = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error: supabaseError } = await supabase
-        .from('organizational_units')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      if (navigator.onLine) {
+        // Online: actualizar en backend
+        const { organizationalUnit } = await orgUnitsService.update(id, updates);
 
-      if (supabaseError) throw supabaseError;
+        setUnits(prev => prev.map(u => u.id === id ? organizationalUnit : u));
+        await orgUnitRepository.save(organizationalUnit);
 
-      setUnits(prev => prev.map(u => u.id === id ? data : u));
-      await db.organizational_units.put(data);
+        return { success: true, data: organizationalUnit };
+      } else {
+        // Offline: actualizar localmente
+        const unit = units.find(u => u.id === id);
+        if (!unit) throw new Error('Unidad no encontrada');
 
-      return { success: true, data };
+        const updatedUnit = {
+          ...unit,
+          ...updates,
+          updated_at: new Date().toISOString(),
+          pending_sync: true
+        };
+
+        await orgUnitRepository.save(updatedUnit);
+        await syncQueue.add('organizational_units', id, 'update', updatedUnit);
+        setUnits(prev => prev.map(u => u.id === id ? updatedUnit : u));
+
+        return { success: true, data: updatedUnit };
+      }
     } catch (err) {
-      console.error('Error updating unit:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error updating unit:', err);
+      }
       setError(err.message);
       return { success: false, error: err.message };
     } finally {
@@ -111,19 +174,26 @@ export const useOrganizationalUnits = () => {
       setLoading(true);
       setError(null);
 
-      const { error: supabaseError } = await supabase
-        .from('organizational_units')
-        .delete()
-        .eq('id', id);
+      if (navigator.onLine) {
+        // Online: eliminar en backend
+        await orgUnitsService.delete(id);
 
-      if (supabaseError) throw supabaseError;
+        setUnits(prev => prev.filter(u => u.id !== id));
+        await orgUnitRepository.delete(id);
 
-      setUnits(prev => prev.filter(u => u.id !== id));
-      await db.organizational_units.delete(id);
+        return { success: true };
+      } else {
+        // Offline: marcar para eliminación
+        await orgUnitRepository.delete(id);
+        await syncQueue.add('organizational_units', id, 'delete', { id });
 
-      return { success: true };
+        setUnits(prev => prev.filter(u => u.id !== id));
+        return { success: true };
+      }
     } catch (err) {
-      console.error('Error deleting unit:', err);
+      if (import.meta.env.DEV) {
+        console.error('Error deleting unit:', err);
+      }
       setError(err.message);
       return { success: false, error: err.message };
     } finally {

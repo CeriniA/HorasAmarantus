@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { syncService } from '../services/syncService';
+import { syncManager } from '../offline/index.js';
 
 export const useOffline = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -64,7 +64,7 @@ export const useOffline = () => {
     // Agregar event listeners
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    syncService.addListener(handleSyncEvent);
+    syncManager.addListener(handleSyncEvent);
 
     // Obtener estado inicial
     updatePendingChanges();
@@ -73,13 +73,13 @@ export const useOffline = () => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      syncService.removeListener(handleSyncEvent);
+      syncManager.removeListener(handleSyncEvent);
     };
   }, []);
 
   const updatePendingChanges = async () => {
     try {
-      const status = await syncService.getSyncStatus();
+      const status = await syncManager.getSyncStatus();
       setPendingChanges(status.pendingCount + status.queueCount);
     } catch (error) {
       console.error('Error updating pending changes:', error);
@@ -89,7 +89,7 @@ export const useOffline = () => {
   const manualSync = async () => {
     try {
       setIsSyncing(true);
-      const result = await syncService.sync();
+      const result = await syncManager.sync();
       await updatePendingChanges();
       return result;
     } catch (error) {
@@ -100,11 +100,12 @@ export const useOffline = () => {
     }
   };
 
-  const downloadData = async (userId) => {
+  const downloadData = async () => {
     try {
       setIsSyncing(true);
-      const result = await syncService.downloadData(userId);
-      return result;
+      // TODO: Implementar downloadData en SyncManager
+      console.warn('downloadData not implemented yet');
+      return { success: false, error: 'Not implemented' };
     } catch (error) {
       console.error('Error downloading data:', error);
       return { success: false, error: error.message };
@@ -115,7 +116,7 @@ export const useOffline = () => {
 
   const getSyncStatus = async () => {
     try {
-      return await syncService.getSyncStatus();
+      return await syncManager.getSyncStatus();
     } catch (error) {
       console.error('Error getting sync status:', error);
       return null;

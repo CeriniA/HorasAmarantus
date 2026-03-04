@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { syncService } from '../services/syncService';
 
 const AuthContext = createContext({});
 
@@ -16,21 +15,15 @@ export const AuthProvider = ({ children }) => {
   const auth = useAuth();
 
   useEffect(() => {
-    // Iniciar sincronización automática cuando el usuario esté autenticado
-    if (auth.user) {
-      syncService.startAutoSync(30000); // Cada 30 segundos
-      
-      // Descargar datos iniciales
-      syncService.downloadData(auth.user.id).catch(err => {
-        console.error('Error downloading initial data:', err);
-      });
-    } else {
-      syncService.stopAutoSync();
-    }
-
-    return () => {
-      syncService.stopAutoSync();
-    };
+    // Nota: La sincronización automática ya se inicia en App.jsx
+    // Este efecto se mantiene por si se necesita lógica adicional por usuario
+    
+    // TODO: Implementar downloadData en SyncManager si se necesita
+    // if (auth.user) {
+    //   syncManager.downloadData().catch(err => {
+    //     console.error('Error downloading initial data:', err);
+    //   });
+    // }
   }, [auth.user]);
 
   return (

@@ -72,13 +72,13 @@ export const Login = () => {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <Input
-              label="Correo Electrónico"
-              type="email"
+              label="Usuario"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="usuario@ejemplo.com"
+              placeholder="superamarantus"
               required
-              autoComplete="email"
+              autoComplete="username"
               autoFocus
             />
 
@@ -108,11 +108,11 @@ export const Login = () => {
               Usuarios de prueba:
             </p>
             <div className="text-xs text-blue-800 space-y-1">
+              <p><strong>Superadmin:</strong> superamarantus</p>
               <p><strong>Admin:</strong> admin@horticola.com</p>
-              <p><strong>Supervisor:</strong> supervisor.produccion@horticola.com</p>
-              <p><strong>Operario:</strong> operario1@horticola.com</p>
+              <p><strong>Operario:</strong> operario1</p>
               <p className="mt-2 text-blue-600">
-                (Contraseña: debes configurarla en Supabase Auth)
+                (Contraseña: configúrala en Supabase o usa el script create-superadmin)
               </p>
             </div>
           </div>
