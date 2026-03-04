@@ -137,7 +137,7 @@ export class SyncManager {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/health`, { 
+      const response = await fetch(`${API_URL}/health`, { 
         method: 'HEAD',
         cache: 'no-cache'
       });
