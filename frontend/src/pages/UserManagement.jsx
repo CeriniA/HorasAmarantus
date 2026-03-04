@@ -1,0 +1,388 @@
+/* eslint-disable no-alert, no-restricted-globals */
+import { useState } from 'react';
+import { useUsers } from '../hooks/useUsers';
+import { usePermissions } from '../hooks/usePermissions';
+import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
+
+export const UserManagement = () => {
+  const { users, loading, createUser, updateUser, deleteUser } = useUsers();
+  const { units } = useOrganizationalUnits();
+  const { can, isSuperadmin } = usePermissions();
+  
+  const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    name: '',
+    role: 'operario',
+    organizational_unit_id: ''
+  });
+  const [formError, setFormError] = useState('');
+
+  const handleOpenCreate = () => {
+    setEditingUser(null);
+    setFormData({
+      email: '',
+      password: '',
+      name: '',
+      role: 'operario',
+      organizational_unit_id: ''
+    });
+    setFormError('');
+    setShowModal(true);
+  };
+
+  const handleOpenEdit = (user) => {
+    if (!can('edit', 'users', user)) {
+      alert('No tienes permisos para editar este usuario');
+      return;
+    }
+
+    setEditingUser(user);
+    setFormData({
+      email: user.email,
+      password: '',
+      name: user.name,
+      role: user.role,
+      organizational_unit_id: user.organizational_unit_id || ''
+    });
+    setFormError('');
+    setShowModal(true);
+  };
+
+  const handleDelete = async (user) => {
+    if (!can('delete', 'users', user)) {
+      alert('No tienes permisos para eliminar este usuario');
+      return;
+    }
+
+    if (!confirm(`¿Estás seguro de eliminar al usuario ${user.name}?`)) {
+      return;
+    }
+
+    const result = await deleteUser(user.id);
+    if (result.success) {
+      alert('Usuario eliminado exitosamente');
+    } else {
+      alert(`Error: ${result.error}`);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setFormError('');
+
+    // Validaciones
+    if (!formData.email || !formData.name) {
+      setFormError('Email y nombre son requeridos');
+      return;
+    }
+
+    if (!editingUser && !formData.password) {
+      setFormError('Password es requerido para nuevos usuarios');
+      return;
+    }
+
+    // Verificar permisos
+    if (!editingUser && !can('create', 'users', formData)) {
+      setFormError('No tienes permisos para crear usuarios con este rol');
+      return;
+    }
+
+    if (editingUser && !can('edit', 'users', { ...editingUser, ...formData })) {
+      setFormError('No tienes permisos para editar este usuario');
+      return;
+    }
+
+    // Preparar datos
+    const userData = {
+      email: formData.email,
+      name: formData.name,
+      role: formData.role,
+      organizational_unit_id: formData.organizational_unit_id || null
+    };
+
+    if (formData.password) {
+      userData.password = formData.password;
+    }
+
+    // Crear o actualizar
+    const result = editingUser
+      ? await updateUser(editingUser.id, userData)
+      : await createUser(userData);
+
+    if (result.success) {
+      alert(editingUser ? 'Usuario actualizado' : 'Usuario creado');
+      setShowModal(false);
+    } else {
+      setFormError(result.error);
+    }
+  };
+
+  const getRoleBadgeColor = (role) => {
+    switch (role) {
+      case 'superadmin':
+        return 'bg-purple-100 text-purple-800';
+      case 'admin':
+        return 'bg-blue-100 text-blue-800';
+      case 'operario':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getRoleLabel = (role) => {
+    switch (role) {
+      case 'superadmin':
+        return 'Super Admin';
+      case 'admin':
+        return 'Admin';
+      case 'operario':
+        return 'Operario';
+      default:
+        return role;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
+          <p className="text-gray-600 mt-1">Administra los usuarios del sistema</p>
+        </div>
+        
+        {can('create', 'users', { role: 'operario' }) && (
+          <button
+            onClick={handleOpenCreate}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            + Nuevo Usuario
+          </button>
+        )}
+      </div>
+
+      {/* Tabla de Usuarios */}
+      <div className="bg-white shadow-md rounded-lg overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Nombre
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Usuario
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Rol
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Área
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Estado
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {users.map((user) => (
+              <tr key={user.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-500">{user.email}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
+                    {getRoleLabel(user.role)}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {user.organizational_unit_id ? (
+                    units.find(u => u.id === user.organizational_unit_id)?.name || 'N/A'
+                  ) : (
+                    <span className="text-gray-400">Sin asignar</span>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    user.is_active 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {user.is_active ? 'Activo' : 'Inactivo'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                  {can('edit', 'users', user) && (
+                    <button
+                      onClick={() => handleOpenEdit(user)}
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      Editar
+                    </button>
+                  )}
+                  {can('delete', 'users', user) && (
+                    <button
+                      onClick={() => handleDelete(user)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Eliminar
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {users.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No hay usuarios registrados</p>
+          </div>
+        )}
+      </div>
+
+      {/* Modal de Crear/Editar */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">
+              {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+            </h2>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Nombre */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              {/* Usuario */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Usuario *
+                </label>
+                <input
+                  type="text"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="superamarantus"
+                  required
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password {!editingUser && '*'}
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required={!editingUser}
+                  placeholder={editingUser ? 'Dejar vacío para no cambiar' : ''}
+                />
+              </div>
+
+              {/* Rol */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Rol *
+                </label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  {isSuperadmin() && (
+                    <>
+                      <option value="superadmin">Super Admin</option>
+                      <option value="admin">Admin</option>
+                    </>
+                  )}
+                  {!isSuperadmin() && (
+                    <option value="admin" disabled>Admin (solo superadmin)</option>
+                  )}
+                  <option value="operario">Operario</option>
+                </select>
+              </div>
+
+              {/* Área */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Área Organizacional
+                </label>
+                <select
+                  value={formData.organizational_unit_id}
+                  onChange={(e) => setFormData({ ...formData, organizational_unit_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Sin asignar</option>
+                  {units.filter(u => u.type === 'area').map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Error */}
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                  {formError}
+                </div>
+              )}
+
+              {/* Botones */}
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  {editingUser ? 'Actualizar' : 'Crear'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default UserManagement;
