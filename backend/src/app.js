@@ -59,11 +59,17 @@ if (config.rateLimit.enabled) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rutas
+// Rutas con prefijo /api
 app.use('/api/auth', authRoutes);
 app.use('/api/time-entries', timeEntriesRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/organizational-units', orgUnitsRoutes);
+
+// Rutas alternativas sin /api (para compatibilidad)
+app.use('/auth', authRoutes);
+app.use('/time-entries', timeEntriesRoutes);
+app.use('/users', usersRoutes);
+app.use('/organizational-units', orgUnitsRoutes);
 
 // Ruta de health check
 app.get('/api/health', (req, res) => {
