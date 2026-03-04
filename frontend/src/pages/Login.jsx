@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Leaf, Loader } from 'lucide-react';
+import { Leaf } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
@@ -72,13 +72,13 @@ export const Login = () => {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <Input
-              label="Usuario"
+              label="Usuario o Email"
               type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="superamarantus"
+              placeholder="superadmin o usuario@ejemplo.com"
               required
-              autoComplete="username"
+              autoComplete="off"
               autoFocus
             />
 
@@ -105,12 +105,12 @@ export const Login = () => {
           {/* Información de demo */}
           <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm font-medium text-blue-900 mb-2">
-              Usuarios de prueba:
+              💡 Puedes usar username o email:
             </p>
             <div className="text-xs text-blue-800 space-y-1">
-              <p><strong>Superadmin:</strong> superamarantus</p>
+              <p><strong>Superadmin:</strong> superadmin (sin @)</p>
               <p><strong>Admin:</strong> admin@horticola.com</p>
-              <p><strong>Operario:</strong> operario1</p>
+              <p><strong>Operario:</strong> operario1 (sin @)</p>
               <p className="mt-2 text-blue-600">
                 (Contraseña: configúrala en Supabase o usa el script create-superadmin)
               </p>
