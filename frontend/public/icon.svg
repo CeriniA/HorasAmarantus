@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#10b981" rx="64"/>
+  <g fill="#ffffff">
+    <!-- Hoja -->
+    <path d="M256 100 C200 100, 150 150, 150 200 C150 280, 200 350, 256 400 C312 350, 362 280, 362 200 C362 150, 312 100, 256 100 Z"/>
+    <!-- Vena central -->
+    <path d="M256 120 L256 380" stroke="#10b981" stroke-width="8"/>
+    <!-- Venas laterales -->
+    <path d="M256 160 L200 180" stroke="#10b981" stroke-width="4"/>
+    <path d="M256 160 L312 180" stroke="#10b981" stroke-width="4"/>
+    <path d="M256 220 L200 240" stroke="#10b981" stroke-width="4"/>
+    <path d="M256 220 L312 240" stroke="#10b981" stroke-width="4"/>
+    <path d="M256 280 L200 300" stroke="#10b981" stroke-width="4"/>
+    <path d="M256 280 L312 300" stroke="#10b981" stroke-width="4"/>
+  </g>
+</svg>
