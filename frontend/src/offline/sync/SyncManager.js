@@ -6,6 +6,9 @@
 import { SyncQueue } from './SyncQueue.js';
 import { db } from '../core/db.js';
 
+// URL base del API
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
 export class SyncManager {
   constructor() {
     this.queue = new SyncQueue();
@@ -134,7 +137,7 @@ export class SyncManager {
     }
 
     try {
-      const response = await fetch('/api/health', { 
+      const response = await fetch(`${API_URL}/api/health`, { 
         method: 'HEAD',
         cache: 'no-cache'
       });
