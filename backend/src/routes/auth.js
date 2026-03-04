@@ -13,13 +13,27 @@ router.post('/login', validateLogin, async (req, res) => {
 
     const { email, password } = req.body;
 
-    // Buscar usuario en Supabase
-    const { data: user, error } = await supabase
+    // Buscar usuario por email o username
+    // Primero intentar por email
+    let { data: user, error } = await supabase
       .from('users')
       .select('*')
       .eq('email', email)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
+
+    // Si no se encuentra por email, intentar por username
+    if (!user && !email.includes('@')) {
+      const result = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', email)
+        .eq('is_active', true)
+        .maybeSingle();
+      
+      user = result.data;
+      error = result.error;
+    }
 
     if (error || !user) {
       return res.status(401).json({ error: 'Credenciales inválidas' });
