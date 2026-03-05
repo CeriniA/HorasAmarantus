@@ -113,13 +113,13 @@ export const Navbar = () => {
                   <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
                     <div className="py-1">
                       <div className="px-4 py-2 text-xs text-gray-500">
-                        {user?.email}
+                        @{user?.username}
                       </div>
                       <div className="px-4 py-2 text-xs text-gray-500 border-b">
                         Rol: <span className="font-medium">{user?.role}</span>
                       </div>
                       <Link
-                        to="/profile"
+                        to="/settings"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setIsMenuOpen(false)}
                       >
@@ -209,12 +209,12 @@ export const Navbar = () => {
               </div>
               <div className="ml-3">
                 <div className="text-base font-medium text-gray-800">{user?.name}</div>
-                <div className="text-sm font-medium text-gray-500">{user?.email}</div>
+                <div className="text-sm font-medium text-gray-500">@{user?.username}</div>
               </div>
             </div>
             <div className="mt-3 space-y-1">
               <Link
-                to="/profile"
+                to="/settings"
                 className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                 onClick={() => setIsMenuOpen(false)}
               >

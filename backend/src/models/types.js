@@ -6,10 +6,11 @@
 /**
  * @typedef {Object} User
  * @property {string} id - UUID
- * @property {string} email - Email único
+ * @property {string} username - Username único (obligatorio)
+ * @property {string|null} email - Email único (opcional)
  * @property {string} password_hash - Hash bcrypt del password
  * @property {string} name - Nombre completo
- * @property {'admin'|'supervisor'|'operario'} role - Rol del usuario
+ * @property {'superadmin'|'admin'|'operario'} role - Rol del usuario
  * @property {string|null} organizational_unit_id - UUID de la unidad organizacional
  * @property {boolean} is_active - Si el usuario está activo
  * @property {string} created_at - Timestamp ISO
@@ -47,8 +48,9 @@
 /**
  * @typedef {Object} JWTPayload
  * @property {string} id - UUID del usuario
- * @property {string} email - Email del usuario
- * @property {'admin'|'supervisor'|'operario'} role - Rol del usuario
+ * @property {string} username - Username del usuario
+ * @property {string|null} email - Email del usuario (opcional)
+ * @property {'superadmin'|'admin'|'operario'} role - Rol del usuario
  * @property {string|null} organizational_unit_id - UUID de la unidad organizacional
  */
 

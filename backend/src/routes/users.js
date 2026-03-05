@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
     const { role, id } = req.user;
     let query = supabase
       .from('users')
-      .select('id, email, name, role, organizational_unit_id, is_active, created_at')
+      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
       .eq('is_active', true);
 
     // Filtrar según rol
@@ -45,7 +45,7 @@ router.get('/:id', async (req, res) => {
 
     const { data, error } = await supabase
       .from('users')
-      .select('id, email, name, role, organizational_unit_id, is_active, created_at')
+      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
       .eq('id', id)
       .single();
 
@@ -70,7 +70,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', requireAdmin, canManageUser, validateCreateUser, async (req, res) => {
   try {
 
-    const { email, password, name, role, organizational_unit_id } = req.body;
+    const { username, email, password, name, role, organizational_unit_id } = req.body;
 
     // Hash password
     const password_hash = await bcrypt.hash(password, 10);
@@ -78,13 +78,14 @@ router.post('/', requireAdmin, canManageUser, validateCreateUser, async (req, re
     const { data, error } = await supabase
       .from('users')
       .insert({
-        email,
+        username,
+        email: email || null, // Email opcional
         password_hash,
         name,
         role,
         organizational_unit_id
       })
-      .select('id, email, name, role, organizational_unit_id, is_active, created_at')
+      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
       .single();
 
     if (error) throw error;
@@ -130,7 +131,7 @@ router.put('/:id', validateUpdateUser, async (req, res) => {
       .from('users')
       .update(updates)
       .eq('id', id)
-      .select('id, email, name, role, organizational_unit_id, is_active, created_at')
+      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
       .single();
 
     if (error) throw error;

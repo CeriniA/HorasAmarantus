@@ -9,6 +9,7 @@ import TimeEntries from './pages/TimeEntries';
 import OrganizationalUnits from './pages/OrganizationalUnits';
 import Reports from './pages/Reports';
 import UserManagement from './pages/UserManagement';
+import Settings from './pages/Settings';
 import { syncManager } from './offline/index.js';
 
 function App() {
@@ -79,6 +80,17 @@ function App() {
               <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
                 <Layout>
                   <UserManagement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Settings />
                 </Layout>
               </ProtectedRoute>
             }

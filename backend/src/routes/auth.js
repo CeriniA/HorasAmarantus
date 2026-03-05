@@ -10,24 +10,23 @@ const router = express.Router();
 // POST /api/auth/login
 router.post('/login', validateLogin, async (req, res) => {
   try {
-
     const { email, password } = req.body;
 
-    // Buscar usuario por email o username
-    // Primero intentar por email
+    // Buscar usuario por username o email
+    // Primero intentar por username (más común)
     let { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq('username', email)
       .eq('is_active', true)
       .maybeSingle();
 
-    // Si no se encuentra por email, intentar por username
-    if (!user && !email.includes('@')) {
+    // Si no se encuentra por username, intentar por email (si tiene @)
+    if (!user && email.includes('@')) {
       const result = await supabase
         .from('users')
         .select('*')
-        .eq('username', email)
+        .eq('email', email)
         .eq('is_active', true)
         .maybeSingle();
       
@@ -48,6 +47,7 @@ router.post('/login', validateLogin, async (req, res) => {
     // Generar JWT
     const token = generateToken({
       id: user.id,
+      username: user.username,
       email: user.email,
       role: user.role,
       organizational_unit_id: user.organizational_unit_id
@@ -57,6 +57,7 @@ router.post('/login', validateLogin, async (req, res) => {
       token,
       user: {
         id: user.id,
+        username: user.username,
         email: user.email,
         name: user.name,
         role: user.role,
@@ -72,17 +73,17 @@ router.post('/login', validateLogin, async (req, res) => {
 // POST /api/auth/register (solo admins pueden crear usuarios)
 router.post('/register', validateRegister, async (req, res) => {
   try {
-
-    const { email, password, name, role, organizational_unit_id } = req.body;
+    const { username, email, password, name, role, organizational_unit_id } = req.body;
 
     // Hash password
     const password_hash = await bcrypt.hash(password, 10);
 
-    // Crear usuario en Supabase
+    // Crear usuario
     const { data: user, error } = await supabase
       .from('users')
       .insert({
-        email,
+        username,
+        email: email || null, // Email opcional
         password_hash,
         name,
         role,
@@ -91,14 +92,13 @@ router.post('/register', validateRegister, async (req, res) => {
       .select()
       .single();
 
-    if (error) {
-      return res.status(400).json({ error: error.message });
-    }
+    if (error) throw error;
 
-    res.status(201).json({ 
+    res.status(201).json({
       message: 'Usuario creado exitosamente',
       user: {
         id: user.id,
+        username: user.username,
         email: user.email,
         name: user.name,
         role: user.role
@@ -115,7 +115,7 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, email, name, role, organizational_unit_id, is_active, created_at')
+      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
       .eq('id', req.user.id)
       .single();
 

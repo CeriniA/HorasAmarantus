@@ -12,6 +12,7 @@ export const UserManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
     name: '',
@@ -23,6 +24,7 @@ export const UserManagement = () => {
   const handleOpenCreate = () => {
     setEditingUser(null);
     setFormData({
+      username: '',
       email: '',
       password: '',
       name: '',
@@ -41,7 +43,8 @@ export const UserManagement = () => {
 
     setEditingUser(user);
     setFormData({
-      email: user.email,
+      username: user.username,
+      email: user.email || '',
       password: '',
       name: user.name,
       role: user.role,
@@ -74,8 +77,8 @@ export const UserManagement = () => {
     setFormError('');
 
     // Validaciones
-    if (!formData.email || !formData.name) {
-      setFormError('Email y nombre son requeridos');
+    if (!formData.username || !formData.name) {
+      setFormError('Usuario y nombre son requeridos');
       return;
     }
 
@@ -97,7 +100,8 @@ export const UserManagement = () => {
 
     // Preparar datos
     const userData = {
-      email: formData.email,
+      username: formData.username,
+      email: formData.email || null, // Email opcional
       name: formData.name,
       role: formData.role,
       organizational_unit_id: formData.organizational_unit_id || null
@@ -203,9 +207,10 @@ export const UserManagement = () => {
               <tr key={user.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                  <div className="text-xs text-gray-500">@{user.username}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-500">{user.email}</div>
+                  <div className="text-sm text-gray-500">{user.email || <span className="text-gray-400 italic">Sin email</span>}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeColor(user.role)}`}>
@@ -288,12 +293,32 @@ export const UserManagement = () => {
                 </label>
                 <input
                   type="text"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="superamarantus"
                   required
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Solo letras, números, guiones y guiones bajos
+                </p>
+              </div>
+
+              {/* Email (opcional) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email (opcional)
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="usuario@ejemplo.com"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Puede agregarse después
+                </p>
               </div>
 
               {/* Password */}

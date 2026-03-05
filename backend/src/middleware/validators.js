@@ -18,9 +18,7 @@ export const validateLogin = [
   body('email')
     .trim()
     .notEmpty()
-    .withMessage('Usuario requerido')
-    .isLength({ min: 3 })
-    .withMessage('Usuario debe tener al menos 3 caracteres'),
+    .withMessage('Usuario requerido'),
   body('password')
     .notEmpty()
     .withMessage('Password requerido'),
@@ -28,12 +26,19 @@ export const validateLogin = [
 ];
 
 export const validateRegister = [
-  body('email')
+  body('username')
     .trim()
     .notEmpty()
     .withMessage('Usuario requerido')
     .isLength({ min: 3 })
-    .withMessage('Usuario debe tener al menos 3 caracteres'),
+    .withMessage('Usuario debe tener al menos 3 caracteres')
+    .matches(/^[a-zA-Z0-9_-]+$/)
+    .withMessage('Usuario solo puede contener letras, números, guiones y guiones bajos'),
+  body('email')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isEmail()
+    .withMessage('Email inválido'),
   body('password')
     .isLength({ min: VALIDATION_RULES.password.minLength })
     .withMessage(`Password debe tener al menos ${VALIDATION_RULES.password.minLength} caracteres`),
@@ -56,16 +61,23 @@ export const validateCreateUser = validateRegister;
 
 export const validateUpdateUser = [
   param('id').isUUID().withMessage('ID de usuario inválido'),
+  body('username')
+    .optional()
+    .trim()
+    .isLength({ min: 3 })
+    .withMessage('Usuario debe tener al menos 3 caracteres')
+    .matches(/^[a-zA-Z0-9_-]+$/)
+    .withMessage('Usuario solo puede contener letras, números, guiones y guiones bajos'),
+  body('email')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isEmail()
+    .withMessage('Email inválido'),
   body('name')
     .optional()
     .trim()
     .isLength({ min: VALIDATION_RULES.name.minLength })
     .withMessage(`Nombre debe tener al menos ${VALIDATION_RULES.name.minLength} caracteres`),
-  body('email')
-    .optional()
-    .trim()
-    .isLength({ min: 3 })
-    .withMessage('Usuario debe tener al menos 3 caracteres'),
   body('role')
     .optional()
     .isIn(['superadmin', 'admin', 'operario'])
