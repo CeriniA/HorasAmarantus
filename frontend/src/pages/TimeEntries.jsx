@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Clock, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Edit2, Trash2, Clock, Calendar, CalendarCheck } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { useTimeEntries } from '../hooks/useTimeEntries';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
@@ -14,6 +15,7 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export const TimeEntries = () => {
+  const navigate = useNavigate();
   const { user } = useAuthContext();
   const { 
     timeEntries, 
@@ -179,13 +181,22 @@ export const TimeEntries = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Registro de Horas</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Registra manualmente tus horas de trabajo
+            Registra tus horas de trabajo individual o por jornada completa
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-5 w-5 mr-2" />
-          Nuevo Registro
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            variant="secondary"
+            onClick={() => navigate('/time-entries/bulk')}
+          >
+            <CalendarCheck className="h-5 w-5 mr-2" />
+            Cargar Jornada
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-5 w-5 mr-2" />
+            Registro Individual
+          </Button>
+        </div>
       </div>
 
       {/* Alertas */}

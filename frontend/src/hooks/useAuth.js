@@ -191,6 +191,7 @@ export const useAuth = () => {
 
   return {
     user,
+    setUser,
     session,
     loading,
     error,

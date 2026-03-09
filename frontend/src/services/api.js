@@ -179,6 +179,9 @@ export const authService = {
   login: (email, password) => api.post('/auth/login', { email, password }, { auth: false }),
   register: (userData) => api.post('/auth/register', userData),
   getMe: () => api.get('/auth/me'),
+  changePassword: (currentPassword, newPassword) => 
+    api.post('/auth/change-password', { currentPassword, newPassword }),
+  updateEmail: (email) => api.put('/auth/me/email', { email }),
   logout: () => {
     api.removeToken();
     return Promise.resolve();
@@ -189,6 +192,7 @@ export const timeEntriesService = {
   getAll: () => api.get('/time-entries'),
   getById: (id) => api.get(`/time-entries/${id}`),
   create: (data) => api.post('/time-entries', data),
+  createBulk: (entries, user_id) => api.post('/time-entries/bulk', { entries, user_id }),
   update: (id, data) => api.put(`/time-entries/${id}`, data),
   delete: (id) => api.delete(`/time-entries/${id}`),
 };

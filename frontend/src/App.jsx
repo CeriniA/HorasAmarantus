@@ -6,6 +6,7 @@ import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import TimeEntries from './pages/TimeEntries';
+import BulkTimeEntry from './pages/BulkTimeEntry';
 import OrganizationalUnits from './pages/OrganizationalUnits';
 import Reports from './pages/Reports';
 import UserManagement from './pages/UserManagement';
@@ -47,6 +48,17 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <TimeEntries />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/time-entries/bulk"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <BulkTimeEntry />
                 </Layout>
               </ProtectedRoute>
             }
