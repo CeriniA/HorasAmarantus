@@ -50,7 +50,7 @@ export const validateRegister = [
     .isIn(['superadmin', 'admin', 'operario'])
     .withMessage('Rol inválido'),
   body('organizational_unit_id')
-    .optional()
+    .optional({ nullable: true })
     .isUUID()
     .withMessage('ID de unidad organizacional inválido'),
   handleValidationErrors
@@ -87,7 +87,7 @@ export const validateUpdateUser = [
     .isLength({ min: VALIDATION_RULES.password.minLength })
     .withMessage(`Password debe tener al menos ${VALIDATION_RULES.password.minLength} caracteres`),
   body('organizational_unit_id')
-    .optional()
+    .optional({ nullable: true })
     .isUUID()
     .withMessage('ID de unidad organizacional inválido'),
   handleValidationErrors
