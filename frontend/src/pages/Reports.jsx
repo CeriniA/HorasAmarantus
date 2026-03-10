@@ -115,7 +115,11 @@ export const Reports = () => {
         return entryDate >= start && entryDate <= end && entry.status === 'completed';
       });
 
-      if (selectedUser !== 'all') {
+      // Si es operario, solo mostrar sus propios registros
+      if (user?.role === 'operario') {
+        filteredEntries = filteredEntries.filter(e => e.user_id === user.id);
+      } else if (selectedUser !== 'all') {
+        // Admin/Superadmin pueden filtrar por usuario
         filteredEntries = filteredEntries.filter(e => e.user_id === selectedUser);
       }
 
@@ -241,7 +245,7 @@ export const Reports = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Reportes</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Análisis de horas trabajadas
+            {user?.role === 'operario' ? 'Tus horas trabajadas' : 'Análisis de horas trabajadas'}
           </p>
         </div>
         <Button onClick={exportToCSV} variant="outline">
@@ -286,15 +290,18 @@ export const Reports = () => {
             </>
           )}
 
-          <Select
-            label="Usuario"
-            value={selectedUser}
-            onChange={(e) => setSelectedUser(e.target.value)}
-            options={[
-              { value: 'all', label: 'Todos' },
-              ...users.map(u => ({ value: u.id, label: u.name }))
-            ]}
-          />
+          {/* Filtro de usuario solo para admin/superadmin */}
+          {(user?.role === 'admin' || user?.role === 'superadmin') && (
+            <Select
+              label="Usuario"
+              value={selectedUser}
+              onChange={(e) => setSelectedUser(e.target.value)}
+              options={[
+                { value: 'all', label: 'Todos' },
+                ...users.map(u => ({ value: u.id, label: u.name }))
+              ]}
+            />
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

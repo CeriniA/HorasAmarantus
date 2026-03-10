@@ -48,12 +48,12 @@ npm start
 ### Autenticación
 
 #### POST /api/auth/login
-Login de usuario
+Login de usuario (solo por username)
 
 **Request:**
 ```json
 {
-  "email": "admin@horticola.com",
+  "username": "admin",
   "password": "ContraseñaSegura123!"
 }
 ```
@@ -64,6 +64,7 @@ Login de usuario
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "id": "uuid",
+    "username": "admin",
     "email": "admin@horticola.com",
     "name": "Juan Pérez",
     "role": "admin"
@@ -151,16 +152,49 @@ backend/
 
 ## 🔐 Seguridad
 
-- ✅ JWT para autenticación
-- ✅ Bcrypt para passwords
-- ✅ Helmet para headers de seguridad
-- ✅ CORS configurado
-- ✅ Rate limiting
-- ✅ Validación de inputs
-- ✅ Service role key (NO expuesta al frontend)
+### Implementado
+- ✅ **JWT** para autenticación (128 bits mínimo)
+- ✅ **Bcrypt** para passwords (10 rounds)
+- ✅ **Helmet** con CSP (Content Security Policy)
+- ✅ **CORS** dinámico (múltiples orígenes en producción)
+- ✅ **Rate limiting** global (100 req/15min en producción)
+- ✅ **Validación de inputs** (express-validator)
+- ✅ **Stack traces ocultos** en producción
+- ✅ **Service role key** (NO expuesta al frontend)
+- ✅ **Login solo por username** (email es informativo)
+
+### Configuración de Producción
+
+**CORS múltiples orígenes:**
+```bash
+# En .env de producción
+ALLOWED_ORIGINS=https://app1.com,https://app2.com,https://app3.com
+```
+
+**Rate Limiting:**
+```bash
+ENABLE_RATE_LIMIT=true
+RATE_LIMIT_MAX_REQUESTS=100
+RATE_LIMIT_WINDOW_MS=900000
+```
+
+**JWT Secret:**
+```bash
+# Generar con:
+npm run generate-jwt
+# Copiar el resultado a JWT_SECRET
+```
+
+### Protecciones Activas
+
+1. **Filtrado en BD**: Operarios solo reciben sus datos
+2. **Validación de permisos**: En cada endpoint
+3. **Errores sanitizados**: Sin stack traces en producción
+4. **Headers de seguridad**: X-Frame-Options, X-Content-Type-Options, etc.
 
 ## 📝 Notas
 
 - El backend usa la **service_role key** que bypasea RLS
 - Todos los permisos se manejan en el código del backend
 - El frontend debe enviar el JWT en cada request
+- HTTPS es provisto por Render.com en producción

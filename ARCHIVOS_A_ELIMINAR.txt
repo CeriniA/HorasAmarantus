@@ -1,0 +1,174 @@
+# Archivos que se pueden eliminar de forma segura
+
+## Documentos Redundantes (carpeta Mds/)
+
+La mayoría de estos documentos están desactualizados o su información fue consolidada en:
+- README.md (raíz)
+- ARQUITECTURA.md
+- backend/README.md
+
+### Eliminar de Mds/:
+- AUDITORIA_ARQUITECTURA.md
+- AUDITORIA_FINAL.md
+- ARQUITECTURA_OFFLINE_MEJORADA.md
+- BUENAS_PRACTICAS_TRY_CATCH.md
+- CAMBIO_USERNAME_SIN_EMAIL.md
+- COHERENCIA_OFFLINE_ONLINE.md
+- CRUD_ORGANIZATIONAL_UNITS.md
+- DEBUG_JERARQUIAS.md
+- DEBUG_SINCRONIZACION.md
+- DEPLOYMENT.md
+- DESPLIEGUE_PRODUCCION.md
+- ESTADO_FINAL.md
+- FIX_FILTRO_USUARIOS_REPORTES.md
+- FIX_REPORTES_JERARQUICO.md
+- FIX_TIPOS_ESPAÑOL.md
+- GUIA_RENDER_PASO_A_PASO.md
+- INSTRUCCIONES_FINALES.md
+- LOGGING.md
+- MIGRACION_3_ROLES.md
+- MIGRACION_ARQUITECTURA_OFFLINE.md
+- MODO_OFFLINE.md
+- MODO_OFFLINE_EXPLICACION.md
+- PANEL_ADMINISTRACION_COMPLETADO.md
+- QUICK_START.md (duplicado del README)
+- RESUMEN_CAMBIOS.md
+- RESUMEN_REFACTORIZACION.md
+- SEGURIDAD_APP_PRIVADA.md
+- SELECCION_JERARQUICA_CRUD.md
+- SELECCION_JERARQUICA_IMPLEMENTADA.md
+- SETUP_COMPLETO.md
+- SETUP_SUPABASE.md
+- SISTEMA_PERMISOS_Y_REPORTES.md
+- SOLUCION_DOBLE_SINCRONIZACION.md
+- SOLUCION_DUPLICADOS.md
+- SOLUCION_ERROR_DEXIE.md
+- SOLUCION_FINAL_DUPLICADOS.md
+- TROUBLESHOOTING_OFFLINE.md
+- VERIFICACION_PUERTOS.md
+
+### Eliminar de raíz:
+- SEGURIDAD.md (info consolidada en ARQUITECTURA.md)
+- RESUMEN_EJECUTIVO.md (reemplazado por README.md)
+- RENDER_RAPIDO.md (info en DEPLOY_RENDER_COMPLETO.md)
+- DEPLOY_RAPIDO.md (info en DEPLOY_RENDER_COMPLETO.md)
+- DEBUG_CONSOLA.md
+- ARQUITECTURA_API.md (info en backend/README.md)
+- INSTRUCCIONES_EMAIL_OPCIONAL.md (ya no aplica, login es solo username)
+- VERIFICAR_RENDER_ENV.md (info en DEPLOY_RENDER_COMPLETO.md)
+- GUIA_VERIFICACION_PASO_A_PASO.md (info en README.md)
+
+## Archivos .bat (Scripts de Deploy)
+
+Estos scripts fueron útiles durante desarrollo pero ya no son necesarios:
+- fix-deploy.bat
+- fix-icons.bat
+- push-carga-jornada.bat
+- push-email-opcional.bat
+- push-final.bat
+- push-fix.bat
+- push-health-fix.bat
+- push-login-fix.bat
+- push-navbar-fix.bat
+- push-reportes-mejorados.bat
+- push-resumen.bat
+- push-routes-fix.bat
+- push-settings-funcionales.bat
+- push-settings.bat
+
+## Archivos SQL de Debug
+
+- DEBUG_JERARQUIAS.sql (ya no necesario)
+- VERIFICAR_JERARQUIAS.sql (ya no necesario)
+- MIGRACION_EMAIL_OPCIONAL.sql (ya aplicado)
+
+## Archivos a MANTENER
+
+### Documentación Esencial:
+- README.md (raíz) ✅
+- ARQUITECTURA.md ✅
+- backend/README.md ✅
+- CREAR_SUPERADMIN.md ✅
+- DEPLOY_RENDER_COMPLETO.md ✅
+- INSTALAR_PWA.md ✅
+- CONFIGURAR_RENDER_AHORA.md ✅
+
+### Archivos de Configuración:
+- .env.example ✅
+- package.json ✅
+- vite.config.js ✅
+- tailwind.config.js ✅
+- etc.
+
+### Scripts Útiles:
+- JWT_SECRETS.txt ✅ (referencia de secrets generados)
+
+### Schema de BD:
+- supabase/schema-simple.sql ✅
+
+## Comando para Eliminar (Windows)
+
+```cmd
+cd "C:\Users\Adri\Desktop\Sistema Horas\app-web"
+
+# Eliminar MDs redundantes
+del /Q Mds\AUDITORIA_*.md
+del /Q Mds\ARQUITECTURA_*.md
+del /Q Mds\BUENAS_*.md
+del /Q Mds\CAMBIO_*.md
+del /Q Mds\COHERENCIA_*.md
+del /Q Mds\CRUD_*.md
+del /Q Mds\DEBUG_*.md
+del /Q Mds\DEPLOY*.md
+del /Q Mds\DESPLIEGUE_*.md
+del /Q Mds\ESTADO_*.md
+del /Q Mds\FIX_*.md
+del /Q Mds\GUIA_*.md
+del /Q Mds\INSTRUCCIONES_*.md
+del /Q Mds\LOGGING.md
+del /Q Mds\MIGRACION_*.md
+del /Q Mds\MODO_*.md
+del /Q Mds\PANEL_*.md
+del /Q Mds\QUICK_*.md
+del /Q Mds\RESUMEN_*.md
+del /Q Mds\SEGURIDAD_*.md
+del /Q Mds\SELECCION_*.md
+del /Q Mds\SETUP_*.md
+del /Q Mds\SISTEMA_*.md
+del /Q Mds\SOLUCION_*.md
+del /Q Mds\TROUBLESHOOTING_*.md
+del /Q Mds\VERIFICACION_*.md
+
+# Eliminar MDs de raíz
+del /Q SEGURIDAD.md
+del /Q RESUMEN_EJECUTIVO.md
+del /Q RENDER_RAPIDO.md
+del /Q DEPLOY_RAPIDO.md
+del /Q DEBUG_CONSOLA.md
+del /Q ARQUITECTURA_API.md
+del /Q INSTRUCCIONES_EMAIL_OPCIONAL.md
+del /Q VERIFICAR_RENDER_ENV.md
+del /Q GUIA_VERIFICACION_PASO_A_PASO.md
+
+# Eliminar scripts .bat
+del /Q *.bat
+
+# Eliminar SQLs de debug
+del /Q DEBUG_JERARQUIAS.sql
+del /Q VERIFICAR_JERARQUIAS.sql
+del /Q MIGRACION_EMAIL_OPCIONAL.sql
+
+echo Limpieza completada!
+```
+
+## Nota
+
+Después de eliminar, el proyecto quedará con solo la documentación esencial:
+- README.md (índice principal)
+- ARQUITECTURA.md (arquitectura técnica)
+- backend/README.md (API docs)
+- CREAR_SUPERADMIN.md
+- DEPLOY_RENDER_COMPLETO.md
+- INSTALAR_PWA.md
+- CONFIGURAR_RENDER_AHORA.md
+- Mds/README.md (si tiene contenido útil)

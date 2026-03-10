@@ -11,7 +11,14 @@ export class UserRepository extends BaseRepository {
   }
 
   /**
-   * Buscar por email
+   * Buscar por username
+   */
+  async findByUsername(username) {
+    return await this.findWhere('username', username);
+  }
+  
+  /**
+   * Buscar por email (opcional, para búsquedas)
    */
   async findByEmail(email) {
     return await this.findWhere('email', email);

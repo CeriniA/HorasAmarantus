@@ -10,29 +10,15 @@ const router = express.Router();
 // POST /api/auth/login
 router.post('/login', validateLogin, async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    // Buscar usuario por username o email
-    // Primero intentar por username (más común)
-    let { data: user, error } = await supabase
+    // Buscar usuario por username
+    const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .eq('username', email)
+      .eq('username', username)
       .eq('is_active', true)
       .maybeSingle();
-
-    // Si no se encuentra por username, intentar por email (si tiene @)
-    if (!user && email.includes('@')) {
-      const result = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .eq('is_active', true)
-        .maybeSingle();
-      
-      user = result.data;
-      error = result.error;
-    }
 
     if (error || !user) {
       return res.status(401).json({ error: 'Credenciales inválidas' });

@@ -7,7 +7,7 @@ import Button from '../components/common/Button';
 import Alert from '../components/common/Alert';
 
 export const Login = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,7 +27,7 @@ export const Login = () => {
     setIsLoading(true);
 
     try {
-      const result = await signIn(email, password);
+      const result = await signIn(username, password);
       
       if (result.success) {
         navigate('/');
@@ -72,13 +72,13 @@ export const Login = () => {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <Input
-              label="Usuario o Email"
+              label="Usuario"
               type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="superadmin o usuario@ejemplo.com"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Ingresa tu usuario"
               required
-              autoComplete="off"
+              autoComplete="username"
               autoFocus
             />
 
@@ -102,20 +102,6 @@ export const Login = () => {
             </Button>
           </form>
 
-          {/* Información de demo */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm font-medium text-blue-900 mb-2">
-              💡 Puedes usar username o email:
-            </p>
-            <div className="text-xs text-blue-800 space-y-1">
-              <p><strong>Superadmin:</strong> superadmin (sin @)</p>
-              <p><strong>Admin:</strong> admin@horticola.com</p>
-              <p><strong>Operario:</strong> operario1 (sin @)</p>
-              <p className="mt-2 text-blue-600">
-                (Contraseña: configúrala en Supabase o usa el script create-superadmin)
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

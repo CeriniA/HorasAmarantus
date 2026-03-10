@@ -20,8 +20,24 @@ validateConfig();
 
 const app = express();
 
-// Middleware de seguridad
-app.use(helmet());
+// Middleware de seguridad con CSP
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Para estilos inline si es necesario
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", config.cors.frontendUrl],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Permite recursos de otros orígenes
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 
 // CORS - Configuración desde config centralizada
 app.use(cors({

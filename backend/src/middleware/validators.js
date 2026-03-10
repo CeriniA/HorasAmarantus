@@ -15,7 +15,7 @@ export const handleValidationErrors = (req, res, next) => {
 
 // Validadores para Auth
 export const validateLogin = [
-  body('email')
+  body('username')
     .trim()
     .notEmpty()
     .withMessage('Usuario requerido'),

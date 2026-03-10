@@ -81,7 +81,7 @@ export const useAuth = () => {
     }
   };
 
-  const signIn = async (email, password) => {
+  const signIn = async (username, password) => {
     try {
       setLoading(true);
       setError(null);
@@ -91,7 +91,7 @@ export const useAuth = () => {
         throw new Error('No hay conexión a internet. El login requiere conexión.');
       }
 
-      const { token, user: userData } = await authService.login(email, password);
+      const { token, user: userData } = await authService.login(username, password);
       
       // Guardar token
       api.setToken(token);

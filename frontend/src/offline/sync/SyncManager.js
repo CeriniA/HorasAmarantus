@@ -130,12 +130,16 @@ export class SyncManager {
 
   /**
    * Verificar si hay conexión a internet
+   * Solo usa navigator.onLine para evitar peticiones innecesarias al backend
    */
   async isOnline() {
-    if (!navigator.onLine) {
-      return false;
-    }
+    return navigator.onLine;
+  }
 
+  /**
+   * Verificar conectividad real con el backend (solo cuando sea necesario)
+   */
+  async checkBackendHealth() {
     try {
       const response = await fetch(`${API_URL}/health`, { 
         method: 'HEAD',

@@ -45,9 +45,9 @@ router.post('/', validateCreateTimeEntry, async (req, res) => {
 
     const { organizational_unit_id, description, start_time, end_time, user_id } = req.body;
     
-    // Solo admins pueden crear registros para otros usuarios
+    // Solo admins y superadmins pueden crear registros para otros usuarios
     const targetUserId = user_id || req.user.id;
-    if (targetUserId !== req.user.id && req.user.role !== 'admin') {
+    if (targetUserId !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({ error: 'No puedes crear registros para otros usuarios' });
     }
 

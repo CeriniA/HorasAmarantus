@@ -11,7 +11,7 @@ export const db = new Dexie('SistemaHorasDB');
 // Definir schema
 db.version(1).stores({
   // Usuarios (cache local)
-  users: 'id, email, role, organizational_unit_id',
+  users: 'id, username, role, organizational_unit_id',
   
   // Unidades organizacionales (cache local)
   organizational_units: 'id, parent_id, type, level, name',

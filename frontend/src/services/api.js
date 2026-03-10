@@ -176,7 +176,7 @@ export const api = new ApiClient();
 
 // Servicios específicos
 export const authService = {
-  login: (email, password) => api.post('/auth/login', { email, password }, { auth: false }),
+  login: (username, password) => api.post('/auth/login', { username, password }, { auth: false }),
   register: (userData) => api.post('/auth/register', userData),
   getMe: () => api.get('/auth/me'),
   changePassword: (currentPassword, newPassword) => 

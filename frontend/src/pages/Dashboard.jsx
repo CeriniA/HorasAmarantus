@@ -75,7 +75,9 @@ export const Dashboard = () => {
               <Clock className="h-6 w-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Hoy</p>
+              <p className="text-sm font-medium text-gray-500">
+                {user?.role === 'operario' ? 'Tus Horas Hoy' : 'Horas Hoy'}
+              </p>
               <p className="text-2xl font-bold text-gray-900">
                 {todayHours.toFixed(1)}h
               </p>
@@ -92,7 +94,9 @@ export const Dashboard = () => {
               <TrendingUp className="h-6 w-6 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Esta Semana</p>
+              <p className="text-sm font-medium text-gray-500">
+                {user?.role === 'operario' ? 'Tu Semana' : 'Esta Semana'}
+              </p>
               <p className="text-2xl font-bold text-gray-900">
                 {weekHours.toFixed(1)}h
               </p>
@@ -109,7 +113,9 @@ export const Dashboard = () => {
               <Briefcase className="h-6 w-6 text-purple-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Este Mes</p>
+              <p className="text-sm font-medium text-gray-500">
+                {user?.role === 'operario' ? 'Tu Mes' : 'Este Mes'}
+              </p>
               <p className="text-2xl font-bold text-gray-900">
                 {monthHours.toFixed(1)}h
               </p>
@@ -123,7 +129,10 @@ export const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Últimas entradas */}
-        <Card title="Últimas Entradas" subtitle="Tus registros más recientes">
+        <Card 
+          title={user?.role === 'operario' ? 'Tus Últimas Entradas' : 'Últimos Registros'} 
+          subtitle={user?.role === 'operario' ? 'Tus registros más recientes' : 'Registros más recientes del sistema'}
+        >
           <div className="space-y-4">
             {recentEntries.length === 0 ? (
               <p className="text-center text-gray-500 py-8">
@@ -161,7 +170,10 @@ export const Dashboard = () => {
         </Card>
 
         {/* Top áreas */}
-        <Card title="Áreas Más Trabajadas" subtitle="Top 5 este mes">
+        <Card 
+          title={user?.role === 'operario' ? 'Tus Áreas Más Trabajadas' : 'Áreas Más Trabajadas'} 
+          subtitle="Top 5 este mes"
+        >
           <div className="space-y-4">
             {topUnits.length === 0 ? (
               <p className="text-center text-gray-500 py-8">
