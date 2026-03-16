@@ -22,6 +22,7 @@ export const Reports = () => {
   
   const [users, setUsers] = useState([]);
   const [units, setUnits] = useState([]);
+  const [filteredEntries, setFilteredEntries] = useState([]);
   const [reportData, setReportData] = useState({
     totalHours: 0,
     totalEntries: 0,
@@ -199,6 +200,9 @@ export const Reports = () => {
       const byDay = Object.values(byDayMap)
         .sort((a, b) => a.date.localeCompare(b.date));
 
+      // Guardar las entradas filtradas para el CSV
+      setFilteredEntries(filteredEntries);
+      
       setReportData({
         totalHours,
         totalEntries,
@@ -215,25 +219,40 @@ export const Reports = () => {
   };
 
   const exportToCSV = () => {
-    // Crear CSV con los datos del reporte
-    const headers = ['Fecha', 'Usuario', 'Unidad', 'Descripción', 'Inicio', 'Fin', 'Horas'];
-    const rows = reportData.byDay.flatMap(day => 
-      // Aquí deberías tener acceso a las entradas individuales
-      // Por simplicidad, exportamos el resumen
-      [[day.date, '', '', '', '', '', day.hours.toFixed(2)]]
-    );
+    // Verificar que estamos en el navegador
+    if (typeof window === 'undefined') return;
+    
+    // Crear CSV con TODOS los registros individuales
+    const headers = ['Fecha', 'Usuario', 'Unidad', 'Tipo Unidad', 'Descripción', 'Hora Inicio', 'Hora Fin', 'Total Horas'];
+    
+    const rows = filteredEntries.map(entry => {
+      const startTime = new Date(entry.start_time);
+      const endTime = entry.end_time ? new Date(entry.end_time) : null;
+      
+      return [
+        format(startTime, 'yyyy-MM-dd'),
+        entry.users?.name || 'Desconocido',
+        entry.organizational_units?.name || 'Sin unidad',
+        entry.organizational_units?.type || '',
+        (entry.description || '').replace(/,/g, ';'), // Reemplazar comas para no romper el CSV
+        format(startTime, 'HH:mm:ss'),
+        endTime ? format(endTime, 'HH:mm:ss') : '',
+        entry.total_hours?.toFixed(2) || '0.00'
+      ];
+    });
 
     const csv = [
       headers.join(','),
-      ...rows.map(row => row.join(','))
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')) // Encerrar en comillas para manejar caracteres especiales
     ].join('\n');
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reporte-horas-${startDate}-${endDate}.csv`;
+    a.download = `reporte-horas-detallado-${startDate}-${endDate}.csv`;
     a.click();
+    window.URL.revokeObjectURL(url); // Limpiar el objeto URL
   };
 
   const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
