@@ -80,10 +80,19 @@ class ApiClient {
         console.error('API Error:', {
           status: response.status,
           url: response.url,
-          message: errorMessage,
+          message: data.message || data.error || 'Error desconocido',
           data: data,
-          errors: data.errors
+          errors: data.errors,
+          fullError: data // Mostrar error completo
         });
+        
+        // Mostrar errores de validación específicos
+        if (data.errors && Array.isArray(data.errors)) {
+          console.error('🔴 Errores de validación detallados:');
+          data.errors.forEach((err, index) => {
+            console.error(`  ${index + 1}.`, err);
+          });
+        }
       }
 
       const error = new Error(errorMessage);

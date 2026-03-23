@@ -56,7 +56,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control']
 }));
 
 // Rate limiting - Configuración desde config centralizada
@@ -96,6 +96,9 @@ app.get('/api/health', (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Manejar preflight requests (OPTIONS) para CORS
+app.options('*', cors());
 
 // Manejo de errores centralizado
 app.use(notFoundHandler);

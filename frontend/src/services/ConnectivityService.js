@@ -11,8 +11,10 @@
  *   const status = await connectivityService.checkConnectivity();
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const HEALTH_ENDPOINT = `${API_URL}/health`;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// Remover /api del final si existe para construir la URL del health endpoint
+const BASE_URL = API_URL.replace(/\/api$/, '');
+const HEALTH_ENDPOINT = `${BASE_URL}/health`;
 const TIMEOUT_MS = 5000; // 5 segundos
 
 /**
@@ -47,23 +49,22 @@ export class ConnectivityService {
       return status;
     }
 
-    // 2. Verificar backend con timeout
+    // 2. Verificar backend con fetch simple
     try {
       const startTime = Date.now();
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
+      if (import.meta.env.DEV) {
+        console.log(`🔍 Verificando conectividad con: ${HEALTH_ENDPOINT}`);
+      }
+      
+      // Fetch simple sin AbortController
       const response = await fetch(HEALTH_ENDPOINT, {
-        method: 'HEAD',
-        signal: controller.signal,
+        method: 'GET',
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache',
         },
       });
-
-      clearTimeout(timeoutId);
 
       const latency = Date.now() - startTime;
 
@@ -75,15 +76,25 @@ export class ConnectivityService {
         timestamp: new Date().toISOString(),
       };
 
+      if (import.meta.env.DEV) {
+        console.log(`✅ Conectividad verificada:`, status);
+      }
+
       this.updateStatus(status);
       return status;
 
     } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error(`❌ Error de conectividad:`, error.message);
+        console.log(`   Endpoint: ${HEALTH_ENDPOINT}`);
+        console.log(`   ¿Backend corriendo en http://localhost:3001?`);
+      }
+      
       const status = {
         online: true,
         backend: false,
         latency: null,
-        error: error.name === 'AbortError' ? 'Backend timeout' : error.message,
+        error: error.message,
         timestamp: new Date().toISOString(),
       };
 
@@ -98,16 +109,10 @@ export class ConnectivityService {
    */
   async isBackendReachable() {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 segundos
-
       const response = await fetch(HEALTH_ENDPOINT, {
-        method: 'HEAD',
-        signal: controller.signal,
+        method: 'GET',
         cache: 'no-cache',
       });
-
-      clearTimeout(timeoutId);
       return response.ok;
     } catch {
       return false;
@@ -190,6 +195,7 @@ export class ConnectivityService {
     this.checkConnectivity();
 
     // Verificar periódicamente
+    // eslint-disable-next-line no-undef
     this.checkInterval = setInterval(() => {
       this.checkConnectivity();
     }, intervalMs);
@@ -208,6 +214,7 @@ export class ConnectivityService {
    */
   stopMonitoring() {
     if (this.checkInterval) {
+      // eslint-disable-next-line no-undef
       clearInterval(this.checkInterval);
       this.checkInterval = null;
     }

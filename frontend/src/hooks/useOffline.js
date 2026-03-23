@@ -1,22 +1,41 @@
 import { useState, useEffect } from 'react';
 import { syncManager } from '../offline/index.js';
+import { connectivityService } from '../services/ConnectivityService.js';
 
 export const useOffline = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
   const [pendingChanges, setPendingChanges] = useState(0);
 
   useEffect(() => {
-    // Handlers para eventos de conectividad
-    const handleOnline = () => {
-      setIsOnline(true);
-      console.log('Conexión restaurada');
+    // Verificar conectividad inicial
+    const checkInitialConnectivity = async () => {
+      const status = await connectivityService.checkConnectivity();
+      setIsOnline(status.backend);
+      
+      if (import.meta.env.DEV) {
+        console.log('🔌 Estado inicial de conectividad:', status);
+      }
+    };
+    
+    checkInitialConnectivity();
+
+    // Handlers para eventos de conectividad del navegador
+    const handleOnline = async () => {
+      if (import.meta.env.DEV) {
+        console.log('📶 Navegador: conexión restaurada');
+      }
+      // Verificar backend real
+      const status = await connectivityService.checkConnectivity();
+      setIsOnline(status.backend);
     };
 
     const handleOffline = () => {
+      if (import.meta.env.DEV) {
+        console.log('📴 Navegador: conexión perdida');
+      }
       setIsOnline(false);
-      console.log('Conexión perdida');
     };
 
     // Listener para eventos de sincronización
@@ -28,6 +47,7 @@ export const useOffline = () => {
         
         case 'sync_complete':
           setIsSyncing(false);
+          setIsOnline(true); // Si sincronizó, está online
           setSyncStatus({
             type: 'success',
             message: `Sincronizados ${event.data.synced} registros`,

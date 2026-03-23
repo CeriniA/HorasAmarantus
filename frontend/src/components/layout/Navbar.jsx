@@ -69,20 +69,14 @@ export const Navbar = () => {
             </div>
           </div>
 
-          {/* Estado de conexión y usuario */}
-          <div className="flex items-center space-x-4">
-            {/* Indicador de conexión */}
-            <div className="flex items-center space-x-2">
+          {/* Estado de conexión y usuario - OPTIMIZADO MOBILE */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Indicador de conexión - MÁS COMPACTO */}
+            <div className="flex items-center gap-1">
               {isOnline ? (
-                <div className="flex items-center text-green-600">
-                  <Wifi className="h-5 w-5" />
-                  <span className="ml-1 text-sm hidden md:inline">Online</span>
-                </div>
+                <Wifi className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" title="Online" />
               ) : (
-                <div className="flex items-center text-red-600">
-                  <WifiOff className="h-5 w-5" />
-                  <span className="ml-1 text-sm hidden md:inline">Offline</span>
-                </div>
+                <WifiOff className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" title="Offline" />
               )}
 
               {/* Botón de sincronización */}
@@ -90,16 +84,16 @@ export const Navbar = () => {
                 <button
                   onClick={handleManualSync}
                   disabled={isSyncing || !isOnline}
-                  className="flex items-center text-sm text-primary-600 hover:text-primary-700 disabled:opacity-50"
+                  className="flex items-center text-xs sm:text-sm text-primary-600 hover:text-primary-700 disabled:opacity-50 px-1"
                   title={`${pendingChanges} cambios pendientes`}
                 >
-                  <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                  <span className="ml-1 hidden md:inline">{pendingChanges}</span>
+                  <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                  <span className="ml-0.5 font-medium">{pendingChanges}</span>
                 </button>
               )}
             </div>
 
-            {/* Menú de usuario */}
+            {/* Menú de usuario - DESKTOP */}
             <div className="hidden sm:flex sm:items-center">
               <div className="relative">
                 <button
@@ -107,7 +101,7 @@ export const Navbar = () => {
                   className="flex items-center text-sm text-gray-700 hover:text-gray-900"
                 >
                   <User className="h-5 w-5 mr-2" />
-                  <span className="font-medium">{user?.name}</span>
+                  <span className="font-medium truncate max-w-[120px]">{user?.name}</span>
                 </button>
 
                 {isMenuOpen && (

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Conectividad</title>
+</head>
+<body>
+    <h1>Test de Conectividad</h1>
+    <button onclick="testHealth()">Probar /health</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testHealth() {
+            const result = document.getElementById('result');
+            result.textContent = 'Probando...';
+            
+            try {
+                const response = await fetch('http://localhost:3001/health', {
+                    method: 'GET',
+                    cache: 'no-cache',
+                });
+                
+                const data = await response.json();
+                
+                result.textContent = `
+✅ SUCCESS!
+Status: ${response.status}
+OK: ${response.ok}
+Data: ${JSON.stringify(data, null, 2)}
+                `;
+            } catch (error) {
+                result.textContent = `
+❌ ERROR!
+Message: ${error.message}
+Name: ${error.name}
+                `;
+            }
+        }
+        
+        // Auto-test al cargar
+        testHealth();
+    </script>
+</body>
+</html>

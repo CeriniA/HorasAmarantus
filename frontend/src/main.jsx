@@ -12,6 +12,7 @@ runMigrations().catch(error => {
 // Importar utilidades de debug en desarrollo
 if (import.meta.env.DEV) {
   import('./utils/dbDebug.js');
+  import('./utils/syncDebug.js');
   import('./offline/utils/debugSync.js');
   import('./offline/utils/debugDuplicates.js');
 }
