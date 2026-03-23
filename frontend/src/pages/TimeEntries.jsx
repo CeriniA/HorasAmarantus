@@ -159,49 +159,90 @@ export const TimeEntries = () => {
       </div>
 
       {/* Controles superiores: Filtros + Botón Cargar */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        {/* Filtros */}
-        <div className="flex flex-wrap gap-2 items-center">
-          <select
-            value={filterMode}
-            onChange={(e) => setFilterMode(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-          >
-            <option value="month">Por Mes</option>
-            <option value="year">Por Año</option>
-            <option value="all">Todos</option>
-          </select>
+      <Card>
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-1">
+            <span className="text-sm font-medium text-gray-700">Filtrar por:</span>
+            
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Botones de modo */}
+              <div className="inline-flex rounded-lg border border-gray-300 bg-white">
+                <button
+                  onClick={() => setFilterMode('month')}
+                  className={`px-4 py-2 text-sm font-medium rounded-l-lg transition-colors ${
+                    filterMode === 'month'
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Mes
+                </button>
+                <button
+                  onClick={() => setFilterMode('year')}
+                  className={`px-4 py-2 text-sm font-medium border-x border-gray-300 transition-colors ${
+                    filterMode === 'year'
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Año
+                </button>
+                <button
+                  onClick={() => setFilterMode('all')}
+                  className={`px-4 py-2 text-sm font-medium rounded-r-lg transition-colors ${
+                    filterMode === 'all'
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Todo
+                </button>
+              </div>
 
-          {filterMode === 'month' && (
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          )}
+              {/* Selector de mes */}
+              {filterMode === 'month' && (
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+              )}
 
-          {filterMode === 'year' && (
-            <input
-              type="number"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(e.target.value)}
-              min="2020"
-              max="2030"
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-24 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          )}
+              {/* Selector de año */}
+              {filterMode === 'year' && (
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="2026">2026</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                  <option value="2022">2022</option>
+                </select>
+              )}
 
-          <span className="text-sm text-gray-600">
-            {filteredEntries.length} {filteredEntries.length === 1 ? 'registro' : 'registros'}
-          </span>
+              {/* Contador de registros */}
+              <div className="px-3 py-2 bg-gray-100 rounded-lg">
+                <span className="text-sm font-semibold text-gray-900">
+                  {filteredEntries.length}
+                </span>
+                <span className="text-sm text-gray-600 ml-1">
+                  {filteredEntries.length === 1 ? 'registro' : 'registros'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Botón Cargar */}
+          <Button onClick={() => setShowBulkEntry(true)} className="w-full sm:w-auto">
+            📋 Cargar Horas
+          </Button>
         </div>
-
-        {/* Botón Cargar */}
-        <Button onClick={() => setShowBulkEntry(true)}>
-          📋 Cargar Horas
-        </Button>
-      </div>
+      </Card>
 
       {/* Alertas */}
       {alert && (
