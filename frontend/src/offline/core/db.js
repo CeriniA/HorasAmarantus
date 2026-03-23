@@ -23,7 +23,10 @@ db.version(1).stores({
   sync_queue: '++id, entity_type, entity_id, action, timestamp, retry_count',
   
   // Metadata de sincronización
-  sync_metadata: 'key, value, updated_at'
+  sync_metadata: 'key, value, updated_at',
+  
+  // ✅ NUEVO: Mapeo de IDs temporales a IDs del servidor
+  id_mappings: 'temp_id, server_id, entity_type, created_at'
 });
 
 export default db;

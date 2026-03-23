@@ -8,6 +8,14 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png'],
+      
+      // ✅ MEJORADO: Habilitar en desarrollo
+      devOptions: {
+        enabled: true,
+        type: 'module',
+        navigateFallback: 'index.html',
+      },
+      
       manifest: {
         name: 'Sistema Horas Hortícola',
         short_name: 'SistemaHoras',
@@ -64,18 +72,61 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        
+        // ✅ MEJORADO: Estrategias de caching optimizadas
         runtimeCaching: [
+          // API - NetworkFirst (prioriza red, fallback a cache)
           {
-            urlPattern: /^http:\/\/localhost:3001\/api\/.*/i,
+            urlPattern: /^https?:\/\/.*\/api\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
+              networkTimeoutSeconds: 10,
               expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 // 1 hora
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 // 24 horas
               },
               cacheableResponse: {
                 statuses: [0, 200]
+              }
+            }
+          },
+          
+          // Imágenes - CacheFirst (prioriza cache)
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images-cache',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 días
+              }
+            }
+          },
+          
+          // Fuentes - CacheFirst
+          {
+            urlPattern: /\.(?:woff|woff2|ttf|otf)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'fonts-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 año
+              }
+            }
+          },
+          
+          // CSS y JS - StaleWhileRevalidate
+          {
+            urlPattern: /\.(?:js|css)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'static-resources',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 días
               }
             }
           }

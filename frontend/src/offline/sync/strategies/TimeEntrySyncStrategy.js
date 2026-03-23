@@ -3,6 +3,7 @@
  */
 
 import { SyncStrategy } from './SyncStrategy.js';
+import { idMappingService } from '../../../services/IdMappingService.js';
 
 export class TimeEntrySyncStrategy extends SyncStrategy {
   /**
@@ -27,6 +28,8 @@ export class TimeEntrySyncStrategy extends SyncStrategy {
    * Crear time entry en el servidor
    */
   async create(data) {
+    const tempId = data.id;
+
     const { timeEntry } = await this.api.post('/time-entries', {
       organizational_unit_id: data.organizational_unit_id,
       description: data.description,
@@ -34,13 +37,25 @@ export class TimeEntrySyncStrategy extends SyncStrategy {
       end_time: data.end_time
     });
 
-    // IMPORTANTE: El servidor devuelve un NUEVO id
-    // Debemos eliminar el registro local y crear uno nuevo
+    const serverId = timeEntry.id;
+
+    // ✅ MEJORADO: Mapear IDs y actualizar referencias
+    if (tempId !== serverId) {
+      // 1. Mapear ID temporal a ID del servidor
+      await idMappingService.mapId(tempId, serverId, 'time_entries');
+
+      // 2. Actualizar referencias en la cola de sincronización
+      await idMappingService.updateReferencesInQueue('time_entries', tempId, serverId);
+
+      // 3. Eliminar registro local con ID temporal
+      await this.repository.delete(tempId);
+
+      if (import.meta.env.DEV) {
+        console.log(`🔗 ID temporal ${tempId} mapeado a ${serverId}`);
+      }
+    }
     
-    // 1. Eliminar registro local con id temporal
-    await this.repository.delete(data.id);
-    
-    // 2. Guardar con el id del servidor
+    // 4. Guardar con el ID del servidor
     await this.repository.save({
       ...timeEntry,
       pending_sync: false,

@@ -8,6 +8,7 @@ import { useAuthContext } from '../context/AuthContext';
 import { timeEntriesService } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import { ORG_UNIT_TYPES } from '../constants';
 
 export const BulkTimeEntry = () => {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export const BulkTimeEntry = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
 
   // Obtener áreas únicas (type = 'area')
-  const allAreas = useMemo(() => units.filter(unit => unit.type === 'area'), [units]);
+  const allAreas = useMemo(() => units.filter(unit => unit.type === ORG_UNIT_TYPES.AREA), [units]);
 
   // Obtener procesos de un área (solo nivel 1, sin subprocesos)
   const getProcessesForArea = (areaId) => {

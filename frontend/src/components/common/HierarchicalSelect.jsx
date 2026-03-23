@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import Select from './Select';
+import { ORG_UNIT_TYPES } from '../../constants';
 
 /**
- * Componente de selección jerárquica para Área → Proceso → Subproceso → Tarea
+ * Componente de selección jerárquica para la estructura organizacional
  */
 export const HierarchicalSelect = ({ 
   units = [], 
@@ -16,11 +17,11 @@ export const HierarchicalSelect = ({
   const [selectedSubprocess, setSelectedSubprocess] = useState('');
   const [selectedTask, setSelectedTask] = useState('');
 
-  // Filtrar por tipo (usando nombres en español como el CRUD)
-  const areas = units.filter(u => u.type === 'area');
-  const processes = units.filter(u => u.type === 'proceso' && u.parent_id === selectedArea);
-  const subprocesses = units.filter(u => u.type === 'subproceso' && u.parent_id === selectedProcess);
-  const tasks = units.filter(u => u.type === 'tarea' && u.parent_id === selectedSubprocess);
+  // Filtrar por tipo
+  const areas = units.filter(u => u.type === ORG_UNIT_TYPES.AREA);
+  const processes = units.filter(u => u.type === ORG_UNIT_TYPES.PROCESO && u.parent_id === selectedArea);
+  const subprocesses = units.filter(u => u.type === ORG_UNIT_TYPES.SUBPROCESO && u.parent_id === selectedProcess);
+  const tasks = units.filter(u => u.type === ORG_UNIT_TYPES.TAREA && u.parent_id === selectedSubprocess);
 
   // Debug
   if (import.meta.env.DEV) {
@@ -42,18 +43,18 @@ export const HierarchicalSelect = ({
     if (value && units.length > 0) {
       const selectedUnit = units.find(u => u.id === value);
       if (selectedUnit) {
-        // Reconstruir la jerarquía (usando tipos en español)
-        if (selectedUnit.type === 'area') {
+        // Reconstruir la jerarquía
+        if (selectedUnit.type === ORG_UNIT_TYPES.AREA) {
           setSelectedArea(selectedUnit.id);
           setSelectedProcess('');
           setSelectedSubprocess('');
           setSelectedTask('');
-        } else if (selectedUnit.type === 'proceso') {
+        } else if (selectedUnit.type === ORG_UNIT_TYPES.PROCESO) {
           setSelectedProcess(selectedUnit.id);
           setSelectedArea(selectedUnit.parent_id || '');
           setSelectedSubprocess('');
           setSelectedTask('');
-        } else if (selectedUnit.type === 'subproceso') {
+        } else if (selectedUnit.type === ORG_UNIT_TYPES.SUBPROCESO) {
           setSelectedSubprocess(selectedUnit.id);
           const process = units.find(u => u.id === selectedUnit.parent_id);
           if (process) {
@@ -61,7 +62,7 @@ export const HierarchicalSelect = ({
             setSelectedArea(process.parent_id || '');
           }
           setSelectedTask('');
-        } else if (selectedUnit.type === 'tarea') {
+        } else if (selectedUnit.type === ORG_UNIT_TYPES.TAREA) {
           setSelectedTask(selectedUnit.id);
           const subprocess = units.find(u => u.id === selectedUnit.parent_id);
           if (subprocess) {

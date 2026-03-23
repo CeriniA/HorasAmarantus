@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { User, Lock, Bell, Save, Mail, AlertCircle } from 'lucide-react';
+import { Save, User, Lock, AlertCircle } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
+import { usersService } from '../services/api';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
+import { USER_ROLES, getRoleLabel } from '../constants';
 import { authService } from '../services/api';
 
 export const Settings = () => {
@@ -123,11 +125,11 @@ export const Settings = () => {
               </label>
               <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  user?.role === 'superadmin' ? 'bg-purple-100 text-purple-800' :
-                  user?.role === 'admin' ? 'bg-blue-100 text-blue-800' :
+                  user?.role === USER_ROLES.SUPERADMIN ? 'bg-purple-100 text-purple-800' :
+                  user?.role === USER_ROLES.ADMIN ? 'bg-blue-100 text-blue-800' :
                   'bg-green-100 text-green-800'
                 }`}>
-                  {user?.role}
+                  {getRoleLabel(user?.role)}
                 </span>
               </div>
             </div>

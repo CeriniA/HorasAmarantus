@@ -3,6 +3,7 @@ import { supabase } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireRole } from '../middleware/roles.js';
 import { validateCreateTimeEntry, validateUpdateTimeEntry, validateUUID } from '../middleware/validators.js';
+import { USER_ROLES, TIME_ENTRY_STATUS } from '../models/constants.js';
 
 const router = express.Router();
 
@@ -23,7 +24,7 @@ router.get('/', async (req, res) => {
       .order('start_time', { ascending: false });
 
     // Filtrar según rol
-    if (role === 'operario') {
+    if (role === USER_ROLES.OPERARIO) {
       query = query.eq('user_id', id);
     }
     // Superadmin y Admin ven todo (no se filtra)
@@ -47,7 +48,7 @@ router.post('/', validateCreateTimeEntry, async (req, res) => {
     
     // Solo admins y superadmins pueden crear registros para otros usuarios
     const targetUserId = user_id || req.user.id;
-    if (targetUserId !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+    if (targetUserId !== req.user.id && req.user.role !== USER_ROLES.ADMIN && req.user.role !== USER_ROLES.SUPERADMIN) {
       return res.status(403).json({ error: 'No puedes crear registros para otros usuarios' });
     }
 
@@ -60,7 +61,7 @@ router.post('/', validateCreateTimeEntry, async (req, res) => {
         description,
         start_time,
         end_time,
-        status: 'completed'
+        status: TIME_ENTRY_STATUS.COMPLETED
       })
       .select(`
         *,
@@ -94,7 +95,7 @@ router.put('/:id', validateUpdateTimeEntry, async (req, res) => {
       return res.status(404).json({ error: 'Registro no encontrado' });
     }
 
-    if (existing.user_id !== req.user.id && req.user.role !== 'admin') {
+    if (existing.user_id !== req.user.id && req.user.role !== USER_ROLES.ADMIN && req.user.role !== USER_ROLES.SUPERADMIN) {
       return res.status(403).json({ error: 'No puedes editar registros de otros usuarios' });
     }
 
@@ -130,7 +131,7 @@ router.post('/bulk', async (req, res) => {
 
     // Solo admins pueden crear registros para otros usuarios
     const targetUserId = user_id || req.user.id;
-    if (targetUserId !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
+    if (targetUserId !== req.user.id && req.user.role !== USER_ROLES.ADMIN && req.user.role !== USER_ROLES.SUPERADMIN) {
       return res.status(403).json({ error: 'No puedes crear registros para otros usuarios' });
     }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { authService, api } from '../services/api';
+import api, { authService } from '../services/api';
+import { USER_ROLES } from '../constants';
 import { db } from '../offline/core/db.js';
 
 export const useAuth = () => {
@@ -121,7 +122,7 @@ export const useAuth = () => {
         email,
         password,
         name: userData.name,
-        role: userData.role || 'operario',
+        role: userData.role || USER_ROLES.OPERARIO,
         organizational_unit_id: userData.organizational_unit_id || null,
       });
 
@@ -201,9 +202,9 @@ export const useAuth = () => {
     updateProfile,
     resetPassword,
     isAuthenticated: !!session,
-    isSuperadmin: user?.role === 'superadmin',
-    isAdmin: user?.role === 'admin',
-    isOperario: user?.role === 'operario',
+    isSuperadmin: user?.role === USER_ROLES.SUPERADMIN,
+    isAdmin: user?.role === USER_ROLES.ADMIN,
+    isOperario: user?.role === USER_ROLES.OPERARIO,
   };
 };
 

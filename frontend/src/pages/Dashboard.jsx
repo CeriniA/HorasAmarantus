@@ -1,11 +1,12 @@
-import { Clock, Users, Briefcase, TrendingUp } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { useTimeEntries } from '../hooks/useTimeEntries';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { USER_ROLES } from '../constants';
+import { Clock, TrendingUp, Briefcase, Users } from 'lucide-react';
 
 export const Dashboard = () => {
   const { user } = useAuthContext();
@@ -76,7 +77,7 @@ export const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">
-                {user?.role === 'operario' ? 'Tus Horas Hoy' : 'Horas Hoy'}
+                {user?.role === USER_ROLES.OPERARIO ? 'Tus Horas Hoy' : 'Horas Hoy'}
               </p>
               <p className="text-2xl font-bold text-gray-900">
                 {todayHours.toFixed(1)}h
@@ -95,7 +96,7 @@ export const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">
-                {user?.role === 'operario' ? 'Tu Semana' : 'Esta Semana'}
+                {user?.role === USER_ROLES.OPERARIO ? 'Tu Semana' : 'Esta Semana'}
               </p>
               <p className="text-2xl font-bold text-gray-900">
                 {weekHours.toFixed(1)}h
@@ -114,7 +115,7 @@ export const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">
-                {user?.role === 'operario' ? 'Tu Mes' : 'Este Mes'}
+                {user?.role === USER_ROLES.OPERARIO ? 'Tu Mes' : 'Este Mes'}
               </p>
               <p className="text-2xl font-bold text-gray-900">
                 {monthHours.toFixed(1)}h
@@ -130,8 +131,8 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Últimas entradas */}
         <Card 
-          title={user?.role === 'operario' ? 'Tus Últimas Entradas' : 'Últimos Registros'} 
-          subtitle={user?.role === 'operario' ? 'Tus registros más recientes' : 'Registros más recientes del sistema'}
+          title={user?.role === USER_ROLES.OPERARIO ? 'Tus Últimas Entradas' : 'Últimos Registros'} 
+          subtitle={user?.role === USER_ROLES.OPERARIO ? 'Tus registros más recientes' : 'Registros más recientes del sistema'}
         >
           <div className="space-y-4">
             {recentEntries.length === 0 ? (
@@ -171,7 +172,7 @@ export const Dashboard = () => {
 
         {/* Top áreas */}
         <Card 
-          title={user?.role === 'operario' ? 'Tus Áreas Más Trabajadas' : 'Áreas Más Trabajadas'} 
+          title={user?.role === USER_ROLES.OPERARIO ? 'Tus Áreas Más Trabajadas' : 'Áreas Más Trabajadas'} 
           subtitle="Top 5 este mes"
         >
           <div className="space-y-4">
@@ -219,7 +220,7 @@ export const Dashboard = () => {
             Registrar Horas
           </Button>
           
-          {(user?.role === 'admin' || user?.role === 'superadmin') && (
+          {(user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN) && (
             <>
               <Button
                 variant="outline"
@@ -241,7 +242,7 @@ export const Dashboard = () => {
             </>
           )}
           
-          {user?.role === 'admin' && (
+          {user?.role === USER_ROLES.ADMIN && (
             <Button
               variant="outline"
               fullWidth

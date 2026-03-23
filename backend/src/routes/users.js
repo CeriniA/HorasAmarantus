@@ -4,6 +4,7 @@ import { supabase } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireAdmin, canManageUser } from '../middleware/roles.js';
 import { validateCreateUser, validateUpdateUser, validateUUID } from '../middleware/validators.js';
+import { USER_ROLES } from '../models/constants.js';
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get('/', async (req, res) => {
       .eq('is_active', true);
 
     // Filtrar según rol
-    if (role === 'operario') {
+    if (role === USER_ROLES.OPERARIO) {
       // Operarios solo ven su propio perfil
       query = query.eq('id', id);
     }
@@ -105,18 +106,18 @@ router.put('/:id', validateUpdateUser, async (req, res) => {
     const updates = { ...req.body };
 
     // Solo el usuario mismo, admin o superadmin pueden actualizar
-    if (id !== userId && userRole !== 'admin' && userRole !== 'superadmin') {
+    if (id !== userId && userRole !== USER_ROLES.ADMIN && userRole !== USER_ROLES.SUPERADMIN) {
       return res.status(403).json({ error: 'No tienes permisos' });
     }
 
     // Verificar si intenta cambiar rol
     if (updates.role) {
       // Solo superadmin puede cambiar roles
-      if (userRole !== 'superadmin') {
+      if (userRole !== USER_ROLES.SUPERADMIN) {
         delete updates.role;
       }
       // Admin no puede crear/editar otros admins o superadmins
-      else if (userRole === 'admin' && (updates.role === 'admin' || updates.role === 'superadmin')) {
+      else if (userRole === USER_ROLES.ADMIN && (updates.role === USER_ROLES.ADMIN || updates.role === USER_ROLES.SUPERADMIN)) {
         return res.status(403).json({ error: 'No puedes gestionar usuarios con rol admin o superadmin' });
       }
     }

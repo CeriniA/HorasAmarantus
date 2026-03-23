@@ -8,17 +8,13 @@ import Input from '../components/common/Input';
 import Select from '../components/common/Select';
 import Alert from '../components/common/Alert';
 import HierarchicalSelect from '../components/common/HierarchicalSelect';
+import { ORG_UNIT_TYPES, ORG_UNIT_TYPE_OPTIONS, getChildType, getUnitStyle, getUnitTypeLabel } from '../constants';
 
 const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = node.children && node.children.length > 0;
 
-  const typeColors = {
-    area: 'bg-blue-100 text-blue-800',
-    proceso: 'bg-green-100 text-green-800',
-    subproceso: 'bg-yellow-100 text-yellow-800',
-    tarea: 'bg-purple-100 text-purple-800'
-  };
+  // Usar estilos desde constantes
 
   return (
     <div className="ml-4">
@@ -42,8 +38,8 @@ const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
 
         {/* Node info */}
         <div className="flex-1 flex items-center space-x-3">
-          <span className={`px-2 py-1 rounded text-xs font-medium ${typeColors[node.type]}`}>
-            {node.type}
+          <span className={`px-2 py-1 rounded text-xs font-medium ${getUnitStyle(node.type, 'badge')}`}>
+            {getUnitTypeLabel(node.type)}
           </span>
           <span className="font-medium text-gray-900">{node.name}</span>
           <span className="text-xs text-gray-500">Nivel {node.level}</span>
@@ -103,16 +99,11 @@ export const OrganizationalUnits = () => {
 
   const [formData, setFormData] = useState({
     name: '',
-    type: 'area',
+    type: ORG_UNIT_TYPES.AREA,
     parent_id: null
   });
 
-  const typeOptions = [
-    { value: 'area', label: 'Área' },
-    { value: 'proceso', label: 'Proceso' },
-    { value: 'subproceso', label: 'Subproceso' },
-    { value: 'tarea', label: 'Tarea' }
-  ];
+  const typeOptions = ORG_UNIT_TYPE_OPTIONS;
 
   const handleCreate = () => {
     setModalMode('create');
@@ -120,7 +111,7 @@ export const OrganizationalUnits = () => {
     setParentUnit(null);
     setFormData({
       name: '',
-      type: 'area',
+      type: ORG_UNIT_TYPES.AREA,
       parent_id: null
     });
     setShowModal(true);
@@ -132,10 +123,7 @@ export const OrganizationalUnits = () => {
     setCurrentUnit(null);
     
     // Determinar el tipo automáticamente basado en el nivel
-    let childType = 'tarea';
-    if (parent.type === 'area') childType = 'proceso';
-    else if (parent.type === 'proceso') childType = 'subproceso';
-    else if (parent.type === 'subproceso') childType = 'tarea';
+    const childType = getChildType(parent.type) || ORG_UNIT_TYPES.TAREA;
 
     setFormData({
       name: '',
@@ -158,7 +146,7 @@ export const OrganizationalUnits = () => {
   };
 
   const handleDelete = async (unit) => {
-    if (!confirm(`¿Estás seguro de eliminar "${unit.name}"? Esto también eliminará todas sus unidades hijas.`)) {
+    if (!window.confirm(`¿Estás seguro de eliminar "${unit.name}"? Esto también eliminará todas sus unidades hijas.`)) {
       return;
     }
 
@@ -191,7 +179,7 @@ export const OrganizationalUnits = () => {
         message: modalMode === 'create' ? 'Unidad creada correctamente' : 'Unidad actualizada correctamente'
       });
       setShowModal(false);
-      setFormData({ name: '', type: 'area', parent_id: null });
+      setFormData({ name: '', type: ORG_UNIT_TYPES.AREA, parent_id: null });
     } else {
       setAlert({ type: 'error', message: result.error });
     }
@@ -206,7 +194,7 @@ export const OrganizationalUnits = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Estructura Organizacional</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Gestiona áreas, procesos, subprocesos y tareas
+            Gestiona la estructura jerárquica de la organización
           </p>
         </div>
         <Button onClick={handleCreate}>
@@ -288,7 +276,7 @@ export const OrganizationalUnits = () => {
           isOpen={showModal}
           onClose={() => {
             setShowModal(false);
-            setFormData({ name: '', type: 'area', parent_id: null });
+            setFormData({ name: '', type: ORG_UNIT_TYPES.AREA, parent_id: null });
           }}
           title={modalMode === 'create' ? 'Nueva Unidad Organizacional' : 'Editar Unidad'}
           footer={
@@ -297,7 +285,7 @@ export const OrganizationalUnits = () => {
                 variant="secondary"
                 onClick={() => {
                   setShowModal(false);
-                  setFormData({ name: '', type: 'area', parent_id: null });
+                  setFormData({ name: '', type: ORG_UNIT_TYPES.AREA, parent_id: null });
                 }}
               >
                 Cancelar
@@ -331,16 +319,16 @@ export const OrganizationalUnits = () => {
               onChange={(e) => setFormData({ 
                 ...formData, 
                 type: e.target.value,
-                parent_id: e.target.value === 'area' ? null : formData.parent_id // Resetear si es área
+                parent_id: e.target.value === ORG_UNIT_TYPES.AREA ? null : formData.parent_id // Resetear si es área
               })}
               options={typeOptions}
               disabled={!!parentUnit}
             />
 
-            {!parentUnit && modalMode === 'create' && formData.type !== 'area' && (
+            {!parentUnit && modalMode === 'create' && formData.type !== ORG_UNIT_TYPES.AREA && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Unidad Padre {formData.type === 'proceso' ? '(Área)' : formData.type === 'subproceso' ? '(Proceso)' : '(Subproceso)'}
+                  Unidad Padre {formData.type === ORG_UNIT_TYPES.PROCESO ? '(Área)' : formData.type === ORG_UNIT_TYPES.SUBPROCESO ? '(Proceso)' : '(Subproceso)'}
                 </label>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -360,9 +348,9 @@ export const OrganizationalUnits = () => {
                     <HierarchicalSelect
                       units={units.filter(u => {
                         // Filtrar según el tipo que estamos creando
-                        if (formData.type === 'proceso') return u.type === 'area';
-                        if (formData.type === 'subproceso') return u.type === 'area' || u.type === 'proceso';
-                        if (formData.type === 'tarea') return u.type === 'area' || u.type === 'proceso' || u.type === 'subproceso';
+                        if (formData.type === ORG_UNIT_TYPES.PROCESO) return u.type === ORG_UNIT_TYPES.AREA;
+                        if (formData.type === ORG_UNIT_TYPES.SUBPROCESO) return u.type === ORG_UNIT_TYPES.AREA || u.type === ORG_UNIT_TYPES.PROCESO;
+                        if (formData.type === ORG_UNIT_TYPES.TAREA) return u.type === ORG_UNIT_TYPES.AREA || u.type === ORG_UNIT_TYPES.PROCESO || u.type === ORG_UNIT_TYPES.SUBPROCESO;
                         return false;
                       })}
                       value={formData.parent_id || ''}
@@ -371,9 +359,9 @@ export const OrganizationalUnits = () => {
                   )}
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
-                  {formData.type === 'proceso' && 'Selecciona el área a la que pertenece este proceso'}
-                  {formData.type === 'subproceso' && 'Selecciona el proceso al que pertenece este subproceso'}
-                  {formData.type === 'tarea' && 'Selecciona el subproceso al que pertenece esta tarea'}
+                  {formData.type === ORG_UNIT_TYPES.PROCESO && 'Selecciona el área a la que pertenece este proceso'}
+                  {formData.type === ORG_UNIT_TYPES.SUBPROCESO && 'Selecciona el proceso al que pertenece este subproceso'}
+                  {formData.type === ORG_UNIT_TYPES.TAREA && 'Selecciona el subproceso al que pertenece esta tarea'}
                 </p>
               </div>
             )}

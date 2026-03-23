@@ -5,9 +5,7 @@
 
 import { SyncQueue } from './SyncQueue.js';
 import { db } from '../core/db.js';
-
-// URL base del API
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { connectivityService } from '../../services/ConnectivityService.js';
 
 export class SyncManager {
   constructor() {
@@ -130,25 +128,19 @@ export class SyncManager {
 
   /**
    * Verificar si hay conexión a internet
-   * Solo usa navigator.onLine para evitar peticiones innecesarias al backend
+   * ✅ MEJORADO: Usa ConnectivityService para verificar backend real
    */
   async isOnline() {
-    return navigator.onLine;
+    const status = await connectivityService.checkConnectivity();
+    return status.online && status.backend;
   }
 
   /**
    * Verificar conectividad real con el backend (solo cuando sea necesario)
+   * ✅ MEJORADO: Delega al ConnectivityService
    */
   async checkBackendHealth() {
-    try {
-      const response = await fetch(`${API_URL}/health`, { 
-        method: 'HEAD',
-        cache: 'no-cache'
-      });
-      return response.ok;
-    } catch {
-      return false;
-    }
+    return await connectivityService.isBackendReachable();
   }
 
   /**
@@ -190,27 +182,41 @@ export class SyncManager {
 
       for (const item of items) {
         try {
+          // ✅ NUEVO: Verificar si debe saltarse por exponential backoff
+          if (this.shouldSkipRetry(item)) {
+            const requiredDelay = this.calculateBackoff(item.retry_count);
+            const lastRetry = new Date(item.last_retry_at);
+            const timeSinceLastRetry = Date.now() - lastRetry.getTime();
+            const remainingDelay = Math.ceil((requiredDelay - timeSinceLastRetry) / 1000);
+            
+            if (import.meta.env.DEV) {
+              console.log(`⏸️ Item #${item.id} esperando backoff (${remainingDelay}s restantes)`);
+            }
+            continue; // Saltar este item por ahora
+          }
+
           if (import.meta.env.DEV) {
             console.log(`🔄 Sincronizando item #${item.id}:`, {
               type: item.entity_type,
               action: item.action,
-              entity_id: item.entity_id
+              entity_id: item.entity_id,
+              retry: item.retry_count || 0
             });
           }
           
-          // CRÍTICO: Remover de la cola ANTES de sincronizar
-          // Esto previene que otra llamada a sync() vea el mismo item
-          await this.queue.remove(item.id);
-          
-          if (import.meta.env.DEV) {
-            console.log(`🗑️ Item #${item.id} removido de cola, sincronizando...`);
-          }
-          
-          // Ahora sincronizar
+          // ✅ MEJORADO: Sincronizar PRIMERO
+          // Solo si tiene éxito, remover de la cola
           await this.syncItem(item);
           
           if (import.meta.env.DEV) {
             console.log(`✅ Item #${item.id} sincronizado exitosamente`);
+          }
+          
+          // ✅ Solo remover si la sincronización fue exitosa
+          await this.queue.remove(item.id);
+          
+          if (import.meta.env.DEV) {
+            console.log(`🗑️ Item #${item.id} removido de cola`);
           }
           
           results.synced++;
@@ -223,28 +229,39 @@ export class SyncManager {
             error: error.message
           });
 
-          // IMPORTANTE: Re-agregar a la cola porque falló
-          // Incrementar retry_count
+          // ✅ MEJORADO: Clasificar error y decidir estrategia
+          const errorType = this.classifyError(error);
           const retryCount = (item.retry_count || 0) + 1;
-          const isPermanentError = retryCount > 5;
+          const maxRetries = 5;
+          
+          // Marcar como permanente si:
+          // 1. Es un error permanente (400, 404, etc.)
+          // 2. O se excedió el número de reintentos
+          const isPermanentError = errorType === 'permanent' || retryCount > maxRetries;
           
           try {
-            await this.queue.table.add({
-              entity_type: item.entity_type,
-              entity_id: item.entity_id,
-              action: item.action,
-              data: item.data,
-              timestamp: new Date().toISOString(),
+            // Actualizar el item existente en lugar de crear uno nuevo
+            await this.queue.update(item.id, {
               retry_count: retryCount,
               error: error.message,
-              permanent_error: isPermanentError
+              error_type: errorType,
+              permanent_error: isPermanentError,
+              last_retry_at: new Date().toISOString()
             });
             
             if (import.meta.env.DEV) {
-              console.log(`🔁 Item #${item.id} re-agregado a cola (retry: ${retryCount})`);
+              if (isPermanentError) {
+                const reason = errorType === 'permanent' 
+                  ? `error ${errorType}` 
+                  : `${retryCount} intentos`;
+                console.warn(`⚠️ Item #${item.id} marcado como error permanente (${reason})`);
+              } else {
+                const nextDelay = this.calculateBackoff(retryCount);
+                console.log(`🔁 Item #${item.id} se reintentará en ${nextDelay/1000}s (intento ${retryCount}/${maxRetries}, tipo: ${errorType})`);
+              }
             }
-          } catch (reAddError) {
-            console.error('Error re-agregando item a cola:', reAddError);
+          } catch (updateError) {
+            console.error('Error actualizando item en cola:', updateError);
           }
         }
       }
@@ -290,6 +307,100 @@ export class SyncManager {
     }
 
     return await strategy.sync(item);
+  }
+
+  /**
+   * ✅ NUEVO: Clasificar tipo de error
+   * @param {Error} error - Error a clasificar
+   * @returns {string} 'permanent' | 'temporary' | 'network'
+   */
+  classifyError(error) {
+    // Errores de red
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+      return 'network';
+    }
+
+    // Errores HTTP
+    const status = error.response?.status;
+    
+    if (!status) {
+      return 'network';
+    }
+
+    // Errores permanentes (no reintentar)
+    // 400: Bad Request - datos inválidos
+    // 401: Unauthorized - no autenticado
+    // 403: Forbidden - sin permisos
+    // 404: Not Found - recurso no existe
+    // 409: Conflict - conflicto de datos
+    // 422: Unprocessable Entity - validación falló
+    if ([400, 401, 403, 404, 409, 422].includes(status)) {
+      return 'permanent';
+    }
+
+    // Errores temporales (reintentar)
+    // 500: Internal Server Error
+    // 502: Bad Gateway
+    // 503: Service Unavailable
+    // 504: Gateway Timeout
+    if ([500, 502, 503, 504].includes(status)) {
+      return 'temporary';
+    }
+
+    // Por defecto, considerar temporal
+    return 'temporary';
+  }
+
+  /**
+   * ✅ NUEVO: Calcular delay para exponential backoff
+   * @param {number} retryCount - Número de reintentos
+   * @returns {number} Delay en milisegundos
+   */
+  calculateBackoff(retryCount) {
+    // Exponential backoff: 2^n * 1000ms
+    // Retry 0: 0ms (primer intento)
+    // Retry 1: 2s
+    // Retry 2: 4s
+    // Retry 3: 8s
+    // Retry 4: 16s
+    // Retry 5: 32s
+    // Máximo: 60s
+    const baseDelay = 1000; // 1 segundo
+    const maxDelay = 60000; // 60 segundos
+    
+    if (retryCount === 0) {
+      return 0; // Sin delay en el primer intento
+    }
+
+    const delay = Math.pow(2, retryCount) * baseDelay;
+    return Math.min(delay, maxDelay);
+  }
+
+  /**
+   * ✅ NUEVO: Verificar si un item debe ser reintentado
+   * @param {Object} item - Item de la cola
+   * @returns {boolean} true si debe esperar más tiempo
+   */
+  shouldSkipRetry(item) {
+    if (!item.last_retry_at || !item.retry_count) {
+      return false; // Primer intento
+    }
+
+    const lastRetry = new Date(item.last_retry_at);
+    const now = new Date();
+    const timeSinceLastRetry = now - lastRetry;
+    
+    const requiredDelay = this.calculateBackoff(item.retry_count);
+    
+    return timeSinceLastRetry < requiredDelay;
+  }
+
+  /**
+   * ✅ NUEVO: Sleep helper
+   * @param {number} ms - Milisegundos a esperar
+   */
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**

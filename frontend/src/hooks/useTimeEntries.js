@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { timeEntriesService } from '../services/api';
-import { timeEntryRepository, syncQueue } from '../offline/index.js';
+import { timeEntryRepository, syncQueue, syncManager } from '../offline/index.js';
 
 export const useTimeEntries = (userId) => {
   const [timeEntries, setTimeEntries] = useState([]);
@@ -84,6 +84,16 @@ export const useTimeEntries = (userId) => {
         const localEntry = prepared;
 
         setTimeEntries(prev => [localEntry, ...prev]);
+
+        // ✅ NUEVO: Intentar sincronizar inmediatamente si hay conexión
+        if (navigator.onLine) {
+          setTimeout(() => {
+            syncManager.sync().catch(err => {
+              console.error('Error en sincronización automática:', err);
+            });
+          }, 1000); // Delay de 1 segundo para no bloquear la UI
+        }
+
         return { success: true, data: localEntry };
       }
     } catch (err) {
@@ -128,6 +138,15 @@ export const useTimeEntries = (userId) => {
         setTimeEntries(prev => 
           prev.map(e => e.id === entryId ? updatedEntry : e)
         );
+
+        // ✅ NUEVO: Intentar sincronizar inmediatamente si hay conexión
+        if (navigator.onLine) {
+          setTimeout(() => {
+            syncManager.sync().catch(err => {
+              console.error('Error en sincronización automática:', err);
+            });
+          }, 1000);
+        }
 
         return { success: true, data: updatedEntry };
       }

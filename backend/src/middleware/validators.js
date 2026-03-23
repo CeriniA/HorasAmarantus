@@ -1,5 +1,6 @@
 import { body, param, validationResult } from 'express-validator';
 import { VALIDATION_RULES } from '../models/types.js';
+import { USER_ROLES_ARRAY, ORG_UNIT_TYPES_ARRAY } from '../models/constants.js';
 
 // Middleware para manejar errores de validación
 export const handleValidationErrors = (req, res, next) => {
@@ -47,7 +48,7 @@ export const validateRegister = [
     .isLength({ min: VALIDATION_RULES.name.minLength })
     .withMessage(`Nombre debe tener al menos ${VALIDATION_RULES.name.minLength} caracteres`),
   body('role')
-    .isIn(['superadmin', 'admin', 'operario'])
+    .isIn(USER_ROLES_ARRAY)
     .withMessage('Rol inválido'),
   body('organizational_unit_id')
     .optional({ nullable: true })
@@ -80,7 +81,7 @@ export const validateUpdateUser = [
     .withMessage(`Nombre debe tener al menos ${VALIDATION_RULES.name.minLength} caracteres`),
   body('role')
     .optional()
-    .isIn(['superadmin', 'admin', 'operario'])
+    .isIn(USER_ROLES_ARRAY)
     .withMessage('Rol inválido'),
   body('password')
     .optional()
@@ -176,7 +177,7 @@ export const validateCreateOrgUnit = [
     .isLength({ max: 255 })
     .withMessage('Nombre muy largo'),
   body('type')
-    .isIn(['area', 'proceso', 'subproceso', 'tarea'])
+    .isIn(ORG_UNIT_TYPES_ARRAY)
     .withMessage('Tipo inválido'),
   body('parent_id')
     .optional({ nullable: true })
@@ -202,7 +203,7 @@ export const validateUpdateOrgUnit = [
     .withMessage('Nombre muy largo'),
   body('type')
     .optional()
-    .isIn(['area', 'proceso', 'subproceso', 'tarea'])
+    .isIn(ORG_UNIT_TYPES_ARRAY)
     .withMessage('Tipo inválido'),
   body('parent_id')
     .optional({ nullable: true })

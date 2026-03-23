@@ -16,19 +16,9 @@ if (import.meta.env.DEV) {
   import('./offline/utils/debugDuplicates.js');
 }
 
-// Registrar Service Worker para PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then(
-      (registration) => {
-        console.log('Service Worker registrado:', registration.scope);
-      },
-      (error) => {
-        console.log('Error al registrar Service Worker:', error);
-      }
-    );
-  });
-}
+// ✅ MEJORADO: Service Worker se registra automáticamente con Vite PWA
+// Ya no es necesario registrarlo manualmente
+// El plugin VitePWA se encarga de todo (desarrollo y producción)
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

@@ -4,6 +4,8 @@
  */
 
 import { BaseRepository } from './BaseRepository.js';
+import { db } from '../core/db.js';
+import { TIME_ENTRY_STATUS } from '../../constants';
 import { generateUUID } from '../../utils/uuid.js';
 
 export class TimeEntryRepository extends BaseRepository {
@@ -57,7 +59,7 @@ export class TimeEntryRepository extends BaseRepository {
       start_time: entry.start_time,
       end_time: entry.end_time,
       total_hours: entry.total_hours || this.calculateHours(entry.start_time, entry.end_time),
-      status: entry.status || 'completed',
+      status: entry.status || TIME_ENTRY_STATUS.COMPLETED,
       pending_sync: true,
       synced_at: null,
       created_at: entry.created_at || new Date().toISOString(),

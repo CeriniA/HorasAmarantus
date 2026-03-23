@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, User, Settings, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { useAuthContext } from '../../context/AuthContext';
+import { USER_ROLES, getRoleLabel } from '../../constants';
 import { useOffline } from '../../hooks/useOffline';
 
 export const Navbar = () => {
@@ -43,7 +44,7 @@ export const Navbar = () => {
               >
                 Registrar Horas
               </Link>
-              {(user?.role === 'admin' || user?.role === 'superadmin') && (
+              {(user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN) && (
                 <>
                   <Link
                     to="/organizational-units"
@@ -116,7 +117,7 @@ export const Navbar = () => {
                         @{user?.username}
                       </div>
                       <div className="px-4 py-2 text-xs text-gray-500 border-b">
-                        Rol: <span className="font-medium">{user?.role}</span>
+                        Rol: <span className="font-medium">{getRoleLabel(user?.role)}</span>
                       </div>
                       <Link
                         to="/settings"
@@ -174,7 +175,7 @@ export const Navbar = () => {
             >
               Registrar Horas
             </Link>
-            {(user?.role === 'admin' || user?.role === 'superadmin') && (
+            {(user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN) && (
               <>
                 <Link
                   to="/organizational-units"
@@ -192,7 +193,7 @@ export const Navbar = () => {
                 </Link>
               </>
             )}
-            {(user?.role === 'admin' || user?.role === 'superadmin') && (
+            {(user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN) && (
               <Link
                 to="/admin/users"
                 className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"

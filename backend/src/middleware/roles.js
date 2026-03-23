@@ -3,6 +3,8 @@
  * Sistema de 3 roles: superadmin, admin, operario
  */
 
+import { USER_ROLES } from '../models/constants.js';
+
 export const requireRole = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -29,13 +31,13 @@ export const canManageUser = (req, res, next) => {
   const { role: targetRole } = req.body;
 
   // Superadmin puede gestionar a todos
-  if (userRole === 'superadmin') {
+  if (userRole === USER_ROLES.SUPERADMIN) {
     return next();
   }
 
   // Admin NO puede crear/editar otros admins o superadmins
-  if (userRole === 'admin') {
-    if (targetRole === 'superadmin' || targetRole === 'admin') {
+  if (userRole === USER_ROLES.ADMIN) {
+    if (targetRole === USER_ROLES.SUPERADMIN || targetRole === USER_ROLES.ADMIN) {
       return res.status(403).json({ 
         error: 'No puedes gestionar usuarios con rol admin o superadmin' 
       });
@@ -50,9 +52,9 @@ export const canManageUser = (req, res, next) => {
 };
 
 // Shortcuts comunes
-export const requireSuperadmin = requireRole('superadmin');
-export const requireAdmin = requireRole('superadmin', 'admin');
-export const requireAnyAuth = requireRole('superadmin', 'admin', 'operario');
+export const requireSuperadmin = requireRole(USER_ROLES.SUPERADMIN);
+export const requireAdmin = requireRole(USER_ROLES.SUPERADMIN, USER_ROLES.ADMIN);
+export const requireAnyAuth = requireRole(USER_ROLES.SUPERADMIN, USER_ROLES.ADMIN, USER_ROLES.OPERARIO);
 
 export default { 
   requireRole, 

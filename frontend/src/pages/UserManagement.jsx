@@ -1,22 +1,22 @@
 /* eslint-disable no-alert, no-restricted-globals */
 import { useState } from 'react';
 import { useUsers } from '../hooks/useUsers';
-import { usePermissions } from '../hooks/usePermissions';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
+import { usePermissions } from '../hooks/usePermissions';
+import { USER_ROLES, getRoleLabel } from '../constants';
 
 export const UserManagement = () => {
   const { users, loading, createUser, updateUser, deleteUser } = useUsers();
   const { units } = useOrganizationalUnits();
-  const { can, isSuperadmin } = usePermissions();
+  const { can } = usePermissions();
   
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
     name: '',
-    role: 'operario',
+    role: USER_ROLES.OPERARIO,
     organizational_unit_id: ''
   });
   const [formError, setFormError] = useState('');
@@ -24,11 +24,10 @@ export const UserManagement = () => {
   const handleOpenCreate = () => {
     setEditingUser(null);
     setFormData({
-      username: '',
       email: '',
       password: '',
       name: '',
-      role: 'operario',
+      role: USER_ROLES.OPERARIO,
       organizational_unit_id: ''
     });
     setFormError('');
@@ -126,27 +125,14 @@ export const UserManagement = () => {
 
   const getRoleBadgeColor = (role) => {
     switch (role) {
-      case 'superadmin':
+      case USER_ROLES.SUPERADMIN:
         return 'bg-purple-100 text-purple-800';
-      case 'admin':
+      case USER_ROLES.ADMIN:
         return 'bg-blue-100 text-blue-800';
-      case 'operario':
+      case USER_ROLES.OPERARIO:
         return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getRoleLabel = (role) => {
-    switch (role) {
-      case 'superadmin':
-        return 'Super Admin';
-      case 'admin':
-        return 'Admin';
-      case 'operario':
-        return 'Operario';
-      default:
-        return role;
     }
   };
 
@@ -167,7 +153,7 @@ export const UserManagement = () => {
           <p className="text-gray-600 mt-1">Administra los usuarios del sistema</p>
         </div>
         
-        {can('create', 'users', { role: 'operario' }) && (
+        {can('create', 'users', { role: USER_ROLES.OPERARIO }) && (
           <button
             onClick={handleOpenCreate}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -347,16 +333,8 @@ export const UserManagement = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
-                  {isSuperadmin() && (
-                    <>
-                      <option value="superadmin">Super Admin</option>
-                      <option value="admin">Admin</option>
-                    </>
-                  )}
-                  {!isSuperadmin() && (
-                    <option value="admin" disabled>Admin (solo superadmin)</option>
-                  )}
-                  <option value="operario">Operario</option>
+                  <option value={USER_ROLES.ADMIN}>{getRoleLabel(USER_ROLES.ADMIN)}</option>
+                  <option value={USER_ROLES.OPERARIO}>{getRoleLabel(USER_ROLES.OPERARIO)}</option>
                 </select>
               </div>
 

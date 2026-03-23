@@ -1,4 +1,5 @@
 import { useAuthContext } from '../context/AuthContext';
+import { USER_ROLES } from '../constants';
 
 /**
  * Hook para verificar permisos del usuario
@@ -15,7 +16,7 @@ export const usePermissions = () => {
     const { role } = user;
 
     // Superadmin puede todo
-    if (role === 'superadmin') return true;
+    if (role === USER_ROLES.SUPERADMIN) return true;
 
     // Matriz de permisos por rol
     const permissions = {
@@ -24,15 +25,15 @@ export const usePermissions = () => {
           view: true,
           create: (target) => {
             // Admin puede crear solo operarios
-            return !target.role || target.role === 'operario';
+            return !target.role || target.role === USER_ROLES.OPERARIO;
           },
           edit: (target) => {
             // Admin puede editar solo operarios
-            return target.role === 'operario';
+            return target.role === USER_ROLES.OPERARIO;
           },
           delete: (target) => {
             // Admin puede eliminar solo operarios
-            return target.role === 'operario';
+            return target.role === USER_ROLES.OPERARIO;
           }
         },
         organizational_units: {
@@ -117,21 +118,21 @@ export const usePermissions = () => {
    * Verificar si es superadmin
    */
   const isSuperadmin = () => {
-    return user?.role === 'superadmin';
+    return user?.role === USER_ROLES.SUPERADMIN;
   };
 
   /**
    * Verificar si es admin o superadmin
    */
   const isAdmin = () => {
-    return user?.role === 'admin' || user?.role === 'superadmin';
+    return user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN;
   };
 
   /**
    * Verificar si es operario
    */
   const isOperario = () => {
-    return user?.role === 'operario';
+    return user?.role === USER_ROLES.OPERARIO;
   };
 
   return {
