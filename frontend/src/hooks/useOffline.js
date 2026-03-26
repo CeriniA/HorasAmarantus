@@ -48,11 +48,14 @@ export const useOffline = () => {
         case 'sync_complete':
           setIsSyncing(false);
           setIsOnline(true); // Si sincronizó, está online
-          setSyncStatus({
-            type: 'success',
-            message: `Sincronizados ${event.data.synced} registros`,
-            data: event.data
-          });
+          // Solo mostrar mensaje si realmente se sincronizaron registros
+          if (event.data.synced > 0) {
+            setSyncStatus({
+              type: 'success',
+              message: `Sincronizados ${event.data.synced} registros`,
+              data: event.data
+            });
+          }
           updatePendingChanges();
           break;
         
