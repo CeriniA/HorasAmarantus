@@ -4,6 +4,7 @@
  */
 
 import { format } from 'date-fns';
+import { extractDate, calculateHours } from './dateHelpers';
 
 /**
  * Obtiene una unidad y todas sus sub-unidades (recursivo)
@@ -97,7 +98,7 @@ export const groupByDay = (entries) => {
   const byDayMap = {};
   
   entries.forEach(entry => {
-    const day = format(new Date(entry.start_time), 'yyyy-MM-dd');
+    const day = extractDate(entry.start_time);
     if (!byDayMap[day]) {
       byDayMap[day] = {
         date: day,

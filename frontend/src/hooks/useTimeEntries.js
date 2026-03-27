@@ -206,6 +206,7 @@ export const useTimeEntries = (userId) => {
 
   return {
     timeEntries,
+    setTimeEntries,
     loading,
     error,
     loadTimeEntries,

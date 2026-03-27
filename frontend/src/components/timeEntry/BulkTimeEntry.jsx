@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Calendar, Save, X } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Calendar, Save, X, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
@@ -20,6 +20,42 @@ export const BulkTimeEntry = ({
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [timeEntries, setTimeEntries] = useState({});
   const [expandedAreas, setExpandedAreas] = useState(new Set());
+  
+  // Rango horario general
+  const [workdayStart, setWorkdayStart] = useState('08:00');
+  const [workdayEnd, setWorkdayEnd] = useState('16:00');
+  
+  // Cargar última preferencia de horario
+  useEffect(() => {
+    const savedWorkday = localStorage.getItem('lastWorkdayRange');
+    if (savedWorkday) {
+      try {
+        const { start, end } = JSON.parse(savedWorkday);
+        setWorkdayStart(start);
+        setWorkdayEnd(end);
+      } catch (e) {
+        // Usar valores por defecto
+      }
+    }
+  }, []);
+  
+  // Guardar preferencia cuando cambia
+  useEffect(() => {
+    if (workdayStart && workdayEnd) {
+      localStorage.setItem('lastWorkdayRange', JSON.stringify({
+        start: workdayStart,
+        end: workdayEnd
+      }));
+    }
+  }, [workdayStart, workdayEnd]);
+  
+  // Resetear fecha a HOY cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setDate(format(new Date(), 'yyyy-MM-dd'));
+      setTimeEntries({});
+    }
+  }, [isOpen]);
 
   // Organizar unidades por jerarquía
   const hierarchy = useMemo(() => {
@@ -101,22 +137,68 @@ export const BulkTimeEntry = ({
   const totalHours = useMemo(() => {
     return Object.values(timeEntries).reduce((sum, entry) => sum + entry.total, 0);
   }, [timeEntries]);
+  
+  // Calcular horas del rango horario
+  const workdayHours = useMemo(() => {
+    if (!workdayStart || !workdayEnd) return 0;
+    const [startH, startM] = workdayStart.split(':').map(Number);
+    const [endH, endM] = workdayEnd.split(':').map(Number);
+    const start = startH + startM / 60;
+    const end = endH + endM / 60;
+    return end - start;
+  }, [workdayStart, workdayEnd]);
+  
+  // Validar que coincidan
+  const isValid = useMemo(() => {
+    const diff = Math.abs(workdayHours - totalHours);
+    return diff < 0.08; // Tolerancia de ~5 minutos
+  }, [workdayHours, totalHours]);
 
   const handleSave = async () => {
-    const entries = Object.entries(timeEntries).map(([unitId, time]) => {
-      const startDateTime = `${date}T08:00:00`;
-      const endHours = 8 + time.total;
-      const endDateTime = `${date}T${String(Math.floor(endHours)).padStart(2, '0')}:${String(Math.round((endHours % 1) * 60)).padStart(2, '0')}:00`;
+    // Validar que coincidan las horas
+    if (!isValid && Object.keys(timeEntries).length > 0) {
+      // eslint-disable-next-line no-alert
+      window.alert(`Las horas por tarea (${totalHours.toFixed(2)}h) no coinciden con el rango horario (${workdayHours.toFixed(2)}h)`);
+      return;
+    }
+    
+    // Distribuir las horas proporcionalmente dentro del rango horario
+    let currentTime = workdayStart;
+    
+    // Filtrar solo las tareas que tienen horas > 0
+    const entries = Object.entries(timeEntries)
+      .filter(([, time]) => time.total > 0)
+      .map(([unitId, time]) => {
+      // Parsear hora actual
+      const [currentH, currentM] = currentTime.split(':').map(Number);
+      const currentMinutes = currentH * 60 + currentM;
+      
+      // Calcular hora de fin
+      const durationMinutes = time.total * 60;
+      const endMinutes = currentMinutes + durationMinutes;
+      const endH = Math.floor(endMinutes / 60);
+      const endM = Math.round(endMinutes % 60);
+      
+      // Timestamps simples: la fecha y hora que el usuario pone es la que se guarda
+      // Sin conversiones de zona horaria - 8:00 es 8:00, punto.
+      const startDateTime = `${date} ${currentTime}:00`;
+      const endDateTime = `${date} ${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`;
+      
+      // Actualizar currentTime para la siguiente tarea
+      currentTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
       return {
-        organizational_unit_id: unitId, // unitId YA ES el UUID
+        organizational_unit_id: unitId,
         start_time: startDateTime,
         end_time: endDateTime,
         description: null
       };
     });
 
-    console.log('📤 Enviando entries:', entries); // Debug
+    console.log('📤 Enviando entries:', entries);
+    console.log('📅 Fecha seleccionada:', date);
+    console.log('⏰ Rango horario:', workdayStart, '-', workdayEnd);
+    console.log('🔍 Primer entry completo:', JSON.stringify(entries[0], null, 2));
     await onSave(entries);
     handleClose();
   };
@@ -192,7 +274,63 @@ export const BulkTimeEntry = ({
               </button>
             </div>
           </div>
+          
+          {/* Rango Horario General */}
+          <div className="border-t pt-4 mt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4 text-gray-700" />
+              <label className="text-sm font-medium text-gray-900">
+                Rango Horario del Día *
+              </label>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Inicio</label>
+                <input
+                  type="time"
+                  value={workdayStart}
+                  onChange={(e) => setWorkdayStart(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-base font-semibold"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Fin</label>
+                <input
+                  type="time"
+                  value={workdayEnd}
+                  onChange={(e) => setWorkdayEnd(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 text-base font-semibold"
+                />
+              </div>
+              <div className={`p-3 rounded-lg border ${isValid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                <p className="text-xs text-gray-600 mb-1">Total</p>
+                <p className={`text-lg font-bold ${isValid ? 'text-green-800' : 'text-red-800'}`}>
+                  {workdayHours.toFixed(2)}h
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              💡 La suma de horas por tarea debe coincidir con este total
+            </p>
+          </div>
         </div>
+
+        {/* Resumen de validación */}
+        {Object.keys(timeEntries).length > 0 && (
+          <div className={`p-4 rounded-lg border ${isValid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  {isValid ? '✓ Horas coinciden' : '✗ Horas no coinciden'}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Rango: {workdayHours.toFixed(2)}h | Tareas: {totalHours.toFixed(2)}h
+                  {!isValid && ` | Diferencia: ${Math.abs(workdayHours - totalHours).toFixed(2)}h`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Lista de tareas agrupadas por área */}
         <div className="bg-white rounded-lg border border-gray-200">

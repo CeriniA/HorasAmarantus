@@ -226,6 +226,47 @@ router.post('/bulk', async (req, res) => {
   }
 });
 
+// DELETE /api/time-entries/bulk - Eliminar múltiples registros
+router.delete('/bulk', async (req, res) => {
+  try {
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Se requiere un array de IDs' });
+    }
+
+    // Verificar que todos los registros pertenecen al usuario (o es admin)
+    const { data: existing, error: fetchError } = await supabase
+      .from('time_entries')
+      .select('id, user_id')
+      .in('id', ids);
+
+    if (fetchError) throw fetchError;
+
+    // Verificar permisos
+    const unauthorized = existing.some(entry => 
+      entry.user_id !== req.user.id && req.user.role !== 'admin'
+    );
+
+    if (unauthorized) {
+      return res.status(403).json({ error: 'No puedes eliminar registros de otros usuarios' });
+    }
+
+    // Eliminar todos de una vez
+    const { error } = await supabase
+      .from('time_entries')
+      .delete()
+      .in('id', ids);
+
+    if (error) throw error;
+
+    res.json({ message: `${ids.length} registros eliminados exitosamente` });
+  } catch (error) {
+    console.error('Error eliminando registros:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
 // DELETE /api/time-entries/:id - Eliminar registro
 router.delete('/:id', async (req, res) => {
   try {

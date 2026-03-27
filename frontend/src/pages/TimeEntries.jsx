@@ -9,13 +9,16 @@ import Alert from '../components/common/Alert';
 import Modal from '../components/common/Modal';
 import Input from '../components/common/Input';
 import { BulkTimeEntry } from '../components/timeEntry/BulkTimeEntry';
+import { timeEntriesService } from '../services/api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { safeDate, extractDate, calculateHours } from '../utils/dateHelpers';
 
 export const TimeEntries = () => {
   const { user } = useAuthContext();
   const { 
-    timeEntries, 
+    timeEntries,
+    setTimeEntries,
     createEntry,
     updateEntry,
     deleteEntry 
@@ -37,7 +40,7 @@ export const TimeEntries = () => {
 
   // Filtrar registros según modo seleccionado
   const filteredEntries = timeEntries.filter(entry => {
-    const entryDate = new Date(entry.start_time);
+    const entryDate = safeDate(entry.start_time);
     
     if (filterMode === 'month') {
       const entryMonth = format(entryDate, 'yyyy-MM');
@@ -99,8 +102,8 @@ export const TimeEntries = () => {
   const handleEdit = (entry) => {
     setEditingEntry(entry);
     setEditForm({
-      startTime: format(new Date(entry.start_time), 'HH:mm'),
-      endTime: format(new Date(entry.end_time), 'HH:mm')
+      startTime: format(safeDate(entry.start_time), 'HH:mm'),
+      endTime: format(safeDate(entry.end_time), 'HH:mm')
     });
     setShowEditModal(true);
   };
@@ -110,7 +113,7 @@ export const TimeEntries = () => {
 
     setSaving(true);
     try {
-      const date = format(new Date(editingEntry.start_time), 'yyyy-MM-dd');
+      const date = extractDate(editingEntry.start_time);
       const newStartTime = `${date}T${editForm.startTime}:00`;
       const newEndTime = `${date}T${editForm.endTime}:00`;
 
@@ -258,25 +261,26 @@ export const TimeEntries = () => {
         <div className="divide-y divide-gray-100">
         {Object.entries(
           filteredEntries.reduce((acc, entry) => {
-            const date = format(new Date(entry.start_time), 'yyyy-MM-dd');
+            // Extraer solo la fecha del timestamp (ignorando la hora y zona horaria)
+            const date = entry.start_time.split('T')[0];
             if (!acc[date]) acc[date] = [];
             acc[date].push(entry);
             return acc;
           }, {})
         ).sort(([a], [b]) => new Date(b) - new Date(a)).map(([date, entries]) => {
           const totalHours = entries.reduce((sum, entry) => {
-            return sum + ((new Date(entry.end_time) - new Date(entry.start_time)) / (1000 * 60 * 60));
+            return sum + calculateHours(entry.start_time, entry.end_time);
           }, 0);
           const isExpanded = expandedDays.has(date);
 
           return (
             <div key={date}>
               {/* Header del día - ULTRA COMPACTO */}
-              <button
-                onClick={() => toggleDay(date)}
-                className="w-full bg-gray-50 px-3 py-2 hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center justify-between gap-2">
+              <div className="w-full bg-gray-50 px-3 py-2 flex items-center justify-between gap-2">
+                <button
+                  onClick={() => toggleDay(date)}
+                  className="flex items-center gap-2 min-w-0 flex-1 hover:bg-gray-100 transition-colors py-1 px-2 rounded"
+                >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     {isExpanded ? (
                       <ChevronDown className="h-4 w-4 text-primary-600 flex-shrink-0" />
@@ -285,7 +289,7 @@ export const TimeEntries = () => {
                     )}
                     <div className="text-left min-w-0">
                       <h3 className="text-sm md:text-base font-semibold text-gray-900 truncate">
-                        {format(new Date(date), "EEE, dd MMM yyyy", { locale: es })}
+                        {format(safeDate(date), "EEE, dd MMM yyyy", { locale: es })}
                       </h3>
                       <p className="text-xs text-gray-600">
                         {entries.length} {entries.length === 1 ? 'reg' : 'regs'}
@@ -297,8 +301,32 @@ export const TimeEntries = () => {
                       {totalHours.toFixed(2)}h
                     </p>
                   </div>
-                </div>
-              </button>
+                </button>
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    // eslint-disable-next-line no-restricted-globals
+                    if (window.confirm(`¿Eliminar todos los ${entries.length} registros del ${format(safeDate(date), "dd/MM/yyyy", { locale: es })}?`)) {
+                      try {
+                        // Eliminar todos en una sola petición al backend
+                        const ids = entries.map(entry => entry.id);
+                        await timeEntriesService.deleteBulk(ids);
+                        
+                        // Actualizar estado local filtrando los eliminados
+                        setTimeEntries(prev => prev.filter(entry => !ids.includes(entry.id)));
+                        
+                        setAlert({ type: 'success', message: `${entries.length} registros eliminados` });
+                      } catch (error) {
+                        setAlert({ type: 'error', message: 'Error al eliminar registros' });
+                      }
+                    }
+                  }}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                  title="Eliminar día completo"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
 
               {/* Tabla de registros del día - COLAPSABLE */}
               {isExpanded && (
@@ -319,7 +347,7 @@ export const TimeEntries = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {entries.map((entry) => {
-                      const hours = ((new Date(entry.end_time) - new Date(entry.start_time)) / (1000 * 60 * 60)).toFixed(2);
+                      const hours = calculateHours(entry.start_time, entry.end_time).toFixed(2);
                       
                       return (
                         <tr key={entry.id} className="hover:bg-gray-50">
@@ -403,7 +431,7 @@ export const TimeEntries = () => {
             <Input
               label="Fecha"
               type="date"
-              value={format(new Date(editingEntry.start_time), 'yyyy-MM-dd')}
+              value={extractDate(editingEntry.start_time)}
               disabled
             />
             <div className="grid grid-cols-2 gap-4">

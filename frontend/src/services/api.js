@@ -162,13 +162,20 @@ class ApiClient {
   }
 
   // DELETE request
-  async delete(endpoint, options = {}) {
+  async delete(endpoint, body = null, options = {}) {
     try {
-      const response = await fetch(`${this.baseURL}${endpoint}`, {
+      const fetchOptions = {
         method: 'DELETE',
         headers: this.getHeaders(options.auth !== false),
         ...options,
-      });
+      };
+      
+      // Si hay body, agregarlo
+      if (body) {
+        fetchOptions.body = JSON.stringify(body);
+      }
+      
+      const response = await fetch(`${this.baseURL}${endpoint}`, fetchOptions);
 
       return this.handleResponse(response);
     } catch (error) {
@@ -204,6 +211,7 @@ export const timeEntriesService = {
   createBulk: (entries, user_id) => api.post('/time-entries/bulk', { entries, user_id }),
   update: (id, data) => api.put(`/time-entries/${id}`, data),
   delete: (id) => api.delete(`/time-entries/${id}`),
+  deleteBulk: (ids) => api.delete('/time-entries/bulk', { ids }),
 };
 
 export const usersService = {

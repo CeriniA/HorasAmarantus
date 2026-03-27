@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Filter } from 'lucide-react';
+import { Download, Filter, BarChart2, TrendingUp, AlertTriangle, LineChart, Target, Clock } from 'lucide-react';
 import { timeEntriesService, usersService, orgUnitsService } from '../services/api';
 import { useAuthContext } from '../context/AuthContext';
 import Card from '../components/common/Card';
@@ -12,14 +12,25 @@ import { ReportFilters } from '../components/reports/ReportFilters';
 import { ReportMetrics } from '../components/reports/ReportMetrics';
 import { ReportCharts } from '../components/reports/ReportCharts';
 import { ReportTable } from '../components/reports/ReportTable';
+import { ComparativeAnalysis } from '../components/reports/ComparativeAnalysis';
+import { ProductivityAnalysis } from '../components/reports/ProductivityAnalysis';
+import { AreaEfficiencyReport } from '../components/reports/AreaEfficiencyReport';
+import { OvertimeReport } from '../components/reports/OvertimeReport';
+import { MonthlyTrendsReport } from '../components/reports/MonthlyTrendsReport';
+import { GoalComplianceReport } from '../components/reports/GoalComplianceReport';
+import { TimeDistributionReport } from '../components/reports/TimeDistributionReport';
 
 // Utilidades
 import { getUnitAndChildren, calculateReportMetrics } from '../utils/reportCalculations';
 import { exportToCSV } from '../utils/reportExport';
+import { exportToExcel } from '../utils/exportToExcel';
+import { exportToPDF } from '../utils/exportToPDF';
+import { safeDate } from '../utils/dateHelpers';
 
 export const Reports = () => {
   const { user } = useAuthContext();
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('general');
   const [dateRange, setDateRange] = useState('month');
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -93,7 +104,7 @@ export const Reports = () => {
 
       // Filtrar por fechas
       let filtered = entries.filter(entry => {
-        const entryDate = new Date(entry.start_time);
+        const entryDate = safeDate(entry.start_time);
         const start = new Date(`${startDate}T00:00:00`);
         const end = new Date(`${endDate}T23:59:59`);
         
@@ -130,6 +141,30 @@ export const Reports = () => {
     exportToCSV(filteredEntries, startDate, endDate);
   };
 
+  const handleExportExcel = () => {
+    const exportData = {
+      ...reportData,
+      entries: filteredEntries,
+      startDate,
+      endDate,
+      avgPerDay: reportData.totalHours / (reportData.byDay?.length || 1),
+      daysWorked: reportData.byDay?.length || 0
+    };
+    exportToExcel(exportData, 'reporte_horas');
+  };
+
+  const handleExportPDF = () => {
+    const exportData = {
+      ...reportData,
+      entries: filteredEntries,
+      startDate,
+      endDate,
+      avgPerDay: reportData.totalHours / (reportData.byDay?.length || 1),
+      daysWorked: reportData.byDay?.length || 0
+    };
+    exportToPDF(exportData, 'reporte_horas');
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -140,10 +175,20 @@ export const Reports = () => {
             {user?.role === USER_ROLES.OPERARIO ? 'Tus horas trabajadas' : 'Análisis de horas trabajadas'}
           </p>
         </div>
-        <Button onClick={handleExportCSV} variant="outline">
-          <Download className="h-5 w-5 mr-2" />
-          Exportar CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleExportCSV} variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            CSV
+          </Button>
+          <Button onClick={handleExportExcel} variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            Excel
+          </Button>
+          <Button onClick={handleExportPDF} variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" />
+            PDF
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -196,18 +241,138 @@ export const Reports = () => {
         </Card>
       )}
 
-      {/* Métricas */}
-      <ReportMetrics reportData={reportData} />
+      {/* Tabs de Reportes */}
+      <Card>
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('general')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'general'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <BarChart2 className="h-4 w-4 mr-2" />
+              General
+            </button>
+            <button
+              onClick={() => setActiveTab('efficiency')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'efficiency'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Eficiencia por Área
+            </button>
+            <button
+              onClick={() => setActiveTab('overtime')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'overtime'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Horas Extras
+            </button>
+            <button
+              onClick={() => setActiveTab('trends')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'trends'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <LineChart className="h-4 w-4 mr-2" />
+              Tendencias
+            </button>
+            <button
+              onClick={() => setActiveTab('goals')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'goals'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Target className="h-4 w-4 mr-2" />
+              Objetivos
+            </button>
+            <button
+              onClick={() => setActiveTab('distribution')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'distribution'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Clock className="h-4 w-4 mr-2" />
+              Distribución Horaria
+            </button>
+          </nav>
+        </div>
+      </Card>
 
-      {/* Gráficos */}
-      <ReportCharts reportData={reportData} />
+      {/* Contenido según tab activo */}
+      {activeTab === 'general' && (
+        <>
+          {/* Métricas */}
+          <ReportMetrics reportData={reportData} />
 
-      {/* Tabla */}
-      <ReportTable 
-        reportData={reportData} 
-        units={units}
-        selectedUnit={selectedUnit}
-      />
+          {/* Gráficos */}
+          <ReportCharts reportData={reportData} />
+
+          {/* Tabla */}
+          <ReportTable 
+            reportData={reportData} 
+            units={units}
+            selectedUnit={selectedUnit}
+          />
+
+          {/* Análisis Avanzados */}
+          {filteredEntries.length > 0 && (
+            <>
+              {/* Análisis Comparativo */}
+              <ComparativeAnalysis timeEntries={filteredEntries} />
+
+              {/* Análisis de Productividad */}
+              {user?.role === USER_ROLES.OPERARIO && (
+                <ProductivityAnalysis timeEntries={filteredEntries} />
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* Reporte de Eficiencia por Área */}
+      {activeTab === 'efficiency' && (
+        <AreaEfficiencyReport 
+          timeEntries={filteredEntries} 
+          units={units}
+        />
+      )}
+
+      {/* Reporte de Horas Extras */}
+      {activeTab === 'overtime' && (
+        <OvertimeReport timeEntries={filteredEntries} />
+      )}
+
+      {/* Reporte de Tendencias Mensuales */}
+      {activeTab === 'trends' && (
+        <MonthlyTrendsReport timeEntries={filteredEntries} />
+      )}
+
+      {/* Reporte de Cumplimiento de Objetivos */}
+      {activeTab === 'goals' && (
+        <GoalComplianceReport timeEntries={filteredEntries} />
+      )}
+
+      {/* Reporte de Distribución Horaria */}
+      {activeTab === 'distribution' && (
+        <TimeDistributionReport timeEntries={filteredEntries} />
+      )}
     </div>
   );
 };

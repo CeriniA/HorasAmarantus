@@ -6,6 +6,7 @@ import Card from '../common/Card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { safeDate } from '../../utils/dateHelpers';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -24,11 +25,11 @@ export const ReportCharts = ({ reportData }) => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date" 
-                tickFormatter={(date) => format(new Date(date), 'dd/MM')}
+                tickFormatter={(date) => format(safeDate(date), 'dd/MM')}
               />
               <YAxis />
               <Tooltip 
-                labelFormatter={(date) => format(new Date(date), "dd 'de' MMMM", { locale: es })}
+                labelFormatter={(date) => format(safeDate(date), "dd 'de' MMMM", { locale: es })}
                 formatter={(value) => [`${value.toFixed(2)} horas`, 'Horas']}
               />
               <Legend />

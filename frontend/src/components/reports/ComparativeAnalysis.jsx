@@ -88,8 +88,8 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
     
     setComparisonData(comparison);
     
-    // Calcular resumen con cambios
-    const summary = periods.map((period, index) => {
+    // Calcular resumen con cambios (primera pasada: calcular totales)
+    const summaryBase = periods.map((period) => {
       const [year, month] = period.month.split('-');
       const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
       const end = endOfMonth(start);
@@ -105,19 +105,31 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
         return sum + (end - start) / (1000 * 60 * 60);
       }, 0);
       
-      // Calcular cambio vs período anterior
+      return {
+        ...period,
+        totalHours
+      };
+    });
+    
+    // Segunda pasada: calcular cambios
+    const summary = summaryBase.map((period, index) => {
       let change = null;
       if (index > 0) {
-        const prevPeriod = summary[index - 1];
+        const prevPeriod = summaryBase[index - 1];
         if (prevPeriod && prevPeriod.totalHours > 0) {
-          change = ((totalHours - prevPeriod.totalHours) / prevPeriod.totalHours) * 100;
+          change = ((period.totalHours - prevPeriod.totalHours) / prevPeriod.totalHours) * 100;
         }
       }
       
       return {
         ...period,
-        totalHours,
-        entries: periodEntries.length,
+        entries: timeEntries.filter(e => {
+          const entryDate = new Date(e.start_time);
+          const [year, month] = period.month.split('-');
+          const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+          const end = endOfMonth(start);
+          return entryDate >= start && entryDate <= end;
+        }).length,
         change
       };
     });

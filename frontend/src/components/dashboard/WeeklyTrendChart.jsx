@@ -6,6 +6,7 @@
 import { useMemo } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { format, subDays, isSameDay } from 'date-fns';
+import { safeDate, calculateHours } from '../../utils/dateHelpers';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
@@ -19,14 +20,11 @@ export const WeeklyTrendChart = ({ timeEntries }) => {
     for (let i = days - 1; i >= 0; i--) {
       const date = subDays(new Date(), i);
       const dayEntries = timeEntries.filter(entry => 
-        isSameDay(new Date(entry.start_time), date)
+        isSameDay(safeDate(entry.start_time), date)
       );
       
       const hours = dayEntries.reduce((sum, entry) => {
-        const start = new Date(entry.start_time);
-        const end = new Date(entry.end_time);
-        const duration = (end - start) / (1000 * 60 * 60);
-        return sum + duration;
+        return sum + calculateHours(entry.start_time, entry.end_time);
       }, 0);
       
       trend.push({
@@ -163,9 +161,10 @@ export const WeeklyTrendChart = ({ timeEntries }) => {
             strokeWidth={3}
             fill="url(#colorHours)"
             dot={(props) => {
-              const { cx, cy, payload } = props;
+              const { cx, cy, payload, index } = props;
               return (
                 <circle
+                  key={`dot-${index}`}
                   cx={cx}
                   cy={cy}
                   r={payload.isToday ? 6 : 4}

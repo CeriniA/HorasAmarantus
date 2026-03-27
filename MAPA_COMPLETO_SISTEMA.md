@@ -744,8 +744,20 @@ console.log('Pendientes:', pending);
 
 ## 📞 CONTACTO Y MANTENIMIENTO
 
-**Última revisión:** 22 de marzo de 2026  
+**Última revisión:** 26 de marzo de 2026  
 **Próxima revisión:** Cada vez que se modifique la estructura de datos o API
+
+### 🆕 Actualizaciones Recientes (26/03/2026)
+- ✅ Dashboard mejorado con alertas inteligentes
+- ✅ Gráfico de tendencia semanal
+- ✅ Seguimiento de objetivos
+- ✅ Mapa de calor de actividad
+- ✅ Análisis comparativo de períodos
+- ✅ Análisis de productividad
+- ✅ Sistema de plantillas de registro
+- ✅ Exportación Excel/PDF profesional
+
+**Ver:** `README_MEJORAS.md` para detalles completos
 
 ---
 

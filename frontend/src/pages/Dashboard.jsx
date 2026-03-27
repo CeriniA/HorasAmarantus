@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useAuthContext } from '../context/AuthContext';
 import { useTimeEntries } from '../hooks/useTimeEntries';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
@@ -7,6 +8,15 @@ import { format, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-f
 import { es } from 'date-fns/locale';
 import { USER_ROLES } from '../constants';
 import { Clock, TrendingUp, Briefcase, Users } from 'lucide-react';
+
+// Componentes nuevos
+import { WeeklyTrendChart } from '../components/dashboard/WeeklyTrendChart';
+import { SmartAlerts } from '../components/dashboard/SmartAlerts';
+import { ActivityHeatmap } from '../components/dashboard/ActivityHeatmap';
+import { GoalTracker } from '../components/dashboard/GoalTracker';
+
+// Utilidades
+import { evaluateAlerts } from '../utils/alertRules';
 
 export const Dashboard = () => {
   const { user } = useAuthContext();
@@ -56,6 +66,12 @@ export const Dashboard = () => {
     .sort((a, b) => b.hours - a.hours)
     .slice(0, 5);
 
+  // Evaluar alertas inteligentes
+  const alerts = useMemo(() => 
+    evaluateAlerts(timeEntries, user),
+    [timeEntries, user]
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -67,6 +83,11 @@ export const Dashboard = () => {
           {format(today, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
         </p>
       </div>
+
+      {/* Alertas Inteligentes */}
+      {alerts.length > 0 && (
+        <SmartAlerts alerts={alerts} />
+      )}
 
       {/* Métricas principales */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -127,6 +148,23 @@ export const Dashboard = () => {
           </div>
         </Card>
       </div>
+
+      {/* Gráfico de Tendencia y Objetivo */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <WeeklyTrendChart timeEntries={timeEntries} />
+        </div>
+        <div>
+          <GoalTracker 
+            timeEntries={timeEntries} 
+            goalType="weekly"
+            customGoal={user?.weekly_goal || 40}
+          />
+        </div>
+      </div>
+
+      {/* Mapa de Calor */}
+      <ActivityHeatmap timeEntries={timeEntries} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Últimas entradas */}

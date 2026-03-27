@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import { startOfWeek, endOfWeek, differenceInDays, isWeekend } from 'date-fns';
+import { startOfWeek, endOfWeek, differenceInDays } from 'date-fns';
 import Card from '../common/Card';
 import { Target, TrendingUp, Calendar } from 'lucide-react';
 
@@ -46,12 +46,14 @@ export const GoalTracker = ({ timeEntries, goalType = 'weekly', customGoal = nul
     
     const daysRemaining = differenceInDays(periodEnd, today);
     
-    // Calcular días laborables restantes (sin fines de semana)
+    // Calcular días laborables restantes (lunes a sábado, SIN domingo)
     let workDaysRemaining = 0;
     for (let i = 0; i <= daysRemaining; i++) {
       const checkDate = new Date(today);
       checkDate.setDate(checkDate.getDate() + i);
-      if (!isWeekend(checkDate)) {
+      const dayOfWeek = checkDate.getDay();
+      // Excluir domingo (0)
+      if (dayOfWeek !== 0) {
         workDaysRemaining++;
       }
     }

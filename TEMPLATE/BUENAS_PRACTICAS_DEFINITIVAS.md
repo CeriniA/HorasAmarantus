@@ -7,10 +7,11 @@
 3. [Naming Conventions](#naming-conventions)
 4. [Manejo de Errores](#manejo-de-errores)
 5. [Validaciones](#validaciones)
-6. [Testing](#testing)
-7. [Seguridad](#seguridad)
-8. [Performance](#performance)
-9. [Code Review Checklist](#code-review-checklist)
+6. [**Manejo de Fechas y Timestamps**](#manejo-de-fechas-y-timestamps) ⭐ NUEVO
+7. [Testing](#testing)
+8. [Seguridad](#seguridad)
+9. [Performance](#performance)
+10. [Code Review Checklist](#code-review-checklist)
 
 ---
 
@@ -778,6 +779,209 @@ class UserService {
 
 ---
 
+## 📅 Manejo de Fechas y Timestamps
+
+### ⚠️ Problema Común: Zonas Horarias
+
+**El problema:** PostgreSQL guarda `TIMESTAMP WITHOUT TIME ZONE`, pero JavaScript interpreta timestamps sin zona como UTC, causando cambios de día en zonas UTC negativas (ej: Argentina UTC-3).
+
+**Ejemplo del problema:**
+```javascript
+// ❌ MAL - Causa cambios de fecha
+const timestamp = "2026-03-26T08:00:00";  // Sin zona horaria
+const date = new Date(timestamp);         // JavaScript lo interpreta como UTC
+// En Argentina (UTC-3): se convierte a 2026-03-26T05:00:00-03:00
+// Al formatear: puede mostrar 2026-03-25 (día anterior!)
+
+// ❌ MAL - Peor aún con solo fecha
+const dateOnly = "2026-03-26";
+const date = new Date(dateOnly);  // UTC medianoche
+// En Argentina: 2026-03-25T21:00:00-03:00 (día anterior!)
+```
+
+### ✅ Solución: Helper Functions
+
+**Crear archivo `utils/dateHelpers.js`:**
+
+```javascript
+/**
+ * Parsear timestamp de DB como fecha local
+ * @param {string} timestamp - Timestamp ISO (YYYY-MM-DDTHH:MM:SS)
+ * @returns {Date} - Date object en hora local
+ */
+export const parseDBTimestamp = (timestamp) => {
+  if (!timestamp) return null;
+  
+  // Si ya tiene hora, usarlo directamente
+  if (timestamp.includes('T')) {
+    return new Date(timestamp);
+  }
+  
+  // Si es solo fecha, agregar mediodía para evitar cambios de día
+  return new Date(timestamp + 'T12:00:00');
+};
+
+/**
+ * Extraer solo la fecha de un timestamp (YYYY-MM-DD)
+ * @param {string} timestamp - Timestamp ISO
+ * @returns {string} - Fecha en formato YYYY-MM-DD
+ */
+export const extractDate = (timestamp) => {
+  if (!timestamp) return '';
+  return timestamp.split('T')[0];
+};
+
+/**
+ * Formatear fecha para mostrar, evitando problemas de zona horaria
+ * @param {string} timestamp - Timestamp de la DB
+ * @returns {Date} - Date object seguro para formatear
+ */
+export const safeDate = (timestamp) => {
+  const dateStr = extractDate(timestamp);
+  return new Date(dateStr + 'T12:00:00');
+};
+
+/**
+ * Calcular horas entre dos timestamps
+ * @param {string} startTime - Timestamp de inicio
+ * @param {string} endTime - Timestamp de fin
+ * @returns {number} - Horas transcurridas
+ */
+export const calculateHours = (startTime, endTime) => {
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+  return (end - start) / (1000 * 60 * 60);
+};
+
+/**
+ * Crear timestamp para guardar en DB (sin zona horaria)
+ * @param {string} date - Fecha YYYY-MM-DD
+ * @param {string} time - Hora HH:MM
+ * @returns {string} - Timestamp YYYY-MM-DD HH:MM:SS
+ */
+export const createDBTimestamp = (date, time) => {
+  return `${date} ${time}:00`;
+};
+```
+
+### 📋 Patrones de Uso
+
+#### 1. Calcular Horas
+```javascript
+// ❌ MAL - Conversión manual propensa a errores
+const hours = (new Date(end_time) - new Date(start_time)) / (1000 * 60 * 60);
+
+// ✅ BIEN - Usar helper
+import { calculateHours } from '../utils/dateHelpers';
+const hours = calculateHours(start_time, end_time);
+```
+
+#### 2. Extraer Fecha
+```javascript
+// ❌ MAL - Puede dar fecha incorrecta por zona horaria
+const date = format(new Date(entry.start_time), 'yyyy-MM-dd');
+
+// ✅ BIEN - Extrae directamente del string
+import { extractDate } from '../utils/dateHelpers';
+const date = extractDate(entry.start_time);
+```
+
+#### 3. Formatear para Mostrar
+```javascript
+// ❌ MAL - Puede mostrar día incorrecto
+format(new Date(entry.start_time), 'dd/MM/yyyy')
+
+// ✅ BIEN - Usa safeDate
+import { safeDate } from '../utils/dateHelpers';
+format(safeDate(entry.start_time), 'dd/MM/yyyy')
+```
+
+#### 4. Comparar Fechas
+```javascript
+// ❌ MAL - Conversión directa
+const entryDate = new Date(entry.start_time);
+if (entryDate >= startDate && entryDate <= endDate) { }
+
+// ✅ BIEN - Usa safeDate
+import { safeDate } from '../utils/dateHelpers';
+const entryDate = safeDate(entry.start_time);
+if (entryDate >= startDate && entryDate <= endDate) { }
+```
+
+#### 5. Agrupar por Fecha
+```javascript
+// ❌ MAL - Puede agrupar en día incorrecto
+const grouped = entries.reduce((acc, entry) => {
+  const date = format(new Date(entry.start_time), 'yyyy-MM-dd');
+  // ...
+}, {});
+
+// ✅ BIEN - Extrae fecha directamente
+import { extractDate } from '../utils/dateHelpers';
+const grouped = entries.reduce((acc, entry) => {
+  const date = extractDate(entry.start_time);
+  // ...
+}, {});
+```
+
+### 🗄️ Base de Datos
+
+**Configuración correcta en PostgreSQL:**
+
+```sql
+-- ✅ BIEN - TIMESTAMP WITHOUT TIME ZONE
+CREATE TABLE time_entries (
+  id UUID PRIMARY KEY,
+  start_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+  end_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+);
+
+-- ❌ MAL - WITH TIME ZONE causa conversiones
+CREATE TABLE time_entries (
+  start_time TIMESTAMP WITH TIME ZONE  -- Evitar esto
+);
+```
+
+**Migración si ya existe:**
+
+```sql
+-- Cambiar columnas existentes
+ALTER TABLE time_entries 
+  ALTER COLUMN start_time TYPE TIMESTAMP WITHOUT TIME ZONE,
+  ALTER COLUMN end_time TYPE TIMESTAMP WITHOUT TIME ZONE;
+```
+
+### 📤 Enviar a Backend
+
+```javascript
+// ✅ BIEN - Formato simple sin zona horaria
+const timestamp = `${date} ${time}:00`;  // "2026-03-26 08:00:00"
+
+// ❌ MAL - Con zona horaria
+const timestamp = new Date().toISOString();  // "2026-03-26T11:00:00.000Z"
+```
+
+### 🎯 Reglas de Oro
+
+1. **NUNCA** usar `new Date()` directamente con timestamps de la DB
+2. **SIEMPRE** usar helpers de `dateHelpers.js`
+3. **EXTRAER** fechas con `.split('T')[0]` cuando sea posible
+4. **AGREGAR** `T12:00:00` cuando necesites crear un Date object de solo fecha
+5. **GUARDAR** timestamps SIN zona horaria en la DB
+6. **MIGRAR** columnas a `TIMESTAMP WITHOUT TIME ZONE`
+
+### ✅ Checklist de Code Review
+
+- [ ] ¿Se usa `calculateHours()` en vez de cálculo manual?
+- [ ] ¿Se usa `extractDate()` para obtener fechas?
+- [ ] ¿Se usa `safeDate()` para formatear fechas?
+- [ ] ¿Los timestamps se guardan sin zona horaria?
+- [ ] ¿Las columnas de DB son `WITHOUT TIME ZONE`?
+- [ ] ¿No hay `new Date(timestamp)` directo en el código?
+
+---
+
 ## 🧪 Testing
 
 ### Unit Tests
@@ -1122,6 +1326,16 @@ async function getUsers(page = 1, pageSize = 20) {
 - [ ] Accesibilidad considerada (frontend)
 - [ ] Responsive design (frontend)
 
+### Manejo de Fechas ⭐ NUEVO
+
+- [ ] Se usan helpers de `dateHelpers.js` en vez de `new Date()` directo
+- [ ] Cálculo de horas usa `calculateHours()` en vez de cálculo manual
+- [ ] Extracción de fechas usa `extractDate()` o `.split('T')[0]`
+- [ ] Formateo de fechas usa `safeDate()` para evitar cambios de día
+- [ ] Timestamps se guardan SIN zona horaria en DB
+- [ ] Columnas de DB son `TIMESTAMP WITHOUT TIME ZONE`
+- [ ] No hay conversiones de zona horaria innecesarias
+
 ---
 
 ## 🎯 Resumen
@@ -1143,6 +1357,7 @@ async function getUsers(page = 1, pageSize = 20) {
 5. ✅ Validar todos los inputs
 6. ✅ Testear todo
 7. ✅ Nunca hardcodear secrets
+8. ✅ **Usar helpers para fechas, nunca `new Date()` directo** ⭐ NUEVO
 8. ✅ Loggear apropiadamente
 9. ✅ Documentar decisiones importantes
 10. ✅ Refactorizar constantemente
