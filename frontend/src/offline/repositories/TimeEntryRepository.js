@@ -4,7 +4,6 @@
  */
 
 import { BaseRepository } from './BaseRepository.js';
-import { db } from '../core/db.js';
 import { TIME_ENTRY_STATUS } from '../../constants';
 import { generateUUID } from '../../utils/uuid.js';
 
@@ -65,24 +64,6 @@ export class TimeEntryRepository extends BaseRepository {
       created_at: entry.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-  }
-
-  /**
-   * Limpiar entries sincronizados (para evitar duplicados al recargar desde backend)
-   */
-  async clearSynced() {
-    const all = await this.findAll();
-    const syncedIds = all
-      .filter(entry => entry.pending_sync === false)
-      .map(entry => entry.id);
-    
-    for (const id of syncedIds) {
-      await this.delete(id);
-    }
-    
-    if (import.meta.env.DEV) {
-      console.log(`🗑️ Limpiados ${syncedIds.length} entries sincronizados de IndexedDB`);
-    }
   }
 
   /**

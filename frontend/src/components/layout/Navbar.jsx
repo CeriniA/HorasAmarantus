@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, User, Settings, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { useAuthContext } from '../../context/AuthContext';
-import { USER_ROLES, getRoleLabel } from '../../constants';
+import { usePermissions } from '../../hooks/usePermissions';
+import { getRoleLabel } from '../../constants';
 import { useOffline } from '../../hooks/useOffline';
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuthContext();
+  const { isAdmin } = usePermissions();
   const { isOnline, isSyncing, pendingChanges, manualSync } = useOffline();
   const navigate = useNavigate();
 
@@ -44,7 +46,7 @@ export const Navbar = () => {
               >
                 Registrar Horas
               </Link>
-              {(user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN) && (
+              {isAdmin() && (
                 <>
                   <Link
                     to="/organizational-units"
@@ -169,7 +171,7 @@ export const Navbar = () => {
             >
               Registrar Horas
             </Link>
-            {(user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN) && (
+            {isAdmin() && (
               <>
                 <Link
                   to="/organizational-units"
@@ -185,16 +187,14 @@ export const Navbar = () => {
                 >
                   Reportes
                 </Link>
+                <Link
+                  to="/admin/users"
+                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Usuarios
+                </Link>
               </>
-            )}
-            {(user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN) && (
-              <Link
-                to="/admin/users"
-                className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Usuarios
-              </Link>
             )}
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">

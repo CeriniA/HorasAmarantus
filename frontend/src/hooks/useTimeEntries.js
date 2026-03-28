@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { timeEntriesService } from '../services/api';
 import { timeEntryRepository, syncQueue, syncManager } from '../offline/index.js';
 
@@ -11,7 +11,7 @@ export const useTimeEntries = (userId) => {
     if (userId) {
       loadTimeEntries();
     }
-  }, [userId]);
+  }, [userId, loadTimeEntries]);
 
   // Escuchar eventos de sincronización
   useEffect(() => {
@@ -27,9 +27,9 @@ export const useTimeEntries = (userId) => {
     return () => {
       syncManager.removeListener(handleSyncComplete);
     };
-  }, [userId]);
+  }, [loadTimeEntries]);
 
-  const loadTimeEntries = async () => {
+  const loadTimeEntries = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -38,43 +38,36 @@ export const useTimeEntries = (userId) => {
         // Cargar desde backend
         const { timeEntries: data } = await timeEntriesService.getAll();
         
-        // Eliminar duplicados basados en client_id (puede haber entries con ID temporal y del servidor)
-        const uniqueEntries = [];
-        const seenClientIds = new Set();
-        const seenServerIds = new Set();
+        // Obtener entries pendientes de IndexedDB
+        const pendingEntries = await timeEntryRepository.findPending();
         
-        for (const entry of data) {
-          // Si tiene client_id, verificar que no esté duplicado
-          if (entry.client_id) {
-            if (seenClientIds.has(entry.client_id)) {
-              continue; // Saltar duplicado
-            }
-            seenClientIds.add(entry.client_id);
+        // Combinar: backend + pendientes locales
+        const combined = [...data];
+        
+        // Agregar pendientes que no estén en backend
+        for (const pending of pendingEntries) {
+          const existsInBackend = data.some(d => 
+            d.id === pending.id || d.client_id === pending.client_id
+          );
+          if (!existsInBackend) {
+            combined.push(pending);
           }
-          
-          // Verificar ID del servidor
-          if (seenServerIds.has(entry.id)) {
-            continue; // Saltar duplicado
-          }
-          seenServerIds.add(entry.id);
-          
+        }
+        
+        // Eliminar duplicados
+        const uniqueEntries = [];
+        const seenIds = new Set();
+        
+        for (const entry of combined) {
+          if (seenIds.has(entry.id)) continue;
+          seenIds.add(entry.id);
           uniqueEntries.push(entry);
         }
         
         setTimeEntries(uniqueEntries);
-
-        // Limpiar entries sincronizados de IndexedDB para evitar duplicados
-        await timeEntryRepository.clearSynced();
-
-        // Guardar en cache local solo entries pendientes de sincronización
-        // Los entries sincronizados se cargarán desde backend la próxima vez
-        for (const entry of data) {
-          await timeEntryRepository.save({
-            ...entry,
-            pending_sync: false,
-            synced_at: new Date().toISOString()
-          });
-        }
+        
+        // NO guardar en IndexedDB - solo mantener pendientes
+        // IndexedDB es solo para offline, no para cache
       } else {
         // Modo offline: cargar desde IndexedDB
         const localEntries = await timeEntryRepository.findByUser(userId);
@@ -94,7 +87,7 @@ export const useTimeEntries = (userId) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   const createEntry = async (entryData) => {
     try {
@@ -110,12 +103,7 @@ export const useTimeEntries = (userId) => {
         
         setTimeEntries(prev => [timeEntry, ...prev]);
 
-        // Guardar en cache local
-        await timeEntryRepository.save({
-          ...timeEntry,
-          pending_sync: false,
-          synced_at: new Date().toISOString()
-        });
+        // NO guardar en IndexedDB - backend es la fuente de verdad
 
         return { success: true, data: timeEntry };
       } else {
@@ -183,14 +171,10 @@ export const useTimeEntries = (userId) => {
           prev.map(e => e.id === entryId ? updatedEntry : e)
         );
 
-        // ✅ NUEVO: Intentar sincronizar inmediatamente si hay conexión
-        if (navigator.onLine) {
-          setTimeout(() => {
-            syncManager.sync().catch(err => {
-              console.error('Error en sincronización automática:', err);
-            });
-          }, 1000);
-        }
+        // Intentar sincronizar en background
+        syncManager.sync().catch(err => {
+          console.error('Error en sincronización automática:', err);
+        });
 
         return { success: true, data: updatedEntry };
       }

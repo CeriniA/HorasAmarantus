@@ -6,6 +6,9 @@ import Button from '../common/Button';
 import Input from '../common/Input';
 import { getAreaColor } from '../../utils/areaColors';
 import { TemplateManager } from './TemplateManager';
+import { isAdminOrSuperadmin, filterUsersByPermission } from '../../utils/roleHelpers';
+import { CONFIG } from '../../constants/config';
+import { getStorageKey } from '../../constants/config';
 
 /**
  * Componente de carga múltiple de tiempo
@@ -34,40 +37,27 @@ export const BulkTimeEntry = ({
   }, [currentUser]);
   
   // Verificar si el usuario actual es admin o superadmin
-  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+  const isAdmin = isAdminOrSuperadmin(currentUser);
   
-  // Filtrar usuarios según el rol actual
+  // Filtrar usuarios según el rol actual usando helper
   const availableUsers = useMemo(() => {
-    if (!users || users.length === 0) return [];
-    
-    // SuperAdmin puede ver todos los usuarios
-    if (currentUser?.role === 'superadmin') {
-      return users;
-    }
-    
-    // Admin solo puede ver operarios
-    if (currentUser?.role === 'admin') {
-      return users.filter(u => u.role === 'operario');
-    }
-    
-    // Operarios no deberían ver este selector
-    return [];
+    return filterUsersByPermission(users, currentUser);
   }, [users, currentUser]);
   
-  // Rango horario general
-  const [workdayStart, setWorkdayStart] = useState('08:00');
-  const [workdayEnd, setWorkdayEnd] = useState('16:00');
+  // Rango horario general (usando configuración centralizada)
+  const [workdayStart, setWorkdayStart] = useState(CONFIG.DEFAULT_WORKDAY_START);
+  const [workdayEnd, setWorkdayEnd] = useState(CONFIG.DEFAULT_WORKDAY_END);
   
-  // Cargar última preferencia de horario
+  // Cargar última preferencia de horario (usando storage key centralizado)
   useEffect(() => {
-    const savedWorkday = localStorage.getItem('lastWorkdayRange');
+    const savedWorkday = localStorage.getItem(getStorageKey('lastWorkdayRange'));
     if (savedWorkday) {
       try {
         const { start, end } = JSON.parse(savedWorkday);
         setWorkdayStart(start);
         setWorkdayEnd(end);
       } catch (e) {
-        // Usar valores por defecto
+        // Usar valores por defecto de CONFIG
       }
     }
   }, []);
@@ -75,7 +65,7 @@ export const BulkTimeEntry = ({
   // Guardar preferencia cuando cambia
   useEffect(() => {
     if (workdayStart && workdayEnd) {
-      localStorage.setItem('lastWorkdayRange', JSON.stringify({
+      localStorage.setItem(getStorageKey('lastWorkdayRange'), JSON.stringify({
         start: workdayStart,
         end: workdayEnd
       }));

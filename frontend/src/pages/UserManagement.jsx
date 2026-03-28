@@ -1,9 +1,12 @@
 /* eslint-disable no-alert, no-restricted-globals */
+// TODO: Reemplazar alert/confirm con componente de notificaciones (Toast/Modal)
 import { useState } from 'react';
 import { useUsers } from '../hooks/useUsers';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
 import { usePermissions } from '../hooks/usePermissions';
 import { USER_ROLES, getRoleLabel } from '../constants';
+import { getRoleBadgeColor } from '../utils/roleHelpers';
+import { MESSAGES } from '../constants/messages';
 
 export const UserManagement = () => {
   const { users, loading, createUser, updateUser, deleteUser } = useUsers();
@@ -36,7 +39,7 @@ export const UserManagement = () => {
 
   const handleOpenEdit = (user) => {
     if (!can('edit', 'users', user)) {
-      alert('No tienes permisos para editar este usuario');
+      alert(MESSAGES.NO_PERMISSION_EDIT_USER);
       return;
     }
 
@@ -55,17 +58,17 @@ export const UserManagement = () => {
 
   const handleDelete = async (user) => {
     if (!can('delete', 'users', user)) {
-      alert('No tienes permisos para eliminar este usuario');
+      alert(MESSAGES.NO_PERMISSION_DELETE_USER);
       return;
     }
 
-    if (!confirm(`¿Estás seguro de eliminar al usuario ${user.name}?`)) {
+    if (!window.confirm(MESSAGES.CONFIRM_DELETE_USER(user.name))) {
       return;
     }
 
     const result = await deleteUser(user.id);
     if (result.success) {
-      alert('Usuario eliminado exitosamente');
+      alert(MESSAGES.USER_DELETED_SUCCESS);
     } else {
       alert(`Error: ${result.error}`);
     }
@@ -77,23 +80,23 @@ export const UserManagement = () => {
 
     // Validaciones
     if (!formData.username || !formData.name) {
-      setFormError('Usuario y nombre son requeridos');
+      setFormError(MESSAGES.REQUIRED_FIELDS);
       return;
     }
 
     if (!editingUser && !formData.password) {
-      setFormError('Password es requerido para nuevos usuarios');
+      setFormError(MESSAGES.INVALID_PASSWORD);
       return;
     }
 
     // Verificar permisos
     if (!editingUser && !can('create', 'users', formData)) {
-      setFormError('No tienes permisos para crear usuarios con este rol');
+      setFormError(MESSAGES.NO_PERMISSION_CREATE_USER);
       return;
     }
 
     if (editingUser && !can('edit', 'users', { ...editingUser, ...formData })) {
-      setFormError('No tienes permisos para editar este usuario');
+      setFormError(MESSAGES.NO_PERMISSION_EDIT_USER);
       return;
     }
 
@@ -116,23 +119,10 @@ export const UserManagement = () => {
       : await createUser(userData);
 
     if (result.success) {
-      alert(editingUser ? 'Usuario actualizado' : 'Usuario creado');
+      alert(editingUser ? MESSAGES.USER_UPDATED_SUCCESS : MESSAGES.USER_CREATED_SUCCESS);
       setShowModal(false);
     } else {
       setFormError(result.error);
-    }
-  };
-
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case USER_ROLES.SUPERADMIN:
-        return 'bg-purple-100 text-purple-800';
-      case USER_ROLES.ADMIN:
-        return 'bg-blue-100 text-blue-800';
-      case USER_ROLES.OPERARIO:
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
     }
   };
 

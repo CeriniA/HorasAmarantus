@@ -5,7 +5,9 @@ import { useAuthContext } from '../context/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
-import { USER_ROLES } from '../constants';
+import { TIME_ENTRY_STATUS } from '../constants';
+import { isAdminOrSuperadmin, isOperario } from '../utils/roleHelpers';
+import { isDateInRange } from '../utils/dateHelpers';
 
 // Componentes modularizados
 import { ReportFilters } from '../components/reports/ReportFilters';
@@ -25,7 +27,6 @@ import { getUnitAndChildren, calculateReportMetrics } from '../utils/reportCalcu
 import { exportToCSV } from '../utils/reportExport';
 import { exportToExcel } from '../utils/exportToExcel';
 import { exportToPDF } from '../utils/exportToPDF';
-import { safeDate } from '../utils/dateHelpers';
 
 export const Reports = () => {
   const { user } = useAuthContext();
@@ -85,10 +86,10 @@ export const Reports = () => {
   const loadFilters = async () => {
     try {
       // Cargar usuarios según rol
-      if (user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN) {
+      if (isAdminOrSuperadmin(user)) {
         const { users: usersData } = await usersService.getAll();
         setUsers(usersData || []);
-      } else if (user?.role === USER_ROLES.OPERARIO) {
+      } else if (isOperario(user)) {
         // Operario solo ve su propio usuario en el filtro
         setUsers([user]);
         setSelectedUser(user.id); // Pre-seleccionar su usuario
@@ -107,17 +108,14 @@ export const Reports = () => {
 
       const { timeEntries: entries } = await timeEntriesService.getAll();
 
-      // Filtrar por fechas
+      // Filtrar por fechas (usando helper)
       let filtered = entries.filter(entry => {
-        const entryDate = safeDate(entry.start_time);
-        const start = new Date(`${startDate}T00:00:00`);
-        const end = new Date(`${endDate}T23:59:59`);
-        
-        return entryDate >= start && entryDate <= end && entry.status === 'completed';
+        return isDateInRange(entry.start_time, startDate, endDate) && 
+               entry.status === TIME_ENTRY_STATUS.COMPLETED;
       });
 
       // Filtrar por usuario
-      if (user?.role === USER_ROLES.OPERARIO) {
+      if (isOperario(user)) {
         filtered = filtered.filter(e => e.user_id === user.id);
       } else if (selectedUser !== 'all') {
         filtered = filtered.filter(e => e.user_id === selectedUser);
@@ -177,7 +175,7 @@ export const Reports = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Reportes</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {user?.role === USER_ROLES.OPERARIO ? 'Tus horas trabajadas' : 'Análisis de horas trabajadas'}
+            {isOperario(user) ? 'Tus horas trabajadas' : 'Análisis de horas trabajadas'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -343,7 +341,7 @@ export const Reports = () => {
               <ComparativeAnalysis timeEntries={filteredEntries} />
 
               {/* Análisis de Productividad */}
-              {user?.role === USER_ROLES.OPERARIO && (
+              {isOperario(user) && (
                 <ProductivityAnalysis timeEntries={filteredEntries} />
               )}
             </>

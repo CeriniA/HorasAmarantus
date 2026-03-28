@@ -6,7 +6,7 @@ import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { format, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { USER_ROLES } from '../constants';
+import { isAdminOrSuperadmin, isAdmin, isOperario } from '../utils/roleHelpers';
 import { Clock, TrendingUp, Briefcase, Users } from 'lucide-react';
 
 // Componentes nuevos
@@ -105,7 +105,7 @@ export const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">
-                {user?.role === USER_ROLES.OPERARIO ? 'Tus Horas Hoy' : 'Horas Hoy'}
+                {isOperario(user) ? 'Tus Horas Hoy' : 'Horas Hoy'}
               </p>
               <p className="text-2xl font-bold text-gray-900">
                 {todayHours.toFixed(1)}h
@@ -124,7 +124,7 @@ export const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">
-                {user?.role === USER_ROLES.OPERARIO ? 'Tu Semana' : 'Esta Semana'}
+                {isOperario(user) ? 'Tu Semana' : 'Esta Semana'}
               </p>
               <p className="text-2xl font-bold text-gray-900">
                 {weekHours.toFixed(1)}h
@@ -143,7 +143,7 @@ export const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-500">
-                {user?.role === USER_ROLES.OPERARIO ? 'Tu Mes' : 'Este Mes'}
+                {isOperario(user) ? 'Tu Mes' : 'Este Mes'}
               </p>
               <p className="text-2xl font-bold text-gray-900">
                 {monthHours.toFixed(1)}h
@@ -182,8 +182,8 @@ export const Dashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Últimas entradas */}
         <Card 
-          title={user?.role === USER_ROLES.OPERARIO ? 'Tus Últimas Entradas' : 'Últimos Registros'} 
-          subtitle={user?.role === USER_ROLES.OPERARIO ? 'Tus registros más recientes' : 'Registros más recientes del sistema'}
+          title={isOperario(user) ? 'Tus Últimas Entradas' : 'Últimos Registros'} 
+          subtitle={isOperario(user) ? 'Tus registros más recientes' : 'Registros más recientes del sistema'}
         >
           <div className="space-y-4">
             {recentEntries.length === 0 ? (
@@ -223,7 +223,7 @@ export const Dashboard = () => {
 
         {/* Top áreas */}
         <Card 
-          title={user?.role === USER_ROLES.OPERARIO ? 'Tus Áreas Más Trabajadas' : 'Áreas Más Trabajadas'} 
+          title={isOperario(user) ? 'Tus Áreas Más Trabajadas' : 'Áreas Más Trabajadas'} 
           subtitle="Top 5 este mes"
         >
           <div className="space-y-4">
@@ -271,7 +271,7 @@ export const Dashboard = () => {
             Registrar Horas
           </Button>
           
-          {(user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN) && (
+          {isAdminOrSuperadmin(user) && (
             <>
               <Button
                 variant="outline"
@@ -293,7 +293,7 @@ export const Dashboard = () => {
             </>
           )}
           
-          {user?.role === USER_ROLES.ADMIN && (
+          {isAdmin(user) && (
             <Button
               variant="outline"
               fullWidth
