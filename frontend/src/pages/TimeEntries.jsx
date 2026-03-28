@@ -3,6 +3,7 @@ import { Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { useTimeEntries } from '../hooks/useTimeEntries';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
+import { useUsers } from '../hooks/useUsers';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Alert from '../components/common/Alert';
@@ -24,6 +25,7 @@ export const TimeEntries = () => {
     deleteEntry 
   } = useTimeEntries(user?.id);
   const { units } = useOrganizationalUnits();
+  const { users } = useUsers(); // Para el selector de usuarios en admins
 
   const [showBulkEntry, setShowBulkEntry] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -39,18 +41,24 @@ export const TimeEntries = () => {
   const [selectedYear, setSelectedYear] = useState(format(new Date(), 'yyyy'));
 
   // Filtrar registros según modo seleccionado
+  // TODOS los usuarios (incluyendo admins) solo ven SUS PROPIOS registros
   const filteredEntries = timeEntries.filter(entry => {
     const entryDate = safeDate(entry.start_time);
     
+    // Filtro 1: Solo registros del usuario actual
+    const isMyEntry = entry.user_id === user?.id;
+    
+    // Filtro 2: Por fecha
+    let dateMatch = true;
     if (filterMode === 'month') {
       const entryMonth = format(entryDate, 'yyyy-MM');
-      return entryMonth === selectedMonth;
+      dateMatch = entryMonth === selectedMonth;
     } else if (filterMode === 'year') {
       const entryYear = format(entryDate, 'yyyy');
-      return entryYear === selectedYear;
+      dateMatch = entryYear === selectedYear;
     }
     
-    return true; // 'all' - mostrar todos
+    return isMyEntry && dateMatch;
   });
 
   const handleBulkSave = async (entries) => {
@@ -157,8 +165,16 @@ export const TimeEntries = () => {
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Registro de Horas</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Gestiona y visualiza tus registros de tiempo
+          Gestiona y visualiza tus registros de tiempo personales
         </p>
+        {(user?.role === 'admin' || user?.role === 'superadmin') && (
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              💡 <strong>Nota:</strong> Esta sección muestra solo tus registros personales. 
+              Para ver datos de otros usuarios, ve a <strong>Reportes</strong>.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Controles superiores: Filtros + Botón Cargar */}
@@ -402,6 +418,8 @@ export const TimeEntries = () => {
         units={units}
         onSave={handleBulkSave}
         loading={saving}
+        currentUser={user}
+        users={users}
       />
 
       {/* Modal de edición */}

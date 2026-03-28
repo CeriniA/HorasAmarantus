@@ -48,8 +48,30 @@ router.post('/', validateCreateTimeEntry, async (req, res) => {
     
     // Solo admins y superadmins pueden crear registros para otros usuarios
     const targetUserId = user_id || req.user.id;
+    
+    // Operarios solo pueden crear para sí mismos
     if (targetUserId !== req.user.id && req.user.role !== USER_ROLES.ADMIN && req.user.role !== USER_ROLES.SUPERADMIN) {
       return res.status(403).json({ error: 'No puedes crear registros para otros usuarios' });
+    }
+    
+    // Si se especifica user_id, validar que el admin no cree para otros admins/superadmins
+    if (user_id && user_id !== req.user.id) {
+      // Obtener el usuario objetivo
+      const { data: targetUser, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user_id)
+        .single();
+      
+      if (userError || !targetUser) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+      
+      // Admin NO puede crear registros para otros admins o superadmins
+      if (req.user.role === USER_ROLES.ADMIN && 
+          (targetUser.role === USER_ROLES.ADMIN || targetUser.role === USER_ROLES.SUPERADMIN)) {
+        return res.status(403).json({ error: 'No puedes crear registros para usuarios admin o superadmin' });
+      }
     }
 
     const { data, error } = await supabase
@@ -129,10 +151,31 @@ router.post('/bulk', async (req, res) => {
       return res.status(400).json({ error: 'Debe proporcionar al menos un registro' });
     }
 
-    // Solo admins pueden crear registros para otros usuarios
+    // Solo admins y superadmins pueden crear registros para otros usuarios
     const targetUserId = user_id || req.user.id;
+    
+    // Operarios solo pueden crear para sí mismos
     if (targetUserId !== req.user.id && req.user.role !== USER_ROLES.ADMIN && req.user.role !== USER_ROLES.SUPERADMIN) {
       return res.status(403).json({ error: 'No puedes crear registros para otros usuarios' });
+    }
+    
+    // Si se especifica user_id, validar que el admin no cree para otros admins/superadmins
+    if (user_id && user_id !== req.user.id) {
+      const { data: targetUser, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user_id)
+        .single();
+      
+      if (userError || !targetUser) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+      
+      // Admin NO puede crear registros para otros admins o superadmins
+      if (req.user.role === USER_ROLES.ADMIN && 
+          (targetUser.role === USER_ROLES.ADMIN || targetUser.role === USER_ROLES.SUPERADMIN)) {
+        return res.status(403).json({ error: 'No puedes crear registros para usuarios admin o superadmin' });
+      }
     }
 
     // Validar cada entrada

@@ -6,7 +6,7 @@
 import express from 'express';
 import { supabase } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
-import { USER_ROLES } from '../constants.js';
+import { USER_ROLES } from '../models/constants.js';
 
 const router = express.Router();
 

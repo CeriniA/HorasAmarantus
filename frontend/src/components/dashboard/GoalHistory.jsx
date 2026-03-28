@@ -4,19 +4,41 @@
  */
 
 import { useMemo } from 'react';
-import { startOfWeek, endOfWeek, subWeeks, format } from 'date-fns';
+import { startOfWeek, endOfWeek, subWeeks, format, differenceInWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { Award, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
 import { calculateHours } from '../../utils/dateHelpers';
 
-export const GoalHistory = ({ timeEntries, weeklyGoal = 40 }) => {
+export const GoalHistory = ({ timeEntries, weeklyGoal = 40, user }) => {
   const historyData = useMemo(() => {
     const today = new Date();
     const history = [];
 
-    // Obtener últimas 8 semanas (excluyendo la actual)
-    for (let i = 1; i <= 8; i++) {
+    // Calcular cuántas semanas mostrar (máximo 8, o menos si el usuario es nuevo)
+    let maxWeeks = 8;
+    if (user?.created_at) {
+      const userCreatedDate = new Date(user.created_at);
+      const weeksSinceCreation = differenceInWeeks(today, userCreatedDate);
+      // Mostrar como máximo las semanas que el usuario ha existido (excluyendo la actual)
+      maxWeeks = Math.min(8, Math.max(0, weeksSinceCreation));
+    }
+
+    // Si el usuario es muy nuevo (menos de 1 semana), no mostrar historial
+    if (maxWeeks === 0) {
+      return {
+        history: [],
+        achieved: 0,
+        almost: 0,
+        partial: 0,
+        missed: 0,
+        totalWeeks: 0,
+        successRate: 0
+      };
+    }
+
+    // Obtener últimas N semanas (excluyendo la actual)
+    for (let i = 1; i <= maxWeeks; i++) {
       const weekDate = subWeeks(today, i);
       const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 });
@@ -71,7 +93,7 @@ export const GoalHistory = ({ timeEntries, weeklyGoal = 40 }) => {
         totalWeeks: history.length
       }
     };
-  }, [timeEntries, weeklyGoal]);
+  }, [timeEntries, weeklyGoal, user?.created_at]);
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -116,11 +138,19 @@ export const GoalHistory = ({ timeEntries, weeklyGoal = 40 }) => {
     <Card 
       title="Historial de Objetivos"
       icon={Award}
-      subtitle={`Últimas ${historyData.stats.totalWeeks} semanas`}
+      subtitle={historyData.stats.totalWeeks > 0 ? `Últimas ${historyData.stats.totalWeeks} semanas` : 'Sin historial aún'}
     >
-      <div className="space-y-6">
-        {/* Estadísticas Generales */}
-        <div className="grid grid-cols-3 gap-4">
+      {historyData.stats.totalWeeks === 0 ? (
+        <div className="text-center py-8">
+          <Award className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 text-sm">
+            ¡Bienvenido! Completa tu primera semana para ver tu historial de objetivos.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Estadísticas Generales */}
+          <div className="grid grid-cols-3 gap-4">
           <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
             <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
             <p className="text-2xl font-bold text-green-700">
@@ -219,7 +249,8 @@ export const GoalHistory = ({ timeEntries, weeklyGoal = 40 }) => {
             </p>
           </div>
         )}
-      </div>
+        </div>
+      )}
     </Card>
   );
 };

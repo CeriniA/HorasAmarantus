@@ -16,12 +16,43 @@ export const BulkTimeEntry = ({
   onClose, 
   units = [], 
   onSave,
-  loading = false 
+  loading = false,
+  currentUser = null,
+  users = [] // Lista de usuarios para admins
 }) => {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [timeEntries, setTimeEntries] = useState({});
   const [expandedAreas, setExpandedAreas] = useState(new Set());
   const [showTemplates, setShowTemplates] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(currentUser?.id || null);
+  
+  // Actualizar selectedUserId cuando cambia currentUser
+  useEffect(() => {
+    if (currentUser?.id) {
+      setSelectedUserId(currentUser.id);
+    }
+  }, [currentUser]);
+  
+  // Verificar si el usuario actual es admin o superadmin
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+  
+  // Filtrar usuarios según el rol actual
+  const availableUsers = useMemo(() => {
+    if (!users || users.length === 0) return [];
+    
+    // SuperAdmin puede ver todos los usuarios
+    if (currentUser?.role === 'superadmin') {
+      return users;
+    }
+    
+    // Admin solo puede ver operarios
+    if (currentUser?.role === 'admin') {
+      return users.filter(u => u.role === 'operario');
+    }
+    
+    // Operarios no deberían ver este selector
+    return [];
+  }, [users, currentUser]);
   
   // Rango horario general
   const [workdayStart, setWorkdayStart] = useState('08:00');
@@ -195,17 +226,25 @@ export const BulkTimeEntry = ({
       // Actualizar currentTime para la siguiente tarea
       currentTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 
-      return {
+      const entry = {
         organizational_unit_id: unitId,
         start_time: startDateTime,
         end_time: endDateTime,
         description: null
       };
+      
+      // Si es admin y seleccionó un usuario específico, incluir user_id
+      if (isAdmin && selectedUserId && selectedUserId !== currentUser?.id) {
+        entry.user_id = selectedUserId;
+      }
+      
+      return entry;
     });
 
     console.log('📤 Enviando entries:', entries);
     console.log('📅 Fecha seleccionada:', date);
     console.log('⏰ Rango horario:', workdayStart, '-', workdayEnd);
+    console.log('👤 Usuario seleccionado:', selectedUserId);
     console.log('🔍 Primer entry completo:', JSON.stringify(entries[0], null, 2));
     await onSave(entries);
     handleClose();
@@ -250,7 +289,7 @@ export const BulkTimeEntry = ({
       }
     >
       <div className="space-y-6">
-        {/* Selector de fecha */}
+        {/* Selector de fecha y usuario */}
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex items-center gap-3">
             <Calendar className="h-5 w-5 text-primary-600" />
@@ -263,6 +302,25 @@ export const BulkTimeEntry = ({
                 required
               />
             </div>
+            {isAdmin && availableUsers.length > 0 && (
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Usuario
+                </label>
+                <select
+                  value={selectedUserId || ''}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">Seleccionar usuario...</option>
+                  {availableUsers.map(user => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.username})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={() => setShowTemplates(!showTemplates)}

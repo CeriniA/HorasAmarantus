@@ -4,19 +4,28 @@
  */
 
 import { useMemo } from 'react';
-import { startOfWeek, endOfWeek, subWeeks, format } from 'date-fns';
+import { startOfWeek, endOfWeek, subWeeks, format, differenceInWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { TrendingUp, TrendingDown, BarChart3, Calendar } from 'lucide-react';
 import { calculateHours } from '../../utils/dateHelpers';
 
-export const WeeklyComparison = ({ timeEntries }) => {
+export const WeeklyComparison = ({ timeEntries, user }) => {
   const comparisonData = useMemo(() => {
     const today = new Date();
     const weeks = [];
 
-    // Obtener datos de las últimas 4 semanas
-    for (let i = 0; i < 4; i++) {
+    // Calcular cuántas semanas mostrar (máximo 4, o menos si el usuario es nuevo)
+    let maxWeeks = 4;
+    if (user?.created_at) {
+      const userCreatedDate = new Date(user.created_at);
+      const weeksSinceCreation = differenceInWeeks(today, userCreatedDate);
+      // Mostrar como máximo las semanas que el usuario ha existido + 1 (semana actual)
+      maxWeeks = Math.min(4, Math.max(1, weeksSinceCreation + 1));
+    }
+
+    // Obtener datos de las últimas N semanas
+    for (let i = 0; i < maxWeeks; i++) {
       const weekDate = subWeeks(today, i);
       const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 });
@@ -67,7 +76,7 @@ export const WeeklyComparison = ({ timeEntries }) => {
       trend,
       trendPercent
     };
-  }, [timeEntries]);
+  }, [timeEntries, user?.created_at]);
 
   const getBarWidth = (hours) => {
     const maxHours = Math.max(...comparisonData.weeks.map(w => w.totalHours), 40);

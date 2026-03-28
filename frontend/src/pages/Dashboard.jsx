@@ -22,8 +22,13 @@ import { evaluateAlerts } from '../utils/alertRules';
 
 export const Dashboard = () => {
   const { user } = useAuthContext();
-  const { timeEntries, getTotalHours, getEntriesByDateRange } = useTimeEntries(user?.id);
+  const { timeEntries: allTimeEntries, getTotalHours, getEntriesByDateRange } = useTimeEntries(user?.id);
   const { units } = useOrganizationalUnits();
+
+  // Filtrar solo los registros del usuario actual (dashboard es personal)
+  const timeEntries = useMemo(() => {
+    return allTimeEntries.filter(entry => entry.user_id === user?.id);
+  }, [allTimeEntries, user?.id]);
 
   // Calcular métricas
   const today = new Date();
@@ -37,8 +42,8 @@ export const Dashboard = () => {
     return entryDate.toDateString() === today.toDateString();
   });
 
-  const weekEntries = getEntriesByDateRange(weekStart, weekEnd);
-  const monthEntries = getEntriesByDateRange(monthStart, monthEnd);
+  const weekEntries = getEntriesByDateRange(weekStart, weekEnd).filter(e => e.user_id === user?.id);
+  const monthEntries = getEntriesByDateRange(monthStart, monthEnd).filter(e => e.user_id === user?.id);
 
   const todayHours = getTotalHours(todayEntries);
   const weekHours = getTotalHours(weekEntries);
@@ -170,8 +175,8 @@ export const Dashboard = () => {
 
       {/* Comparación Semanal e Historial */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <WeeklyComparison timeEntries={timeEntries} />
-        <GoalHistory timeEntries={timeEntries} weeklyGoal={user?.weekly_goal || 40} />
+        <WeeklyComparison timeEntries={timeEntries} user={user} />
+        <GoalHistory timeEntries={timeEntries} weeklyGoal={user?.weekly_goal || 40} user={user} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
