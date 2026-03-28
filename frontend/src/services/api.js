@@ -231,4 +231,9 @@ export const orgUnitsService = {
   delete: (id) => api.delete(`/organizational-units/${id}`),
 };
 
+export const reportsService = {
+  getSummary: (params) => api.get('/reports/summary', { params }),
+  getOvertime: (params) => api.get('/reports/overtime', { params }),
+};
+
 export default api;

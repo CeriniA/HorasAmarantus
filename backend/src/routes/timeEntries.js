@@ -19,7 +19,7 @@ router.get('/', async (req, res) => {
       .select(`
         *,
         organizational_units (id, name, type),
-        users (id, name, email)
+        users (id, name, email, weekly_goal, monthly_goal, standard_daily_hours)
       `)
       .order('start_time', { ascending: false });
 

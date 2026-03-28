@@ -17,7 +17,7 @@ export const OvertimeReport = ({ timeEntries }) => {
   const overtimeAnalysis = useMemo(() => {
     if (!timeEntries.length) return null;
 
-    // Agrupar por día
+    // Agrupar por día y usuario
     const dailyHours = {};
     const weekendWork = [];
     const longDays = [];
@@ -27,24 +27,30 @@ export const OvertimeReport = ({ timeEntries }) => {
       const end = new Date(entry.end_time);
       const hours = (end - start) / (1000 * 60 * 60);
       const dateKey = format(start, 'yyyy-MM-dd');
+      const userId = entry.user_id;
+      const userStandardHours = entry.users?.standard_daily_hours || STANDARD_DAILY_HOURS;
+      const dayKey = `${dateKey}_${userId}`;
 
-      if (!dailyHours[dateKey]) {
-        dailyHours[dateKey] = {
+      if (!dailyHours[dayKey]) {
+        dailyHours[dayKey] = {
           date: dateKey,
+          userId,
+          userName: entry.users?.name || 'Usuario',
+          standardHours: userStandardHours,
           hours: 0,
           entries: [],
           isWeekend: isWeekend(start)
         };
       }
 
-      dailyHours[dateKey].hours += hours;
-      dailyHours[dateKey].entries.push(entry);
+      dailyHours[dayKey].hours += hours;
+      dailyHours[dayKey].entries.push(entry);
     });
 
     // Detectar días con horas extras
     Object.values(dailyHours).forEach(day => {
-      if (day.hours > STANDARD_DAILY_HOURS) {
-        const overtime = day.hours - STANDARD_DAILY_HOURS;
+      if (day.hours > day.standardHours) {
+        const overtime = day.hours - day.standardHours;
         longDays.push({
           ...day,
           overtime: parseFloat(overtime.toFixed(2)),

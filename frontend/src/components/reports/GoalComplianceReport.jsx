@@ -37,11 +37,15 @@ export const GoalComplianceReport = ({ timeEntries }) => {
       if (entryDate >= periodStart && entryDate <= periodEnd) {
         const userId = entry.user_id;
         const userName = entry.users?.name || 'Usuario Desconocido';
+        const userWeeklyGoal = entry.users?.weekly_goal || DEFAULT_WEEKLY_GOAL;
+        const userMonthlyGoal = entry.users?.monthly_goal || DEFAULT_MONTHLY_GOAL;
         
         if (!userStats[userId]) {
           userStats[userId] = {
             userId,
             userName,
+            weekly_goal: userWeeklyGoal,
+            monthly_goal: userMonthlyGoal,
             hours: 0,
             entries: 0
           };
@@ -58,10 +62,10 @@ export const GoalComplianceReport = ({ timeEntries }) => {
 
     // Calcular cumplimiento
     const compliance = Object.values(userStats).map(user => {
-      // Buscar objetivo del usuario (cuando esté en DB)
+      // Usar objetivo del usuario desde DB
       const userGoal = period === 'weekly' 
-        ? (user.weekly_goal || DEFAULT_WEEKLY_GOAL)
-        : (user.monthly_goal || DEFAULT_MONTHLY_GOAL);
+        ? user.weekly_goal
+        : user.monthly_goal;
 
       const actualHours = parseFloat(user.hours.toFixed(1));
       const percentage = (actualHours / userGoal) * 100;

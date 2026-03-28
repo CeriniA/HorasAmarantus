@@ -14,6 +14,7 @@ import authRoutes from './routes/auth.js';
 import timeEntriesRoutes from './routes/timeEntries.js';
 import usersRoutes from './routes/users.js';
 import orgUnitsRoutes from './routes/organizationalUnits.js';
+import reportsRoutes from './routes/reports.js';
 
 // Validar configuración al inicio
 validateConfig();
@@ -80,12 +81,14 @@ app.use('/api/auth', authRoutes);
 app.use('/api/time-entries', timeEntriesRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/organizational-units', orgUnitsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // Rutas alternativas sin /api (para compatibilidad)
 app.use('/auth', authRoutes);
 app.use('/time-entries', timeEntriesRoutes);
 app.use('/users', usersRoutes);
 app.use('/organizational-units', orgUnitsRoutes);
+app.use('/reports', reportsRoutes);
 
 // Ruta de health check
 app.get('/api/health', (req, res) => {
