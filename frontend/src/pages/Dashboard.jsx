@@ -14,6 +14,8 @@ import { WeeklyTrendChart } from '../components/dashboard/WeeklyTrendChart';
 import { SmartAlerts } from '../components/dashboard/SmartAlerts';
 import { ActivityHeatmap } from '../components/dashboard/ActivityHeatmap';
 import { GoalTracker } from '../components/dashboard/GoalTracker';
+import { WeeklyComparison } from '../components/dashboard/WeeklyComparison';
+import { GoalHistory } from '../components/dashboard/GoalHistory';
 
 // Utilidades
 import { evaluateAlerts } from '../utils/alertRules';
@@ -165,6 +167,12 @@ export const Dashboard = () => {
 
       {/* Mapa de Calor */}
       <ActivityHeatmap timeEntries={timeEntries} />
+
+      {/* Comparación Semanal e Historial */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <WeeklyComparison timeEntries={timeEntries} />
+        <GoalHistory timeEntries={timeEntries} weeklyGoal={user?.weekly_goal || 40} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Últimas entradas */}

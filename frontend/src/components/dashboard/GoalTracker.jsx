@@ -4,9 +4,10 @@
  */
 
 import { useMemo } from 'react';
-import { startOfWeek, endOfWeek, differenceInDays } from 'date-fns';
+import { startOfWeek, endOfWeek, differenceInDays, isSameDay, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import Card from '../common/Card';
-import { Target, TrendingUp, Calendar } from 'lucide-react';
+import { Target, TrendingUp, Calendar, Sparkles } from 'lucide-react';
 
 export const GoalTracker = ({ timeEntries, goalType = 'weekly', customGoal = null }) => {
   // Calcular progreso
@@ -138,12 +139,38 @@ export const GoalTracker = ({ timeEntries, goalType = 'weekly', customGoal = nul
     return 'stroke-orange-500';
   };
 
+  // Verificar si es lunes (inicio de semana)
+  const today = new Date();
+  const isMonday = today.getDay() === 1;
+  const isNewWeek = isMonday && isSameDay(today, goalData.periodStart);
+
   return (
     <Card 
       title={`Objetivo ${goalType === 'weekly' ? 'Semanal' : 'Mensual'}`}
       subtitle={getStatusMessage()}
     >
       <div className="space-y-6">
+        {/* Indicador de Nueva Semana */}
+        {isNewWeek && goalType === 'weekly' && (
+          <div className="p-4 bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-lg border-2 border-blue-200 animate-pulse">
+            <div className="flex items-center justify-center gap-2">
+              <Sparkles className="h-5 w-5 text-blue-600" />
+              <div className="text-center">
+                <p className="font-semibold text-blue-900">
+                  ¡Nueva Semana!
+                </p>
+                <p className="text-sm text-blue-700">
+                  {format(goalData.periodStart, "d 'de' MMMM", { locale: es })} - {format(goalData.periodEnd, "d 'de' MMMM", { locale: es })}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Tu objetivo: <strong>{goalData.targetHours}h</strong> (lunes a sábado)
+                </p>
+              </div>
+              <Sparkles className="h-5 w-5 text-blue-600" />
+            </div>
+          </div>
+        )}
+
         {/* Progreso Circular */}
         <div className="flex justify-center">
           <div className="relative inline-flex items-center justify-center">

@@ -11,6 +11,7 @@ import { isSameDay, isWeekend, getHours, differenceInDays, startOfWeek, endOfWee
 export const evaluateAlerts = (timeEntries, user) => {
   const alerts = [];
   const today = new Date();
+  const weeklyGoal = user?.weekly_goal || 40;
 
   // Regla 1: Sin registros hoy (después de las 6 PM)
   if (getHours(today) >= 18) {
@@ -68,10 +69,23 @@ export const evaluateAlerts = (timeEntries, user) => {
     });
   }
 
-  // Regla 4: Objetivo semanal
-  const weeklyGoal = user?.weeklyGoal || 40;
+  // Regla 4: Objetivo semanal - Progreso y alertas
   const progress = (weekHours / weeklyGoal) * 100;
+  const remaining = weeklyGoal - weekHours;
+  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+  const daysRemaining = differenceInDays(weekEnd, today);
   
+  // Calcular días laborables restantes (sin domingo)
+  let workDaysRemaining = 0;
+  for (let i = 1; i <= daysRemaining; i++) {
+    const checkDate = new Date(today);
+    checkDate.setDate(checkDate.getDate() + i);
+    if (checkDate.getDay() !== 0) workDaysRemaining++;
+  }
+  
+  const requiredPerDay = workDaysRemaining > 0 ? remaining / workDaysRemaining : 0;
+  
+  // 4a. Objetivo cumplido
   if (progress >= 100) {
     alerts.push({
       id: 'goal-achieved',
@@ -85,13 +99,64 @@ export const evaluateAlerts = (timeEntries, user) => {
       },
       priority: 'medium'
     });
-  } else if (progress >= 80 && progress < 100) {
-    const remaining = weeklyGoal - weekHours;
+  }
+  // 4b. Cerca del objetivo (80-99%)
+  else if (progress >= 80 && progress < 100) {
     alerts.push({
       id: 'goal-near',
       type: 'info',
       title: '🎯 Cerca del objetivo',
       message: `${progress.toFixed(0)}% completado - Faltan ${remaining.toFixed(1)}h para tu meta semanal`,
+      action: {
+        label: 'Registrar horas',
+        route: '/time-entries'
+      },
+      priority: 'medium'
+    });
+  }
+  // 4c. Ritmo insuficiente (quedan pocos días y mucho por hacer)
+  else if (workDaysRemaining <= 2 && progress < 70) {
+    alerts.push({
+      id: 'goal-behind',
+      type: 'warning',
+      title: '⚠️ Necesitas acelerar',
+      message: `Solo quedan ${workDaysRemaining} días y llevas ${progress.toFixed(0)}% del objetivo`,
+      data: {
+        'Faltan': `${remaining.toFixed(1)}h`,
+        'Necesitas': `${requiredPerDay.toFixed(1)}h/día`
+      },
+      action: {
+        label: 'Registrar horas',
+        route: '/time-entries'
+      },
+      priority: 'high'
+    });
+  }
+  // 4d. Buen ritmo (mitad de semana, buen progreso)
+  else if (today.getDay() >= 3 && progress >= 50) {
+    alerts.push({
+      id: 'goal-on-track',
+      type: 'success',
+      title: '✅ Vas bien encaminado',
+      message: `Llevas ${progress.toFixed(0)}% del objetivo. Mantén el ritmo!`,
+      data: {
+        'Progreso': `${weekHours.toFixed(1)}h / ${weeklyGoal}h`,
+        'Promedio necesario': `${requiredPerDay.toFixed(1)}h/día`
+      },
+      priority: 'low'
+    });
+  }
+  // 4e. Alerta temprana (mitad de semana, poco progreso)
+  else if (today.getDay() >= 3 && progress < 40) {
+    alerts.push({
+      id: 'goal-early-warning',
+      type: 'warning',
+      title: '📊 Progreso bajo',
+      message: `Llevas ${progress.toFixed(0)}% del objetivo y ya es ${today.getDay() === 3 ? 'miércoles' : today.getDay() === 4 ? 'jueves' : 'viernes'}`,
+      data: {
+        'Faltan': `${remaining.toFixed(1)}h`,
+        'Necesitas': `${requiredPerDay.toFixed(1)}h/día`
+      },
       action: {
         label: 'Registrar horas',
         route: '/time-entries'

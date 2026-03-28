@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Calendar, Save, X, Clock } from 'lucide-react';
+import { Calendar, Save, X, Clock, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import { getAreaColor } from '../../utils/areaColors';
+import { TemplateManager } from './TemplateManager';
 
 /**
  * Componente de carga múltiple de tiempo
@@ -20,6 +21,7 @@ export const BulkTimeEntry = ({
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [timeEntries, setTimeEntries] = useState({});
   const [expandedAreas, setExpandedAreas] = useState(new Set());
+  const [showTemplates, setShowTemplates] = useState(false);
   
   // Rango horario general
   const [workdayStart, setWorkdayStart] = useState('08:00');
@@ -132,6 +134,12 @@ export const BulkTimeEntry = ({
         return newEntries;
       });
     }
+  };
+
+  // Aplicar plantilla
+  const handleApplyTemplate = (templateEntries) => {
+    setTimeEntries(templateEntries);
+    setShowTemplates(false);
   };
 
   const totalHours = useMemo(() => {
@@ -257,6 +265,13 @@ export const BulkTimeEntry = ({
             </div>
             <div className="flex gap-2">
               <button
+                onClick={() => setShowTemplates(!showTemplates)}
+                className="px-3 py-2 text-sm font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Plantillas
+              </button>
+              <button
                 onClick={() => setDate(format(new Date(), 'yyyy-MM-dd'))}
                 className="px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
               >
@@ -274,6 +289,16 @@ export const BulkTimeEntry = ({
               </button>
             </div>
           </div>
+
+          {/* Gestor de Plantillas */}
+          {showTemplates && (
+            <div className="border-t pt-4 mt-4">
+              <TemplateManager
+                timeEntries={timeEntries}
+                onApplyTemplate={handleApplyTemplate}
+              />
+            </div>
+          )}
           
           {/* Rango Horario General */}
           <div className="border-t pt-4 mt-4">
