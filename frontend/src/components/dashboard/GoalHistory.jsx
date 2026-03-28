@@ -19,9 +19,12 @@ export const GoalHistory = ({ timeEntries, weeklyGoal = 40, user }) => {
     let maxWeeks = 8;
     if (user?.created_at) {
       const userCreatedDate = new Date(user.created_at);
-      const weeksSinceCreation = differenceInWeeks(today, userCreatedDate);
-      // Mostrar como máximo las semanas que el usuario ha existido (excluyendo la actual)
-      maxWeeks = Math.min(8, Math.max(0, weeksSinceCreation));
+      // Validar que la fecha sea válida
+      if (!isNaN(userCreatedDate.getTime())) {
+        const weeksSinceCreation = differenceInWeeks(today, userCreatedDate);
+        // Mostrar como máximo las semanas que el usuario ha existido (excluyendo la actual)
+        maxWeeks = Math.min(8, Math.max(0, weeksSinceCreation));
+      }
     }
 
     // Si el usuario es muy nuevo (menos de 1 semana), no mostrar historial

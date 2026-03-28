@@ -19,9 +19,12 @@ export const WeeklyComparison = ({ timeEntries, user }) => {
     let maxWeeks = 4;
     if (user?.created_at) {
       const userCreatedDate = new Date(user.created_at);
-      const weeksSinceCreation = differenceInWeeks(today, userCreatedDate);
-      // Mostrar como máximo las semanas que el usuario ha existido + 1 (semana actual)
-      maxWeeks = Math.min(4, Math.max(1, weeksSinceCreation + 1));
+      // Validar que la fecha sea válida
+      if (!isNaN(userCreatedDate.getTime())) {
+        const weeksSinceCreation = differenceInWeeks(today, userCreatedDate);
+        // Mostrar como máximo las semanas que el usuario ha existido + 1 (semana actual)
+        maxWeeks = Math.min(4, Math.max(1, weeksSinceCreation + 1));
+      }
     }
 
     // Obtener datos de las últimas N semanas

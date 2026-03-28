@@ -84,9 +84,14 @@ export const Reports = () => {
 
   const loadFilters = async () => {
     try {
+      // Cargar usuarios según rol
       if (user?.role === USER_ROLES.ADMIN || user?.role === USER_ROLES.SUPERADMIN) {
         const { users: usersData } = await usersService.getAll();
         setUsers(usersData || []);
+      } else if (user?.role === USER_ROLES.OPERARIO) {
+        // Operario solo ve su propio usuario en el filtro
+        setUsers([user]);
+        setSelectedUser(user.id); // Pre-seleccionar su usuario
       }
 
       const { organizationalUnits: unitsData } = await orgUnitsService.getAll();
