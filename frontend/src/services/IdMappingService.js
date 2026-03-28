@@ -47,6 +47,13 @@ export class IdMappingService {
     if (this.initialized) return;
 
     try {
+      // Verificar si la tabla existe
+      if (!db.id_mappings) {
+        console.warn('⚠️ Tabla id_mappings no existe aún. Esperando migración de DB...');
+        this.initialized = true;
+        return;
+      }
+
       const mappings = await db.id_mappings.toArray();
       
       for (const mapping of mappings) {
@@ -59,7 +66,13 @@ export class IdMappingService {
         console.log(`📋 IdMappingService inicializado con ${mappings.length} mappings`);
       }
     } catch (error) {
-      console.error('Error inicializando IdMappingService:', error);
+      // Si la tabla no existe, solo advertir pero no fallar
+      if (error.name === 'NotFoundError' || error.message.includes('id_mappings')) {
+        console.warn('⚠️ Tabla id_mappings no disponible. Se creará en próxima versión de DB.');
+        this.initialized = true;
+      } else {
+        console.error('Error inicializando IdMappingService:', error);
+      }
     }
   }
 

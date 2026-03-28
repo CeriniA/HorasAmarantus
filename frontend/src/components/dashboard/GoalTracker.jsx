@@ -47,8 +47,9 @@ export const GoalTracker = ({ timeEntries, goalType = 'weekly', customGoal = nul
     const daysRemaining = differenceInDays(periodEnd, today);
     
     // Calcular días laborables restantes (lunes a sábado, SIN domingo)
+    // Empezar desde mañana (i=1) porque hoy ya está en curso
     let workDaysRemaining = 0;
-    for (let i = 0; i <= daysRemaining; i++) {
+    for (let i = 1; i <= daysRemaining; i++) {
       const checkDate = new Date(today);
       checkDate.setDate(checkDate.getDate() + i);
       const dayOfWeek = checkDate.getDay();

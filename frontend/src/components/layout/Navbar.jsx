@@ -70,7 +70,7 @@ export const Navbar = () => {
           </div>
 
           {/* Estado de conexión y usuario - OPTIMIZADO MOBILE */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-3">
             {/* Indicador de conexión - MÁS COMPACTO */}
             <div className="flex items-center gap-1">
               {isOnline ? (
@@ -94,14 +94,14 @@ export const Navbar = () => {
             </div>
 
             {/* Menú de usuario - DESKTOP */}
-            <div className="hidden sm:flex sm:items-center">
+            <div className="hidden md:flex md:items-center">
               <div className="relative">
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="flex items-center text-sm text-gray-700 hover:text-gray-900"
+                  className="flex items-center text-sm text-gray-700 hover:text-gray-900 gap-2"
                 >
-                  <User className="h-5 w-5 mr-2" />
-                  <span className="font-medium truncate max-w-[120px]">{user?.name}</span>
+                  <User className="h-5 w-5 flex-shrink-0" />
+                  <span className="font-medium truncate max-w-[100px] lg:max-w-[150px]">{user?.name}</span>
                 </button>
 
                 {isMenuOpen && (
@@ -135,7 +135,7 @@ export const Navbar = () => {
             </div>
 
             {/* Botón de menú móvil */}
-            <div className="flex items-center sm:hidden">
+            <div className="flex items-center md:hidden">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
@@ -153,7 +153,7 @@ export const Navbar = () => {
 
       {/* Menú móvil */}
       {isMenuOpen && (
-        <div className="sm:hidden">
+        <div className="md:hidden">
           <div className="pt-2 pb-3 space-y-1">
             <Link
               to="/"

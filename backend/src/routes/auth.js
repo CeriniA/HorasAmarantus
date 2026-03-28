@@ -47,7 +47,8 @@ router.post('/login', validateLogin, async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
-        organizational_unit_id: user.organizational_unit_id
+        organizational_unit_id: user.organizational_unit_id,
+        weekly_goal: user.weekly_goal || 40
       }
     });
   } catch (error) {
@@ -101,7 +102,7 @@ router.get('/me', authenticate, async (req, res) => {
   try {
     const { data: user, error } = await supabase
       .from('users')
-      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
+      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at, weekly_goal')
       .eq('id', req.user.id)
       .single();
 
@@ -197,7 +198,7 @@ router.put('/me/email', authenticate, async (req, res) => {
       .from('users')
       .update({ email: email && email.trim() ? email.trim() : null })
       .eq('id', userId)
-      .select('id, username, email, name, role, organizational_unit_id')
+      .select('id, username, email, name, role, organizational_unit_id, weekly_goal')
       .single();
 
     if (error) throw error;
@@ -208,6 +209,49 @@ router.put('/me/email', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Error actualizando email:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// PUT /api/auth/me/goal (actualizar objetivo de horas semanal)
+router.put('/me/goal', authenticate, async (req, res) => {
+  try {
+    const { weekly_goal } = req.body;
+    const userId = req.user.id;
+
+    // Validaciones
+    if (weekly_goal === undefined || weekly_goal === null) {
+      return res.status(400).json({ error: 'El objetivo semanal es requerido' });
+    }
+
+    const goalNumber = parseFloat(weekly_goal);
+
+    if (isNaN(goalNumber)) {
+      return res.status(400).json({ error: 'El objetivo debe ser un número' });
+    }
+
+    if (goalNumber < 1 || goalNumber > 168) {
+      return res.status(400).json({ 
+        error: 'El objetivo debe estar entre 1 y 168 horas (hay 168 horas en una semana)' 
+      });
+    }
+
+    // Actualizar objetivo
+    const { data, error } = await supabase
+      .from('users')
+      .update({ weekly_goal: goalNumber })
+      .eq('id', userId)
+      .select('id, username, email, name, role, organizational_unit_id, weekly_goal')
+      .single();
+
+    if (error) throw error;
+
+    res.json({ 
+      message: 'Objetivo actualizado correctamente',
+      user: data
+    });
+  } catch (error) {
+    console.error('Error actualizando objetivo:', error);
     res.status(500).json({ error: 'Error en el servidor' });
   }
 });

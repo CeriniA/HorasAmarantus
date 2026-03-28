@@ -1,23 +1,81 @@
 /**
  * Alertas Inteligentes
  * Sistema de notificaciones contextuales basadas en patrones de uso
+ * Con sistema de snooze y persistencia
  */
 
-import { AlertCircle, CheckCircle, Info, AlertTriangle, X } from 'lucide-react';
-import { useState } from 'react';
+import { AlertCircle, CheckCircle, Info, AlertTriangle, X, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import Button from '../common/Button';
 
+const STORAGE_KEY = 'dismissed_alerts';
+
+// Cargar alertas descartadas del localStorage
+const loadDismissedAlerts = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return {};
+    
+    const dismissed = JSON.parse(stored);
+    const now = Date.now();
+    
+    // Filtrar alertas cuyo snooze ya expiró
+    const active = {};
+    Object.entries(dismissed).forEach(([id, data]) => {
+      if (data.until > now) {
+        active[id] = data;
+      }
+    });
+    
+    return active;
+  } catch (error) {
+    console.error('Error loading dismissed alerts:', error);
+    return {};
+  }
+};
+
+// Guardar alertas descartadas en localStorage
+const saveDismissedAlerts = (dismissed) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(dismissed));
+  } catch (error) {
+    console.error('Error saving dismissed alerts:', error);
+  }
+};
+
 export const SmartAlerts = ({ alerts, onDismiss }) => {
-  const [dismissedAlerts, setDismissedAlerts] = useState(new Set());
+  const [dismissedAlerts, setDismissedAlerts] = useState(loadDismissedAlerts());
+
+  useEffect(() => {
+    saveDismissedAlerts(dismissedAlerts);
+  }, [dismissedAlerts]);
 
   if (!alerts || alerts.length === 0) return null;
 
-  const visibleAlerts = alerts.filter(alert => !dismissedAlerts.has(alert.id));
+  const now = Date.now();
+  const visibleAlerts = alerts.filter(alert => {
+    const dismissed = dismissedAlerts[alert.id];
+    return !dismissed || dismissed.until <= now;
+  });
 
   if (visibleAlerts.length === 0) return null;
 
-  const handleDismiss = (alertId) => {
-    setDismissedAlerts(prev => new Set([...prev, alertId]));
+  const handleDismiss = (alertId, duration = 'forever') => {
+    const durations = {
+      'today': 24 * 60 * 60 * 1000,        // 1 día
+      'week': 7 * 24 * 60 * 60 * 1000,     // 1 semana
+      'month': 30 * 24 * 60 * 60 * 1000,   // 30 días
+      'forever': 365 * 24 * 60 * 60 * 1000 // 1 año
+    };
+
+    setDismissedAlerts(prev => ({
+      ...prev,
+      [alertId]: {
+        until: now + durations[duration],
+        dismissedAt: now
+      }
+    }));
+
     if (onDismiss) {
       onDismiss(alertId);
     }
@@ -119,19 +177,70 @@ export const SmartAlerts = ({ alerts, onDismiss }) => {
                 </div>
               </div>
 
-              {/* Botón cerrar */}
-              <button
-                onClick={() => handleDismiss(alert.id)}
-                className="
-                  flex-shrink-0 ml-4 p-1 
-                  hover:bg-black hover:bg-opacity-10 
-                  rounded transition-colors duration-200
-                  focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500
-                "
-                aria-label="Cerrar alerta"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              {/* Botones de acción */}
+              <div className="flex-shrink-0 ml-4 flex gap-2">
+                {/* Dropdown de snooze */}
+                <div className="relative group">
+                  <button
+                    className="
+                      p-1 hover:bg-black hover:bg-opacity-10 
+                      rounded transition-colors duration-200
+                      focus:outline-none
+                    "
+                    aria-label="Posponer alerta"
+                  >
+                    <Clock className="h-4 w-4" />
+                  </button>
+                  
+                  {/* Menú dropdown */}
+                  <div className="
+                    absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200
+                    opacity-0 invisible group-hover:opacity-100 group-hover:visible
+                    transition-all duration-200 z-10
+                  ">
+                    <div className="py-1">
+                      <button
+                        onClick={() => handleDismiss(alert.id, 'today')}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors"
+                      >
+                        Ocultar por hoy
+                      </button>
+                      <button
+                        onClick={() => handleDismiss(alert.id, 'week')}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors"
+                      >
+                        Ocultar por 1 semana
+                      </button>
+                      <button
+                        onClick={() => handleDismiss(alert.id, 'month')}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors"
+                      >
+                        Ocultar por 1 mes
+                      </button>
+                      <button
+                        onClick={() => handleDismiss(alert.id, 'forever')}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors border-t border-gray-200"
+                      >
+                        No mostrar más
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botón cerrar rápido */}
+                <button
+                  onClick={() => handleDismiss(alert.id, 'today')}
+                  className="
+                    p-1 hover:bg-black hover:bg-opacity-10 
+                    rounded transition-colors duration-200
+                    focus:outline-none
+                  "
+                  aria-label="Cerrar alerta"
+                  title="Ocultar por hoy"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         );
