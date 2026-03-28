@@ -306,13 +306,49 @@ Resultado:
 
 ## 🔧 ARCHIVOS MODIFICADOS
 
-### `frontend/src/hooks/useTimeEntries.js`
+### 1. `frontend/src/hooks/useTimeEntries.js`
 
 **Cambios:**
 1. Agregar listener de eventos de sincronización
 2. No bloquear UI en modo offline
 3. Sincronizar en background sin setTimeout
 4. Filtrar duplicados por client_id al cargar
+
+### 2. `frontend/src/pages/TimeEntries.jsx`
+
+**Cambios:**
+1. No mostrar loading en modo offline en `handleBulkSave`
+2. Agregar mensaje informativo cuando se guarda offline
+3. Solo bloquear UI si está online
+
+**Código:**
+```javascript
+// ANTES ❌
+const handleBulkSave = async (entries) => {
+  setSaving(true); // Siempre bloqueaba
+  // ...
+  setSaving(false);
+};
+
+// DESPUÉS ✅
+const handleBulkSave = async (entries) => {
+  const isOnline = navigator.onLine;
+  if (isOnline) {
+    setSaving(true); // Solo si es online
+  }
+  
+  // ... guardar entries ...
+  
+  // Mensaje diferente según modo
+  setAlert({ 
+    message: `✅ Guardado${!isOnline ? ' (se sincronizará cuando haya conexión)' : ''}`
+  });
+  
+  if (isOnline) {
+    setSaving(false);
+  }
+};
+```
 
 ---
 

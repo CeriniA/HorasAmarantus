@@ -62,7 +62,11 @@ export const TimeEntries = () => {
   });
 
   const handleBulkSave = async (entries) => {
-    setSaving(true);
+    // Solo mostrar loading si estamos online (operaciones más lentas)
+    const isOnline = navigator.onLine;
+    if (isOnline) {
+      setSaving(true);
+    }
 
     try {
       let successCount = 0;
@@ -83,7 +87,7 @@ export const TimeEntries = () => {
       }
 
       if (errorCount === 0) {
-        setAlert({ type: 'success', message: `✅ ${successCount} ${successCount === 1 ? 'registro creado' : 'registros creados'} correctamente` });
+        setAlert({ type: 'success', message: `✅ ${successCount} ${successCount === 1 ? 'registro creado' : 'registros creados'} correctamente${!isOnline ? ' (se sincronizará cuando haya conexión)' : ''}` });
         setShowBulkEntry(false);
       } else {
         console.error('❌ Errores:', errors);
@@ -93,7 +97,9 @@ export const TimeEntries = () => {
       console.error('Error creating entries:', error);
       setAlert({ type: 'error', message: `Error: ${error.message}` });
     } finally {
-      setSaving(false);
+      if (isOnline) {
+        setSaving(false);
+      }
     }
   };
 
