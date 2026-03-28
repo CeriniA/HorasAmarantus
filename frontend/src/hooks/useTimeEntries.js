@@ -13,6 +13,22 @@ export const useTimeEntries = (userId) => {
     }
   }, [userId]);
 
+  // Escuchar eventos de sincronización
+  useEffect(() => {
+    const handleSyncComplete = (event) => {
+      if (event.type === 'sync_complete' && event.data.synced > 0) {
+        // Recargar datos después de sincronizar
+        loadTimeEntries();
+      }
+    };
+
+    syncManager.addListener(handleSyncComplete);
+
+    return () => {
+      syncManager.removeListener(handleSyncComplete);
+    };
+  }, [userId]);
+
   const loadTimeEntries = async () => {
     try {
       setLoading(true);
@@ -21,7 +37,31 @@ export const useTimeEntries = (userId) => {
       if (navigator.onLine) {
         // Cargar desde backend
         const { timeEntries: data } = await timeEntriesService.getAll();
-        setTimeEntries(data);
+        
+        // Eliminar duplicados basados en client_id (puede haber entries con ID temporal y del servidor)
+        const uniqueEntries = [];
+        const seenClientIds = new Set();
+        const seenServerIds = new Set();
+        
+        for (const entry of data) {
+          // Si tiene client_id, verificar que no esté duplicado
+          if (entry.client_id) {
+            if (seenClientIds.has(entry.client_id)) {
+              continue; // Saltar duplicado
+            }
+            seenClientIds.add(entry.client_id);
+          }
+          
+          // Verificar ID del servidor
+          if (seenServerIds.has(entry.id)) {
+            continue; // Saltar duplicado
+          }
+          seenServerIds.add(entry.id);
+          
+          uniqueEntries.push(entry);
+        }
+        
+        setTimeEntries(uniqueEntries);
 
         // Guardar en cache local
         for (const entry of data) {
@@ -54,7 +94,10 @@ export const useTimeEntries = (userId) => {
 
   const createEntry = async (entryData) => {
     try {
-      setLoading(true);
+      // Solo mostrar loading si estamos online (más rápido)
+      if (navigator.onLine) {
+        setLoading(true);
+      }
       setError(null);
 
       if (navigator.onLine) {
@@ -72,7 +115,7 @@ export const useTimeEntries = (userId) => {
 
         return { success: true, data: timeEntry };
       } else {
-        // Offline: guardar localmente
+        // Offline: guardar localmente (sin loading para no bloquear UI)
         const prepared = timeEntryRepository.prepareForLocal({
           ...entryData,
           status: 'completed'
@@ -81,27 +124,24 @@ export const useTimeEntries = (userId) => {
         await timeEntryRepository.save(prepared);
         await syncQueue.add('time_entries', prepared.id, 'create', prepared);
         
-        const localEntry = prepared;
+        // Agregar a la UI inmediatamente
+        setTimeEntries(prev => [prepared, ...prev]);
 
-        setTimeEntries(prev => [localEntry, ...prev]);
+        // Sincronizar en background (sin esperar)
+        syncManager.sync().catch(err => {
+          console.error('Error en sincronización automática:', err);
+        });
 
-        // ✅ NUEVO: Intentar sincronizar inmediatamente si hay conexión
-        if (navigator.onLine) {
-          setTimeout(() => {
-            syncManager.sync().catch(err => {
-              console.error('Error en sincronización automática:', err);
-            });
-          }, 1000); // Delay de 1 segundo para no bloquear la UI
-        }
-
-        return { success: true, data: localEntry };
+        return { success: true, data: prepared };
       }
     } catch (err) {
       console.error('Error creating entry:', err);
       setError(err.message);
       return { success: false, error: err.message };
     } finally {
-      setLoading(false);
+      if (navigator.onLine) {
+        setLoading(false);
+      }
     }
   };
 
