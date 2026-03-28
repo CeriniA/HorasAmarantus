@@ -68,6 +68,24 @@ export class TimeEntryRepository extends BaseRepository {
   }
 
   /**
+   * Limpiar entries sincronizados (para evitar duplicados al recargar desde backend)
+   */
+  async clearSynced() {
+    const all = await this.findAll();
+    const syncedIds = all
+      .filter(entry => entry.pending_sync === false)
+      .map(entry => entry.id);
+    
+    for (const id of syncedIds) {
+      await this.delete(id);
+    }
+    
+    if (import.meta.env.DEV) {
+      console.log(`🗑️ Limpiados ${syncedIds.length} entries sincronizados de IndexedDB`);
+    }
+  }
+
+  /**
    * Marcar como sincronizado
    */
   async markAsSynced(id, serverData) {

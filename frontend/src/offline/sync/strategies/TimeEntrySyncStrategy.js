@@ -55,12 +55,8 @@ export class TimeEntrySyncStrategy extends SyncStrategy {
       }
     }
     
-    // 4. Guardar con el ID del servidor
-    await this.repository.save({
-      ...timeEntry,
-      pending_sync: false,
-      synced_at: new Date().toISOString()
-    });
+    // NO guardar en IndexedDB - el hook recargará desde backend
+    // Esto evita duplicados cuando sync_complete dispara loadTimeEntries()
 
     return timeEntry;
   }

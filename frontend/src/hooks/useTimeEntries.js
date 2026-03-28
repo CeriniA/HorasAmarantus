@@ -63,7 +63,11 @@ export const useTimeEntries = (userId) => {
         
         setTimeEntries(uniqueEntries);
 
-        // Guardar en cache local
+        // Limpiar entries sincronizados de IndexedDB para evitar duplicados
+        await timeEntryRepository.clearSynced();
+
+        // Guardar en cache local solo entries pendientes de sincronización
+        // Los entries sincronizados se cargarán desde backend la próxima vez
         for (const entry of data) {
           await timeEntryRepository.save({
             ...entry,
