@@ -9,6 +9,7 @@ import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { AlertTriangle, Calendar, Clock, DollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { safeDate, calculateHours, extractDate } from '../../utils/dateHelpers';
 
 const STANDARD_DAILY_HOURS = 8;
 const STANDARD_WEEKLY_HOURS = 40;
@@ -23,10 +24,10 @@ export const OvertimeReport = ({ timeEntries }) => {
     const longDays = [];
 
     timeEntries.forEach(entry => {
-      const start = new Date(entry.start_time);
-      const end = new Date(entry.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
-      const dateKey = format(start, 'yyyy-MM-dd');
+      // Usar helpers para evitar problemas de zona horaria
+      const hours = calculateHours(entry.start_time, entry.end_time);
+      const dateKey = extractDate(entry.start_time);
+      const start = safeDate(entry.start_time);
       const userId = entry.user_id;
       const userStandardHours = entry.users?.standard_daily_hours || STANDARD_DAILY_HOURS;
       const dayKey = `${dateKey}_${userId}`;
@@ -68,8 +69,9 @@ export const OvertimeReport = ({ timeEntries }) => {
 
     // Agrupar por semana
     const weeklyHours = {};
-    Object.entries(dailyHours).forEach(([dateKey, day]) => {
-      const date = new Date(dateKey);
+    Object.values(dailyHours).forEach((day) => {
+      // Usar safeDate para crear Date object desde fecha YYYY-MM-DD
+      const date = safeDate(day.date);
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
       const weekKey = format(weekStart, 'yyyy-MM-dd');
 

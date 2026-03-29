@@ -159,14 +159,66 @@ export const useTimeEntries = (userId) => {
 
 ---
 
+### 5. ❌ Invalid time value (RangeError)
+**Archivo:** `OvertimeReport.jsx:74`
+
+**Problema:**
+```javascript
+// ❌ MAL - new Date() directo con timestamp de DB
+timeEntries.forEach(entry => {
+  const start = new Date(entry.start_time); // ❌ Problema de zona horaria
+  const end = new Date(entry.end_time);
+  const hours = (end - start) / (1000 * 60 * 60); // ❌ Cálculo manual
+  const dateKey = format(start, 'yyyy-MM-dd');
+});
+
+// ❌ MAL - new Date() con string de fecha
+const date = new Date(dateKey); // ❌ dateKey es "2024-03-29_123"
+const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+```
+
+**Solución:**
+```javascript
+// ✅ BIEN - Usar helpers de dateHelpers.js
+import { safeDate, calculateHours, extractDate } from '../../utils/dateHelpers';
+
+timeEntries.forEach(entry => {
+  const hours = calculateHours(entry.start_time, entry.end_time); // ✅ Helper
+  const dateKey = extractDate(entry.start_time); // ✅ Helper
+  const start = safeDate(entry.start_time); // ✅ Helper
+});
+
+// ✅ BIEN - safeDate para crear Date object
+Object.values(dailyHours).forEach((day) => {
+  const date = safeDate(day.date); // ✅ Seguro para zona horaria
+  const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+});
+```
+
+**Razón:**
+- PostgreSQL guarda timestamps sin zona horaria
+- JavaScript los interpreta como UTC
+- En zonas UTC negativas (ej: UTC-3), cambia el día
+- `safeDate()` agrega mediodía para evitar cambios de día
+- `calculateHours()` calcula correctamente las horas
+- `extractDate()` extrae solo la fecha sin conversión
+
+**Regla:**
+- ❌ **NUNCA** usar `new Date()` directo con timestamps de DB
+- ✅ **SIEMPRE** usar helpers de `utils/dateHelpers.js`
+- 📖 Ver: `REGLAS_FECHAS_TIMESTAMPS.md`
+
+---
+
 ## ✅ RESULTADO
 
-### Antes (5 errores):
+### Antes (6 errores):
 ```
 ❌ 'setTimeout' is not defined (error)
 ⚠️ React Hook useEffect missing dependency (warning) x2
 ❌ 'db' is defined but never used (error)
 ❌ Cannot access 'loadTimeEntries' before initialization (error)
+❌ Invalid time value - RangeError (error)
 ```
 
 ### Después (0 errores):
@@ -176,6 +228,7 @@ export const useTimeEntries = (userId) => {
 ✅ No hay imports innecesarios
 ✅ Código más simple y mantenible
 ✅ Orden correcto de hooks
+✅ Fechas manejadas correctamente con helpers
 ```
 
 ---
@@ -221,6 +274,18 @@ useEffect(() => { myFunction(); }, []);         // ❌ Usa antes de definir
 const myFunction = useCallback(() => {}, []);   // ❌ Definido después
 ```
 
+### 5. SIEMPRE usar helpers para fechas
+```javascript
+// ❌ MAL
+const date = new Date(timestamp);
+const hours = (end - start) / (1000 * 60 * 60);
+
+// ✅ BIEN
+import { safeDate, calculateHours, extractDate } from '../utils/dateHelpers';
+const date = safeDate(timestamp);
+const hours = calculateHours(start, end);
+```
+
 ---
 
 ## 🎯 BUENAS PRÁCTICAS APLICADAS
@@ -230,8 +295,9 @@ const myFunction = useCallback(() => {}, []);   // ❌ Definido después
 3. **Clean Code** - Imports limpios, sin código muerto
 4. **React Best Practices** - Usar useCallback correctamente
 5. **Hook Order** - Definir callbacks antes de usarlos en effects
+6. **Date Helpers** - SIEMPRE usar helpers para fechas (ver REGLAS_FECHAS_TIMESTAMPS.md)
 
 ---
 
-**Fecha:** 28 de marzo de 2026  
+**Fecha:** 29 de marzo de 2026  
 **Estado:** ✅ COMPLETADO - Todos los errores corregidos

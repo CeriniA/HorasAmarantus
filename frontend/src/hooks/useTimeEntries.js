@@ -24,22 +24,43 @@ export const useTimeEntries = (userId) => {
         const combined = [...data];
         
         // Agregar pendientes que no estén en backend
+        const entriesToKeep = [];
+        const entriesToDelete = [];
+        
         for (const pending of pendingEntries) {
           const existsInBackend = data.some(d => 
             d.id === pending.id || d.client_id === pending.client_id
           );
           if (!existsInBackend) {
             combined.push(pending);
+            entriesToKeep.push(pending);
+          } else {
+            // Entry ya está en backend, eliminar de IndexedDB
+            entriesToDelete.push(pending);
           }
         }
         
-        // Eliminar duplicados
+        // Limpiar entries sincronizados de IndexedDB
+        for (const entry of entriesToDelete) {
+          try {
+            await timeEntryRepository.delete(entry.id);
+          } catch (err) {
+            console.error('Error eliminando entry sincronizado:', err);
+          }
+        }
+        
+        // Eliminar duplicados por id y client_id
         const uniqueEntries = [];
         const seenIds = new Set();
+        const seenClientIds = new Set();
         
         for (const entry of combined) {
-          if (seenIds.has(entry.id)) continue;
+          const isDuplicate = seenIds.has(entry.id) || 
+                             (entry.client_id && seenClientIds.has(entry.client_id));
+          if (isDuplicate) continue;
+          
           seenIds.add(entry.id);
+          if (entry.client_id) seenClientIds.add(entry.client_id);
           uniqueEntries.push(entry);
         }
         
@@ -93,11 +114,9 @@ export const useTimeEntries = (userId) => {
 
   const createEntry = async (entryData) => {
     try {
-      // Solo mostrar loading si estamos online (más rápido)
-      if (navigator.onLine) {
-        setLoading(true);
-      }
       setError(null);
+      // SIEMPRE mostrar loading para evitar pantalla blanca
+      setLoading(true);
 
       if (navigator.onLine) {
         // Online: crear en backend
@@ -109,7 +128,7 @@ export const useTimeEntries = (userId) => {
 
         return { success: true, data: timeEntry };
       } else {
-        // Offline: guardar localmente (sin loading para no bloquear UI)
+        // Offline: guardar localmente
         const prepared = timeEntryRepository.prepareForLocal({
           ...entryData,
           status: 'completed'
@@ -133,9 +152,8 @@ export const useTimeEntries = (userId) => {
       setError(err.message);
       return { success: false, error: err.message };
     } finally {
-      if (navigator.onLine) {
-        setLoading(false);
-      }
+      // SIEMPRE quitar loading
+      setLoading(false);
     }
   };
 
