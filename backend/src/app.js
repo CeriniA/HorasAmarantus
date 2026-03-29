@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 
 // Configuración centralizada
 import { config, validateConfig, logConfig } from './config/env.js';
+import logger from './utils/logger.js';
 
 // Middleware de errores
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -49,9 +50,7 @@ app.use(cors({
     if (config.cors.allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      if (config.isDevelopment) {
-        console.warn(`⚠️  CORS bloqueado para origin: ${origin}`);
-      }
+      logger.warn(`CORS bloqueado para origin: ${origin}`);
       callback(new Error('No permitido por CORS'));
     }
   },
@@ -109,8 +108,8 @@ app.use(errorHandler);
 
 // Iniciar servidor
 app.listen(config.port, () => {
-  console.log(`\n🚀 Servidor backend iniciado`);
-  console.log(`   URL: http://localhost:${config.port}`);
+  logger.info(`\n🚀 Servidor backend iniciado`);
+  logger.info(`   URL: http://localhost:${config.port}`);
   logConfig();
 });
 

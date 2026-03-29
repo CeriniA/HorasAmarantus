@@ -1,33 +1,34 @@
 /**
  * Análisis de Productividad
- * Muestra métricas de desempeño y patrones de trabajo
+ * Muestra datos objetivos de trabajo y patrones
  */
 
 import { useMemo } from 'react';
 import { format, differenceInDays, isWeekend, getHours } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { TrendingUp, Clock, Calendar, Zap } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Clock, Calendar, Target } from 'lucide-react';
 import { safeDate, calculateHours, extractDate } from '../../utils/dateHelpers';
 
 export const ProductivityAnalysis = ({ timeEntries }) => {
-  // Calcular métricas de productividad
+  // Calcular datos objetivos de trabajo
   const metrics = useMemo(() => {
     if (timeEntries.length === 0) {
       return {
-        consistency: 0,
-        peakDays: [],
+        totalHours: 0,
         avgHoursPerDay: 0,
+        daysWorked: 0,
+        peakDays: [],
         patterns: {},
-        radarData: []
+        dayOfWeekData: []
       };
     }
 
     // Filtrar últimos 30 días
     const last30Days = timeEntries.filter(e => {
       const entryDate = safeDate(e.start_time);
-      const daysAgo = differenceInDays(new Date(), entryDate); // OK: fecha actual
+      const daysAgo = differenceInDays(new Date(), entryDate);
       return daysAgo <= 30;
     });
 
@@ -43,15 +44,11 @@ export const ProductivityAnalysis = ({ timeEntries }) => {
     });
 
     const hours = Object.values(dailyHours);
-    const avg = hours.reduce((sum, h) => sum + h, 0) / hours.length;
-    
-    // Calcular consistencia (basado en desviación estándar)
-    const variance = Math.sqrt(
-      hours.reduce((sum, h) => sum + Math.pow(h - avg, 2), 0) / hours.length
-    );
-    const consistency = Math.max(0, Math.min(100, 100 - (variance * 10)));
+    const totalHours = hours.reduce((sum, h) => sum + h, 0);
+    const avgHoursPerDay = hours.length > 0 ? totalHours / hours.length : 0;
+    const daysWorked = Object.keys(dailyHours).length;
 
-    // Encontrar días pico (por día de la semana)
+    // Patrón por día de la semana
     const byDayOfWeek = {};
     last30Days.forEach(entry => {
       const dayName = format(safeDate(entry.start_time), 'EEEE', { locale: es });
@@ -63,6 +60,18 @@ export const ProductivityAnalysis = ({ timeEntries }) => {
       byDayOfWeek[dayName].count += 1;
     });
 
+    // Ordenar días de la semana
+    const dayOrder = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+    const dayOfWeekData = dayOrder
+      .map(day => {
+        const data = byDayOfWeek[day];
+        return {
+          day: day.charAt(0).toUpperCase() + day.slice(1, 3),
+          hours: data ? data.hours / data.count : 0
+        };
+      })
+      .filter(d => d.hours > 0);
+
     const avgByDay = Object.entries(byDayOfWeek).map(([day, data]) => ({
       day,
       avgHours: data.hours / data.count
@@ -70,164 +79,109 @@ export const ProductivityAnalysis = ({ timeEntries }) => {
 
     const peakDays = avgByDay
       .sort((a, b) => b.avgHours - a.avgHours)
-      .slice(0, 3)
+      .slice(0, 2)
       .map(d => d.day);
 
-    // Detectar patrones
+    // Detectar patrones de horario
     const hourDistribution = last30Days.map(e => getHours(safeDate(e.start_time)));
-    const avgStartHour = hourDistribution.reduce((sum, h) => sum + h, 0) / hourDistribution.length;
+    const avgStartHour = hourDistribution.length > 0 
+      ? hourDistribution.reduce((sum, h) => sum + h, 0) / hourDistribution.length 
+      : 0;
     
     const patterns = {
-      morningPerson: avgStartHour < 9,
       avgStartTime: `${Math.floor(avgStartHour)}:${String(Math.round((avgStartHour % 1) * 60)).padStart(2, '0')}`,
-      weekendWorker: last30Days.some(e => isWeekend(safeDate(e.start_time))),
-      avgHoursPerDay: avg
+      weekendWorker: last30Days.some(e => isWeekend(safeDate(e.start_time)))
     };
 
-    // Calcular puntualidad (% de días que empezó antes de las 9am)
-    const punctualDays = hourDistribution.filter(h => h <= 9).length;
-    const punctuality = (punctualDays / hourDistribution.length) * 100;
-
-    // Calcular productividad (basado en horas promedio vs objetivo de 8h)
-    const productivity = Math.min(100, (avg / 8) * 100);
-
-    // Calcular diversidad (cuántas unidades diferentes trabajó)
-    const uniqueUnits = new Set(last30Days.map(e => e.organizational_unit_id)).size;
-    const diversity = Math.min(100, (uniqueUnits / 5) * 100); // Asumiendo 5 unidades como máximo
-
-    // Calcular eficiencia (registros por día trabajado)
-    const daysWorked = Object.keys(dailyHours).length;
-    const avgEntriesPerDay = last30Days.length / daysWorked;
-    const efficiency = Math.min(100, (avgEntriesPerDay / 3) * 100); // Asumiendo 3 registros/día como óptimo
-
-    // Datos para radar chart
-    const radarData = [
-      { metric: 'Consistencia', value: Math.round(consistency), fullMark: 100 },
-      { metric: 'Puntualidad', value: Math.round(punctuality), fullMark: 100 },
-      { metric: 'Productividad', value: Math.round(productivity), fullMark: 100 },
-      { metric: 'Diversidad', value: Math.round(diversity), fullMark: 100 },
-      { metric: 'Eficiencia', value: Math.round(efficiency), fullMark: 100 }
-    ];
-
     return {
-      consistency,
-      punctuality,
-      productivity,
-      diversity,
-      efficiency,
+      totalHours,
+      avgHoursPerDay,
+      daysWorked,
       peakDays,
-      avgHoursPerDay: avg,
       patterns,
-      radarData,
-      uniqueUnits,
-      daysWorked
+      dayOfWeekData
     };
   }, [timeEntries]);
 
   return (
-    <Card title="Análisis de Productividad" subtitle="Últimos 30 días">
+    <Card title="Análisis de Trabajo" subtitle="Últimos 30 días - Datos objetivos">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Radar Chart */}
+        {/* Gráfico de Patrón Semanal */}
         <div>
           <h4 className="font-semibold text-gray-900 mb-4 text-center">
-            Perfil de Desempeño
+            Patrón Semanal
           </h4>
           <ResponsiveContainer width="100%" height={300}>
-            <RadarChart data={metrics.radarData}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="metric" />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} />
-              <Radar
-                name="Tu Desempeño"
-                dataKey="value"
-                stroke="#10b981"
-                fill="#10b981"
-                fillOpacity={0.6}
-              />
+            <BarChart data={metrics.dayOfWeekData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="day" />
+              <YAxis label={{ value: 'Horas', angle: -90, position: 'insideLeft' }} />
               <Tooltip />
-            </RadarChart>
+              <Bar dataKey="hours" fill="#10b981" />
+            </BarChart>
           </ResponsiveContainer>
+          <p className="text-xs text-gray-500 text-center mt-2">
+            Promedio de horas trabajadas por día de la semana
+          </p>
         </div>
 
-        {/* Insights y Métricas */}
+        {/* Datos Objetivos */}
         <div className="space-y-4">
           <h4 className="font-semibold text-gray-900 mb-4">
-            Insights Personalizados
+            Resumen del Período
           </h4>
 
-          {/* Patrón de Trabajo */}
+          {/* Total de Horas */}
           <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
             <div className="flex items-start">
-              <Calendar className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
+              <Target className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
               <div>
                 <h5 className="font-semibold text-blue-900 mb-1">
-                  🌅 Patrón de Trabajo
+                  📊 Horas Trabajadas
                 </h5>
                 <p className="text-sm text-blue-800">
-                  Eres más productivo los <strong>{metrics.peakDays.join(', ')}</strong>
+                  Total: <strong>{metrics.totalHours.toFixed(1)} horas</strong>
                 </p>
                 <p className="text-xs text-blue-700 mt-1">
-                  Promedio: {metrics.avgHoursPerDay.toFixed(1)}h/día
+                  Promedio: {metrics.avgHoursPerDay.toFixed(1)}h/día en {metrics.daysWorked} días
                 </p>
               </div>
             </div>
           </div>
+
+          {/* Patrón de Trabajo */}
+          {metrics.peakDays.length > 0 && (
+            <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-400">
+              <div className="flex items-start">
+                <Calendar className="h-5 w-5 text-green-600 mr-3 mt-0.5" />
+                <div>
+                  <h5 className="font-semibold text-green-900 mb-1">
+                    📅 Días con Más Actividad
+                  </h5>
+                  <p className="text-sm text-green-800">
+                    {metrics.peakDays.join(' y ')}
+                  </p>
+                  <p className="text-xs text-green-700 mt-1">
+                    Días donde registraste más horas en promedio
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Horario Típico */}
-          <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-400">
-            <div className="flex items-start">
-              <Clock className="h-5 w-5 text-green-600 mr-3 mt-0.5" />
-              <div>
-                <h5 className="font-semibold text-green-900 mb-1">
-                  ⏰ Horario Típico
-                </h5>
-                <p className="text-sm text-green-800">
-                  {metrics.patterns.morningPerson ? (
-                    <>Eres una persona <strong>madrugadora</strong></>
-                  ) : (
-                    <>Prefieres empezar más <strong>tarde</strong></>
-                  )}
-                </p>
-                <p className="text-xs text-green-700 mt-1">
-                  Hora promedio de inicio: {metrics.patterns.avgStartTime}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Consistencia */}
           <div className="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-400">
             <div className="flex items-start">
-              <TrendingUp className="h-5 w-5 text-purple-600 mr-3 mt-0.5" />
+              <Clock className="h-5 w-5 text-purple-600 mr-3 mt-0.5" />
               <div>
                 <h5 className="font-semibold text-purple-900 mb-1">
-                  📊 Consistencia
+                  ⏰ Horario de Inicio
                 </h5>
                 <p className="text-sm text-purple-800">
-                  Score: <strong>{metrics.consistency.toFixed(0)}/100</strong> - 
-                  {metrics.consistency > 80 ? ' ¡Excelente!' : 
-                   metrics.consistency > 60 ? ' Bueno' : ' Puede mejorar'}
+                  Hora promedio: <strong>{metrics.patterns.avgStartTime}</strong>
                 </p>
                 <p className="text-xs text-purple-700 mt-1">
-                  Mantienes un ritmo {metrics.consistency > 70 ? 'muy' : ''} constante
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Diversidad */}
-          <div className="p-4 bg-orange-50 rounded-lg border-l-4 border-orange-400">
-            <div className="flex items-start">
-              <Zap className="h-5 w-5 text-orange-600 mr-3 mt-0.5" />
-              <div>
-                <h5 className="font-semibold text-orange-900 mb-1">
-                  🎯 Versatilidad
-                </h5>
-                <p className="text-sm text-orange-800">
-                  Trabajaste en <strong>{metrics.uniqueUnits} áreas diferentes</strong>
-                </p>
-                <p className="text-xs text-orange-700 mt-1">
-                  {metrics.daysWorked} días trabajados en el período
+                  Basado en tus registros del período
                 </p>
               </div>
             </div>
@@ -243,7 +197,7 @@ export const ProductivityAnalysis = ({ timeEntries }) => {
                     📅 Trabajo en Fin de Semana
                   </h5>
                   <p className="text-sm text-yellow-800">
-                    Has trabajado algunos fines de semana
+                    Registraste horas en fines de semana
                   </p>
                   <p className="text-xs text-yellow-700 mt-1">
                     Recuerda tomar descansos adecuados
@@ -255,37 +209,24 @@ export const ProductivityAnalysis = ({ timeEntries }) => {
         </div>
       </div>
 
-      {/* Métricas Numéricas */}
-      <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-500 mb-1">Consistencia</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {metrics.consistency.toFixed(0)}
-          </p>
-          <p className="text-xs text-gray-500">/100</p>
-        </div>
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-500 mb-1">Puntualidad</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {metrics.punctuality.toFixed(0)}%
+      {/* Métricas Numéricas Simples */}
+      <div className="mt-6 grid grid-cols-3 gap-4">
+        <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-500 mb-1">Total Horas</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {metrics.totalHours.toFixed(0)}h
           </p>
         </div>
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-500 mb-1">Productividad</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {metrics.productivity.toFixed(0)}%
+        <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-500 mb-1">Promedio/Día</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {metrics.avgHoursPerDay.toFixed(1)}h
           </p>
         </div>
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-500 mb-1">Diversidad</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {metrics.diversity.toFixed(0)}%
-          </p>
-        </div>
-        <div className="text-center p-3 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-500 mb-1">Eficiencia</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {metrics.efficiency.toFixed(0)}%
+        <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-500 mb-1">Días Trabajados</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {metrics.daysWorked}
           </p>
         </div>
       </div>

@@ -1,4 +1,7 @@
+import jwt from 'jsonwebtoken';
+import { config } from '../config/env.js';
 import { verifyToken } from '../config/auth.js';
+import logger from '../utils/logger.js';
 
 export const authenticate = (req, res, next) => {
   try {
@@ -19,7 +22,7 @@ export const authenticate = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    console.error('Error en autenticación:', error);
+    logger.error('Error en autenticación:', error);
     return res.status(401).json({ error: 'Error de autenticación' });
   }
 };

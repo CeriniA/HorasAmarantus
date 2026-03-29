@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { format, startOfWeek, endOfWeek, subWeeks, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
-import { safeDate, calculateHours } from '../../utils/dateHelpers';
+import { safeDate, calculateHours, safeDivide, safeNumber } from '../../utils/dateHelpers';
 import { TrendingUp, TrendingDown, BarChart3, Calendar } from 'lucide-react';
 
 export const WeeklyComparison = ({ timeEntries, user }) => {
@@ -55,7 +55,7 @@ export const WeeklyComparison = ({ timeEntries, user }) => {
         dateRange: `${format(weekStart, 'd MMM', { locale: es })} - ${format(weekEnd, 'd MMM', { locale: es })}`,
         totalHours: totalHours,
         daysWorked: daysWorked,
-        avgPerDay: daysWorked > 0 ? totalHours / daysWorked : 0,
+        avgPerDay: safeDivide(totalHours, daysWorked, 1),
         entries: weekEntries.length,
         isCurrent: i === 0
       });
@@ -91,24 +91,24 @@ export const WeeklyComparison = ({ timeEntries, user }) => {
       title="Comparación Semanal"
       icon={BarChart3}
       subtitle={
-        <div className="flex items-center gap-2 text-sm">
+        <span className="flex items-center gap-2 text-sm">
           {comparisonData.trend === 'up' ? (
             <>
               <TrendingUp className="h-4 w-4 text-green-500" />
               <span className="text-green-600 font-medium">
-                +{comparisonData.trendPercent.toFixed(0)}%
+                +{safeNumber(comparisonData.trendPercent, 0)}%
               </span>
             </>
           ) : (
             <>
               <TrendingDown className="h-4 w-4 text-red-500" />
               <span className="text-red-600 font-medium">
-                -{comparisonData.trendPercent.toFixed(0)}%
+                -{safeNumber(comparisonData.trendPercent, 0)}%
               </span>
             </>
           )}
           <span className="text-gray-500">vs promedio</span>
-        </div>
+        </span>
       }
     >
       <div className="space-y-4">

@@ -33,7 +33,7 @@ export const Navbar = () => {
                 Sistema Horas
               </Link>
             </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+            <div className="hidden lg:ml-6 lg:flex lg:space-x-8">
               <Link
                 to="/"
                 className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
@@ -46,6 +46,12 @@ export const Navbar = () => {
               >
                 Registrar Horas
               </Link>
+              <Link
+                to="/reports"
+                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                {isAdmin() ? 'Reportes' : 'Mis Reportes'}
+              </Link>
               {isAdmin() && (
                 <>
                   <Link
@@ -53,12 +59,6 @@ export const Navbar = () => {
                     className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
                   >
                     Estructura
-                  </Link>
-                  <Link
-                    to="/reports"
-                    className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-                  >
-                    Reportes
                   </Link>
                   <Link
                     to="/admin/users"
@@ -96,14 +96,14 @@ export const Navbar = () => {
             </div>
 
             {/* Menú de usuario - DESKTOP */}
-            <div className="hidden md:flex md:items-center">
+            <div className="hidden lg:flex lg:items-center">
               <div className="relative">
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
                   className="flex items-center text-sm text-gray-700 hover:text-gray-900 gap-2"
                 >
                   <User className="h-5 w-5 flex-shrink-0" />
-                  <span className="font-medium truncate max-w-[100px] lg:max-w-[150px]">{user?.name}</span>
+                  <span className="font-medium truncate max-w-[150px]">{user?.name}</span>
                 </button>
 
                 {isMenuOpen && (
@@ -137,7 +137,7 @@ export const Navbar = () => {
             </div>
 
             {/* Botón de menú móvil */}
-            <div className="flex items-center md:hidden">
+            <div className="flex items-center lg:hidden">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
@@ -155,7 +155,7 @@ export const Navbar = () => {
 
       {/* Menú móvil */}
       {isMenuOpen && (
-        <div className="md:hidden">
+        <div className="lg:hidden">
           <div className="pt-2 pb-3 space-y-1">
             <Link
               to="/"
@@ -171,6 +171,13 @@ export const Navbar = () => {
             >
               Registrar Horas
             </Link>
+            <Link
+              to="/reports"
+              className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              {isAdmin() ? 'Reportes' : 'Mis Reportes'}
+            </Link>
             {isAdmin() && (
               <>
                 <Link
@@ -179,13 +186,6 @@ export const Navbar = () => {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Estructura
-                </Link>
-                <Link
-                  to="/reports"
-                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Reportes
                 </Link>
                 <Link
                   to="/admin/users"

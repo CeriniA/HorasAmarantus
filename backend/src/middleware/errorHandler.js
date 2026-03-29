@@ -3,6 +3,7 @@
  */
 
 import { config } from '../config/env.js';
+import logger from '../utils/logger.js';
 
 /**
  * Clase base para errores personalizados
@@ -102,7 +103,7 @@ export const errorHandler = (err, req, res, next) => {
   
   // Log del error
   if (config.isDevelopment || err.statusCode >= 500) {
-    console.error('❌ Error:', {
+    logger.error('❌ Error:', {
       message: err.message,
       status: err.statusCode,
       path: req.path,

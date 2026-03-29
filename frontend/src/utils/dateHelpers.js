@@ -8,6 +8,34 @@
  */
 
 /**
+ * División segura que evita NaN
+ * @param {number} numerator - Numerador
+ * @param {number} denominator - Denominador
+ * @param {number} decimals - Decimales a redondear (default: 1)
+ * @returns {number} - Resultado o 0 si el denominador es 0
+ */
+export const safeDivide = (numerator, denominator, decimals = 1) => {
+  if (!denominator || denominator === 0 || !isFinite(numerator)) {
+    return 0;
+  }
+  const result = numerator / denominator;
+  return isFinite(result) ? parseFloat(result.toFixed(decimals)) : 0;
+};
+
+/**
+ * Formatear número con fallback a 0
+ * @param {number} value - Valor a formatear
+ * @param {number} decimals - Decimales (default: 1)
+ * @returns {number} - Valor formateado o 0
+ */
+export const safeNumber = (value, decimals = 1) => {
+  if (!isFinite(value) || value === null || value === undefined) {
+    return 0;
+  }
+  return parseFloat(value.toFixed(decimals));
+};
+
+/**
  * Parsear un timestamp de la DB como fecha local
  * @param {string} timestamp - Timestamp en formato ISO (YYYY-MM-DDTHH:MM:SS)
  * @returns {Date} - Objeto Date en hora local

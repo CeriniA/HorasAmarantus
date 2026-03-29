@@ -4,6 +4,8 @@
  */
 
 import dotenv from 'dotenv';
+import path from 'path';
+import logger from '../utils/logger.js';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -96,29 +98,29 @@ export const validateConfig = () => {
   }
   
   if (errors.length > 0) {
-    console.error('❌ Errores de configuración:');
-    errors.forEach(err => console.error(`  - ${err}`));
+    logger.critical('❌ Errores de configuración:');
+    errors.forEach(err => logger.critical(`  - ${err}`));
     throw new Error('Configuración inválida');
   }
   
-  console.log('✅ Configuración validada correctamente');
+  logger.info('✅ Configuración validada correctamente');
 };
 
 /**
  * Mostrar configuración (sin secretos)
  */
 export const logConfig = () => {
-  console.log('\n📋 Configuración del servidor:');
-  console.log(`  Ambiente: ${config.env}`);
-  console.log(`  Puerto: ${config.port}`);
-  console.log(`  Supabase URL: ${config.supabase.url}`);
-  console.log(`  JWT Expira en: ${config.jwt.expiresIn}`);
-  console.log(`  CORS Origins: ${config.cors.allowedOrigins.length} permitidos`);
-  console.log(`  Rate Limiting: ${config.rateLimit.enabled ? 'Habilitado' : 'Deshabilitado'}`);
+  logger.info('\n📋 Configuración del servidor:');
+  logger.info(`  Ambiente: ${config.env}`);
+  logger.info(`  Puerto: ${config.port}`);
+  logger.info(`  Supabase URL: ${config.supabase.url}`);
+  logger.info(`  JWT Expira en: ${config.jwt.expiresIn}`);
+  logger.info(`  CORS Origins: ${config.cors.allowedOrigins.length} permitidos`);
+  logger.info(`  Rate Limiting: ${config.rateLimit.enabled ? 'Habilitado' : 'Deshabilitado'}`);
   if (config.rateLimit.enabled) {
-    console.log(`    - Max requests: ${config.rateLimit.maxRequests}/${config.rateLimit.windowMs / 60000}min`);
+    logger.info(`    - Max requests: ${config.rateLimit.maxRequests}/${config.rateLimit.windowMs / 60000}min`);
   }
-  console.log('');
+  logger.info('');
 };
 
 export default config;

@@ -90,7 +90,7 @@ export const WeeklyTrendChart = ({ timeEntries }) => {
     <Card 
       title="Tendencia Últimos 7 Días"
       subtitle={
-        <div className="flex items-center gap-2 text-sm">
+        <span className="flex items-center gap-2 text-sm">
           {stats.trendDirection === 'up' ? (
             <>
               <TrendingUp className="h-4 w-4 text-green-500" />
@@ -107,7 +107,7 @@ export const WeeklyTrendChart = ({ timeEntries }) => {
             </>
           )}
           <span className="text-gray-500">vs primera mitad de la semana</span>
-        </div>
+        </span>
       }
     >
       {/* Estadísticas rápidas */}

@@ -1,44 +1,74 @@
 /**
- * Logger utility - Solo muestra logs en desarrollo
- * En producción, los logs no se muestran en consola
+ * Sistema de Logs Centralizado - Frontend
+ * 
+ * - En DEV: Muestra todos los logs en consola
+ * - En PROD: Solo muestra errores críticos
+ * 
+ * Uso:
+ *   import logger from '@/utils/logger';
+ *   logger.info('Usuario logueado:', user);
+ *   logger.error('Error en API:', error);
  */
 
 const isDev = import.meta.env.DEV;
 
+const formatMessage = (level, ...args) => {
+  const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+  return [`[${timestamp}] [${level}]`, ...args];
+};
+
 export const logger = {
+  /**
+   * Log general (solo DEV)
+   */
   log: (...args) => {
     if (isDev) {
-      console.log(...args);
+      console.log(...formatMessage('LOG', ...args));
     }
   },
 
-  error: (...args) => {
-    if (isDev) {
-      console.error(...args);
-    }
-  },
-
-  warn: (...args) => {
-    if (isDev) {
-      console.warn(...args);
-    }
-  },
-
+  /**
+   * Información (solo DEV)
+   */
   info: (...args) => {
     if (isDev) {
-      console.info(...args);
+      console.info(...formatMessage('INFO', ...args));
     }
   },
 
+  /**
+   * Debug detallado (solo DEV)
+   */
   debug: (...args) => {
     if (isDev) {
-      console.debug(...args);
+      console.debug(...formatMessage('DEBUG', ...args));
     }
   },
 
-  // Para errores críticos que siempre deben mostrarse
+  /**
+   * Advertencias (solo DEV)
+   */
+  warn: (...args) => {
+    if (isDev) {
+      console.warn(...formatMessage('WARN', ...args));
+    }
+  },
+
+  /**
+   * Errores (solo DEV)
+   */
+  error: (...args) => {
+    if (isDev) {
+      console.error(...formatMessage('ERROR', ...args));
+    }
+  },
+
+  /**
+   * Errores críticos (SIEMPRE se muestran, incluso en PROD)
+   */
   critical: (...args) => {
-    console.error('[CRITICAL]', ...args);
+    console.error(...formatMessage('CRITICAL', ...args));
+    // En producción, aquí podrías enviar a un servicio de monitoreo (Sentry, etc.)
   }
 };
 

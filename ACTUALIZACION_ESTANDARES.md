@@ -1,6 +1,51 @@
 # 📝 ACTUALIZACIÓN DE ESTÁNDARES DE DESARROLLO
 
 ## 📅 Fecha: 29 de marzo de 2026
+## 🔄 Última actualización: 29 de marzo de 2026 - 09:30
+
+---
+
+## 🎯 CAMBIOS CRÍTICOS IMPLEMENTADOS HOY
+
+### ✅ 1. ARQUITECTURA DE CAPAS OBLIGATORIA
+**Ver:** `ARQUITECTURA_OBLIGATORIA.md`
+
+**Backend refactorizado:**
+- ✅ Creado `services/timeEntries.service.js` - Toda la lógica de negocio
+- ✅ Creado `controllers/timeEntries.controller.js` - Orquestación
+- ✅ Refactorizado `routes/timeEntries.js` - Solo endpoints (348 → 39 líneas)
+
+**Regla inquebrantable:**
+```
+Route → Controller → Service → Database
+NUNCA saltar capas
+```
+
+### ✅ 2. SISTEMA DE LOGS CENTRALIZADO
+**Ver:** `GUIA_LOGS.md`
+
+**Implementado:**
+- ✅ `frontend/src/utils/logger.js` - Logger frontend
+- ✅ `backend/src/utils/logger.js` - Logger backend con colores
+- ✅ Migrados archivos críticos a logger
+- ✅ Solo DEV muestra logs, PROD solo errores críticos
+
+**Regla inquebrantable:**
+```javascript
+// ❌ PROHIBIDO
+console.log('mensaje');
+
+// ✅ OBLIGATORIO
+import logger from './utils/logger';
+logger.info('mensaje');
+```
+
+### ✅ 3. MODO OFFLINE CORREGIDO
+**Problemas resueltos:**
+- ✅ Duplicación de registros (2 listeners del evento 'online')
+- ✅ Botones editar/borrar deshabilitados offline
+- ✅ IndexedDB solo guarda entries PENDIENTES del usuario actual
+- ✅ Logs detallados para debugging (solo DEV)
 
 ---
 

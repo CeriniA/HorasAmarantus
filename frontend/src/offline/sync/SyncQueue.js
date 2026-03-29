@@ -4,6 +4,7 @@
  */
 
 import { db } from '../core/db.js';
+import logger from '../../utils/logger.js';
 
 export class SyncQueue {
   constructor() {
@@ -32,9 +33,7 @@ export class SyncQueue {
           await this.table.delete(item.id);
         }
         
-        if (import.meta.env.DEV) {
-          console.log(`🔄 Operaciones consolidadas y canceladas para ${entityType}#${entityId}`);
-        }
+        logger.debug(`🔄 Operaciones consolidadas y canceladas para ${entityType}#${entityId}`);
         
         return null;
       }
@@ -47,12 +46,10 @@ export class SyncQueue {
       // Agregar operación consolidada
       const id = await this.table.add(consolidated);
       
-      if (import.meta.env.DEV) {
-        console.log(`🔄 Operaciones consolidadas para ${entityType}#${entityId}:`, {
-          previous: existingItems.length,
-          action: consolidated.action
-        });
-      }
+      logger.debug(`🔄 Operaciones consolidadas para ${entityType}#${entityId}:`, {
+        previous: existingItems.length,
+        action: consolidated.action
+      });
       
       return id;
     }
@@ -68,13 +65,11 @@ export class SyncQueue {
       error: null
     });
     
-    if (import.meta.env.DEV) {
-      console.log(`✅ Item agregado a cola #${id}:`, {
-        type: entityType,
-        entity_id: entityId,
-        action
-      });
-    }
+    logger.debug(`✅ Item agregado a cola #${id}:`, {
+      type: entityType,
+      entity_id: entityId,
+      action
+    });
     
     return id;
   }

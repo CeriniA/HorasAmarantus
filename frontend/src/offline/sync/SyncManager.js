@@ -6,6 +6,7 @@
 import { SyncQueue } from './SyncQueue.js';
 import { db } from '../core/db.js';
 import { connectivityService } from '../../services/ConnectivityService.js';
+import logger from '../../utils/logger.js';
 
 export class SyncManager {
   constructor() {
@@ -32,9 +33,7 @@ export class SyncManager {
    * Handler para evento online
    */
   handleOnline() {
-    if (import.meta.env.DEV) {
-      console.log('✅ Conexión restaurada, sincronizando...');
-    }
+    logger.info('✅ Conexión restaurada, sincronizando...');
     this.sync();
   }
 
@@ -42,9 +41,7 @@ export class SyncManager {
    * Handler para evento offline
    */
   handleOffline() {
-    if (import.meta.env.DEV) {
-      console.log('❌ Conexión perdida, modo offline activado');
-    }
+    logger.info('📴 Conexión perdida, modo offline activado');
     this.notifyListeners({ type: 'offline' });
   }
 

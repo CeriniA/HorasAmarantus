@@ -340,8 +340,8 @@ export const Reports = () => {
               {/* Análisis Comparativo */}
               <ComparativeAnalysis timeEntries={filteredEntries} />
 
-              {/* Análisis de Productividad */}
-              {isOperario(user) && (
+              {/* Análisis de Trabajo - Visible para operarios siempre, y para admins cuando filtran por usuario */}
+              {(isOperario(user) || (isAdminOrSuperadmin(user) && selectedUser !== 'all')) && (
                 <ProductivityAnalysis timeEntries={filteredEntries} />
               )}
             </>

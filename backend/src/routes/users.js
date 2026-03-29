@@ -1,10 +1,17 @@
+/**
+ * Users Routes
+ * 
+ * Responsabilidad: SOLO definir endpoints HTTP
+ * - NO lógica de negocio
+ * - NO acceso a base de datos
+ * - Solo middleware y delegación a controller
+ */
+
 import express from 'express';
-import bcrypt from 'bcryptjs';
-import { supabase } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireAdmin, canManageUser } from '../middleware/roles.js';
-import { validateCreateUser, validateUpdateUser, validateUUID } from '../middleware/validators.js';
-import { USER_ROLES } from '../models/constants.js';
+import { validateCreateUser, validateUpdateUser } from '../middleware/validators.js';
+import usersController from '../controllers/users.controller.js';
 
 const router = express.Router();
 
@@ -12,156 +19,18 @@ const router = express.Router();
 router.use(authenticate);
 
 // GET /api/users - Obtener usuarios según rol
-router.get('/', async (req, res) => {
-  try {
-    const { role, id } = req.user;
-    let query = supabase
-      .from('users')
-      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
-      .eq('is_active', true);
-
-    // Filtrar según rol
-    if (role === USER_ROLES.OPERARIO) {
-      // Operarios solo ven su propio perfil
-      query = query.eq('id', id);
-    }
-    // Superadmin y Admin ven todos (no se filtra)
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    res.json({ users: data });
-  } catch (error) {
-    console.error('Error obteniendo usuarios:', error);
-    res.status(500).json({ error: 'Error en el servidor' });
-  }
-});
+router.get('/', usersController.getAll);
 
 // GET /api/users/:id - Obtener un usuario
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { role, id: userId } = req.user;
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
-      .eq('id', id)
-      .single();
-
-    if (error || !data) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
-    }
-
-    // Verificar permisos
-    if (role === 'operario' && id !== userId) {
-      return res.status(403).json({ error: 'No tienes permisos' });
-    }
-    // Superadmin y Admin pueden ver cualquier usuario
-
-    res.json({ user: data });
-  } catch (error) {
-    console.error('Error obteniendo usuario:', error);
-    res.status(500).json({ error: 'Error en el servidor' });
-  }
-});
+router.get('/:id', usersController.getById);
 
 // POST /api/users - Crear usuario (solo admin/superadmin)
-router.post('/', requireAdmin, canManageUser, validateCreateUser, async (req, res) => {
-  try {
-
-    const { username, email, password, name, role, organizational_unit_id } = req.body;
-
-    // Hash password
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const { data, error } = await supabase
-      .from('users')
-      .insert({
-        username,
-        email: email || null, // Email opcional
-        password_hash,
-        name,
-        role,
-        organizational_unit_id
-      })
-      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
-      .single();
-
-    if (error) throw error;
-
-    res.status(201).json({ user: data });
-  } catch (error) {
-    console.error('Error creando usuario:', error);
-    res.status(500).json({ error: 'Error en el servidor' });
-  }
-});
+router.post('/', requireAdmin, canManageUser, validateCreateUser, usersController.create);
 
 // PUT /api/users/:id - Actualizar usuario
-router.put('/:id', validateUpdateUser, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { role: userRole, id: userId } = req.user;
-    const updates = { ...req.body };
-
-    // Solo el usuario mismo, admin o superadmin pueden actualizar
-    if (id !== userId && userRole !== USER_ROLES.ADMIN && userRole !== USER_ROLES.SUPERADMIN) {
-      return res.status(403).json({ error: 'No tienes permisos' });
-    }
-
-    // Verificar si intenta cambiar rol
-    if (updates.role) {
-      // Solo superadmin puede cambiar roles
-      if (userRole !== USER_ROLES.SUPERADMIN) {
-        delete updates.role;
-      }
-      // Admin no puede crear/editar otros admins o superadmins
-      else if (userRole === USER_ROLES.ADMIN && (updates.role === USER_ROLES.ADMIN || updates.role === USER_ROLES.SUPERADMIN)) {
-        return res.status(403).json({ error: 'No puedes gestionar usuarios con rol admin o superadmin' });
-      }
-    }
-
-    // Si hay password, hashearlo
-    if (updates.password) {
-      updates.password_hash = await bcrypt.hash(updates.password, 10);
-      delete updates.password;
-    }
-
-    const { data, error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', id)
-      .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
-      .single();
-
-    if (error) throw error;
-
-    res.json({ user: data });
-  } catch (error) {
-    console.error('Error actualizando usuario:', error);
-    res.status(500).json({ error: 'Error en el servidor' });
-  }
-});
+router.put('/:id', validateUpdateUser, usersController.update);
 
 // DELETE /api/users/:id - Eliminar usuario (solo admin)
-router.delete('/:id', requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Soft delete
-    const { error } = await supabase
-      .from('users')
-      .update({ is_active: false })
-      .eq('id', id);
-
-    if (error) throw error;
-
-    res.json({ message: 'Usuario eliminado exitosamente' });
-  } catch (error) {
-    console.error('Error eliminando usuario:', error);
-    res.status(500).json({ error: 'Error en el servidor' });
-  }
-});
+router.delete('/:id', requireAdmin, usersController.deleteUser);
 
 export default router;

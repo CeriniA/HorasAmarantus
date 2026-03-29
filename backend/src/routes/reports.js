@@ -6,6 +6,7 @@
 import express from 'express';
 import { supabase } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import logger from '../utils/logger.js';
 import { USER_ROLES } from '../models/constants.js';
 
 const router = express.Router();
@@ -158,7 +159,7 @@ router.get('/summary', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error generando resumen de reportes:', error);
+    logger.error('Error generando resumen de reportes:', error);
     res.status(500).json({ error: 'Error en el servidor' });
   }
 });
@@ -256,7 +257,7 @@ router.get('/overtime', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error generando reporte de overtime:', error);
+    logger.error('Error generando reporte de overtime:', error);
     res.status(500).json({ error: 'Error en el servidor' });
   }
 });

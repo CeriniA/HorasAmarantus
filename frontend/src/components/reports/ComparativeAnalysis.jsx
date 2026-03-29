@@ -10,7 +10,8 @@ import Card from '../common/Card';
 import Button from '../common/Button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Plus, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
-import { safeDate, calculateHours, extractDate } from '../../utils/dateHelpers';
+import { safeDate, calculateHours, extractDate, safeDivide, safeNumber } from '../../utils/dateHelpers';
+import logger from '../../utils/logger';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -45,13 +46,19 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
       
       periods.forEach(period => {
         const [year, month] = period.month.split('-');
-        const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+        // Construir fecha correctamente: año, mes (0-indexed), día 1
+        const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1, 1));
         const end = endOfMonth(start);
+        
+        logger.debug(`📅 Período ${period.month}: ${start.toISOString()} - ${end.toISOString()}`);
         
         const periodEntries = timeEntries.filter(e => {
           const entryDate = safeDate(e.start_time);
+          if (!entryDate) return false;
           return entryDate >= start && entryDate <= end;
         });
+        
+        logger.debug(`  → Encontrados ${periodEntries.length} entries de ${timeEntries.length} totales`);
         
         const totalHours = periodEntries.reduce((sum, entry) => {
           return sum + calculateHours(entry.start_time, entry.end_time);
@@ -64,13 +71,13 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
         let value = 0;
         switch (category) {
           case 'Total Horas':
-            value = parseFloat(totalHours.toFixed(1));
+            value = safeNumber(totalHours, 1);
             break;
           case 'Registros':
             value = periodEntries.length;
             break;
           case 'Promedio/Día':
-            value = daysWorked > 0 ? parseFloat((totalHours / daysWorked).toFixed(1)) : 0;
+            value = safeDivide(totalHours, daysWorked, 1);
             break;
           case 'Días Trabajados':
             value = daysWorked;
@@ -90,11 +97,13 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
     // Calcular resumen con cambios (primera pasada: calcular totales)
     const summaryBase = periods.map((period) => {
       const [year, month] = period.month.split('-');
-      const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+      // Construir fecha correctamente
+      const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1, 1));
       const end = endOfMonth(start);
       
       const periodEntries = timeEntries.filter(e => {
         const entryDate = safeDate(e.start_time);
+        if (!entryDate) return false;
         return entryDate >= start && entryDate <= end;
       });
       
@@ -122,8 +131,9 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
         ...period,
         entries: timeEntries.filter(e => {
           const entryDate = safeDate(e.start_time);
+          if (!entryDate) return false;
           const [year, month] = period.month.split('-');
-          const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1)); // OK: construir fecha
+          const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1, 1));
           const end = endOfMonth(start);
           return entryDate >= start && entryDate <= end;
         }).length,
@@ -205,8 +215,10 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
           <div key={period.id} className="p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">
-                {/* OK: construir fecha desde string YYYY-MM */}
-                {format(new Date(period.month + '-01'), 'MMMM yyyy', { locale: es })}
+                {(() => {
+                  const [year, month] = period.month.split('-');
+                  return format(new Date(parseInt(year), parseInt(month) - 1, 1), 'MMMM yyyy', { locale: es });
+                })()}
               </span>
               {period.change !== null && (
                 <div className={`flex items-center text-sm font-semibold ${
@@ -222,7 +234,7 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
               )}
             </div>
             <div className="text-2xl font-bold text-gray-900">
-              {period.totalHours.toFixed(0)}h
+              {safeNumber(period.totalHours, 0)}h
             </div>
             <div className="text-xs text-gray-500 mt-1">
               {period.entries} registros
@@ -242,8 +254,8 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
             <Tooltip />
             <Legend />
             {periods.map(period => {
-              // OK: construir fecha desde string YYYY-MM
-              const periodName = format(new Date(period.month + '-01'), 'MMM yyyy', { locale: es });
+              const [year, month] = period.month.split('-');
+              const periodName = format(new Date(parseInt(year), parseInt(month) - 1, 1), 'MMM yyyy', { locale: es });
               return (
                 <Bar
                   key={period.id}
@@ -268,8 +280,8 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
                   Métrica
                 </th>
                 {periods.map(period => {
-                  // OK: construir fecha desde string YYYY-MM
-                  const periodName = format(new Date(period.month + '-01'), 'MMM yyyy', { locale: es });
+                  const [year, month] = period.month.split('-');
+                  const periodName = format(new Date(parseInt(year), parseInt(month) - 1, 1), 'MMM yyyy', { locale: es });
                   return (
                     <th key={period.id} className="text-right py-3 px-4 font-semibold text-gray-700">
                       {periodName}

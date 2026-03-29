@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAuthContext } from '../context/AuthContext';
-import { safeDate, calculateHours } from '../utils/dateHelpers';
+import { safeDate, safeNumber } from '../utils/dateHelpers';
 import { useTimeEntries } from '../hooks/useTimeEntries';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
 import Card from '../components/common/Card';
@@ -109,7 +109,7 @@ export const Dashboard = () => {
                 {isOperario(user) ? 'Tus Horas Hoy' : 'Horas Hoy'}
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {todayHours.toFixed(1)}h
+                {safeNumber(todayHours, 1)}h
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 {todayEntries.length} registros
@@ -128,7 +128,7 @@ export const Dashboard = () => {
                 {isOperario(user) ? 'Tu Semana' : 'Esta Semana'}
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {weekHours.toFixed(1)}h
+                {safeNumber(weekHours, 1)}h
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 {weekEntries.length} registros
@@ -147,7 +147,7 @@ export const Dashboard = () => {
                 {isOperario(user) ? 'Tu Mes' : 'Este Mes'}
               </p>
               <p className="text-2xl font-bold text-gray-900">
-                {monthHours.toFixed(1)}h
+                {safeNumber(monthHours, 1)}h
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 {monthEntries.length} registros

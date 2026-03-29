@@ -31,12 +31,13 @@ export const GoalHistory = ({ timeEntries, weeklyGoal = 40, user }) => {
     if (maxWeeks === 0) {
       return {
         history: [],
-        achieved: 0,
-        almost: 0,
-        partial: 0,
-        missed: 0,
-        totalWeeks: 0,
-        successRate: 0
+        stats: {
+          achieved: 0,
+          almost: 0,
+          successRate: 0,
+          avgCompletion: 0,
+          totalWeeks: 0
+        }
       };
     }
 
