@@ -7,28 +7,7 @@ export const useTimeEntries = (userId) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (userId) {
-      loadTimeEntries();
-    }
-  }, [userId, loadTimeEntries]);
-
-  // Escuchar eventos de sincronización
-  useEffect(() => {
-    const handleSyncComplete = (event) => {
-      if (event.type === 'sync_complete' && event.data.synced > 0) {
-        // Recargar datos después de sincronizar
-        loadTimeEntries();
-      }
-    };
-
-    syncManager.addListener(handleSyncComplete);
-
-    return () => {
-      syncManager.removeListener(handleSyncComplete);
-    };
-  }, [loadTimeEntries]);
-
+  // Definir loadTimeEntries ANTES de usarlo en useEffect
   const loadTimeEntries = useCallback(async () => {
     try {
       setLoading(true);
@@ -88,6 +67,29 @@ export const useTimeEntries = (userId) => {
       setLoading(false);
     }
   }, [userId]);
+
+  // useEffect para cargar datos cuando cambia userId
+  useEffect(() => {
+    if (userId) {
+      loadTimeEntries();
+    }
+  }, [userId, loadTimeEntries]);
+
+  // Escuchar eventos de sincronización
+  useEffect(() => {
+    const handleSyncComplete = (event) => {
+      if (event.type === 'sync_complete' && event.data.synced > 0) {
+        // Recargar datos después de sincronizar
+        loadTimeEntries();
+      }
+    };
+
+    syncManager.addListener(handleSyncComplete);
+
+    return () => {
+      syncManager.removeListener(handleSyncComplete);
+    };
+  }, [loadTimeEntries]);
 
   const createEntry = async (entryData) => {
     try {

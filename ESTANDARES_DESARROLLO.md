@@ -101,6 +101,43 @@ const confirmed = await confirmDialog(MESSAGES.CONFIRM_DELETE_USER(user.name));
 <LoadingSpinner />
 ```
 
+#### 6. NUNCA Usar Hooks en Orden Incorrecto
+
+```javascript
+// ❌ MAL - useEffect usa función que no existe aún
+export const MyHook = () => {
+  const [data, setData] = useState([]);
+  
+  useEffect(() => {
+    loadData(); // ❌ ERROR: loadData no existe aún
+  }, [loadData]);
+  
+  const loadData = useCallback(async () => {
+    // ...
+  }, []);
+};
+
+// ✅ BIEN - Definir callbacks ANTES de usarlos
+export const MyHook = () => {
+  const [data, setData] = useState([]);
+  
+  // 1. Definir callback primero
+  const loadData = useCallback(async () => {
+    // ...
+  }, []);
+  
+  // 2. Usar en useEffect después
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+};
+```
+
+**ORDEN CORRECTO DE HOOKS:**
+1. `useState` - Estados
+2. `useCallback`, `useMemo` - Callbacks y valores memorizados
+3. `useEffect` - Efectos secundarios
+
 ---
 
 ## ✅ REGLAS OBLIGATORIAS
@@ -232,20 +269,18 @@ export const MyComponent = () => {
 ### 2. Custom Hooks
 
 ```javascript
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { showError } from '../utils/notificationHelpers';
 import { MESSAGES } from '../constants/messages';
 
 export const useMyHook = (param) => {
+  // 1. Estados primero
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  useEffect(() => {
-    loadData();
-  }, [param]);
-  
-  const loadData = async () => {
+  // 2. Callbacks después (ANTES de useEffect)
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -257,7 +292,12 @@ export const useMyHook = (param) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [param]); // Dependencias del callback
+  
+  // 3. Effects al final (DESPUÉS de definir callbacks)
+  useEffect(() => {
+    loadData();
+  }, [loadData]); // Ahora loadData existe
   
   return {
     data,
@@ -432,17 +472,26 @@ const Reports = lazy(() => import('./pages/Reports'));
 
 ## 📋 CHECKLIST ANTES DE COMMIT
 
+### Código:
 - [ ] No hay código duplicado
 - [ ] No hay valores hardcodeados
 - [ ] Se usan constantes de `constants/`
 - [ ] Se usan helpers de `utils/`
 - [ ] Se usan componentes reutilizables
 - [ ] Se usan custom hooks cuando corresponde
+
+### React Hooks:
+- [ ] **Orden correcto: useState → useCallback/useMemo → useEffect**
+- [ ] Callbacks definidos ANTES de usarlos en useEffect
+- [ ] Todas las dependencias incluidas en arrays de dependencias
+- [ ] No hay warnings de React Hooks
+
+### Calidad:
 - [ ] Código está documentado
 - [ ] No hay console.logs en producción
+- [ ] No hay warnings de ESLint
 - [ ] Funciona en modo offline
 - [ ] Funciona en móvil
-- [ ] No hay warnings de ESLint
 
 ---
 
@@ -454,6 +503,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 - ❌ Verificar roles inline
 - ❌ Usar alert/confirm directo
 - ❌ Crear componentes inline
+- ❌ **Usar hooks en orden incorrecto**
 
 ### SIEMPRE:
 - ✅ Usar constantes
@@ -463,6 +513,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 - ✅ Validar datos
 - ✅ Documentar
 - ✅ Pensar en reutilización
+- ✅ **Definir callbacks ANTES de useEffect**
 
 ---
 
@@ -478,4 +529,5 @@ Si tienes dudas sobre cómo implementar algo:
 
 ---
 
-**Última actualización:** 28 de marzo de 2026
+**Última actualización:** 29 de marzo de 2026  
+**Última regla agregada:** Orden correcto de React Hooks (useState → useCallback → useEffect)

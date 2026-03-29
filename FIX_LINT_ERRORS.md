@@ -111,13 +111,62 @@ import { generateUUID } from '../../utils/uuid.js';
 
 ---
 
+### 4. ❌ Cannot access 'loadTimeEntries' before initialization
+**Archivo:** `useTimeEntries.js:14`
+
+**Problema:**
+```javascript
+// ❌ MAL - loadTimeEntries se usa antes de ser definido
+export const useTimeEntries = (userId) => {
+  const [timeEntries, setTimeEntries] = useState([]);
+  
+  useEffect(() => {
+    if (userId) {
+      loadTimeEntries(); // ❌ ERROR: usado aquí
+    }
+  }, [userId, loadTimeEntries]);
+  
+  const loadTimeEntries = useCallback(async () => { // ❌ Definido después
+    // ...
+  }, [userId]);
+}
+```
+
+**Solución:**
+```javascript
+// ✅ BIEN - Definir loadTimeEntries ANTES de usarlo
+export const useTimeEntries = (userId) => {
+  const [timeEntries, setTimeEntries] = useState([]);
+  
+  // ✅ Definir primero
+  const loadTimeEntries = useCallback(async () => {
+    // ...
+  }, [userId]);
+  
+  // ✅ Usar después
+  useEffect(() => {
+    if (userId) {
+      loadTimeEntries();
+    }
+  }, [userId, loadTimeEntries]);
+}
+```
+
+**Razón:**
+- JavaScript tiene "hoisting" pero `const` no se puede usar antes de su declaración
+- `useCallback` debe definirse antes de ser usado en `useEffect`
+- El orden correcto es: estados → callbacks → effects
+
+---
+
 ## ✅ RESULTADO
 
-### Antes (4 errores):
+### Antes (5 errores):
 ```
 ❌ 'setTimeout' is not defined (error)
 ⚠️ React Hook useEffect missing dependency (warning) x2
 ❌ 'db' is defined but never used (error)
+❌ Cannot access 'loadTimeEntries' before initialization (error)
 ```
 
 ### Después (0 errores):
@@ -126,6 +175,7 @@ import { generateUUID } from '../../utils/uuid.js';
 ✅ Código cumple con reglas de React Hooks
 ✅ No hay imports innecesarios
 ✅ Código más simple y mantenible
+✅ Orden correcto de hooks
 ```
 
 ---
@@ -159,6 +209,18 @@ doSomething();
 import { onlyWhatYouNeed } from './module';
 ```
 
+### 4. Orden correcto de hooks
+```javascript
+// ✅ ORDEN CORRECTO
+const [state, setState] = useState();           // 1. Estados
+const myFunction = useCallback(() => {}, []);   // 2. Callbacks
+useEffect(() => { myFunction(); }, []);         // 3. Effects
+
+// ❌ ORDEN INCORRECTO
+useEffect(() => { myFunction(); }, []);         // ❌ Usa antes de definir
+const myFunction = useCallback(() => {}, []);   // ❌ Definido después
+```
+
 ---
 
 ## 🎯 BUENAS PRÁCTICAS APLICADAS
@@ -167,6 +229,7 @@ import { onlyWhatYouNeed } from './module';
 2. **KISS** - Mantener simple (eliminar setTimeout innecesario)
 3. **Clean Code** - Imports limpios, sin código muerto
 4. **React Best Practices** - Usar useCallback correctamente
+5. **Hook Order** - Definir callbacks antes de usarlos en effects
 
 ---
 

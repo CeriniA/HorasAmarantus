@@ -65,3 +65,31 @@ export const calculateHours = (startTime, endTime) => {
 export const createDBTimestamp = (date, time) => {
   return `${date} ${time}:00`;
 };
+
+/**
+ * Verificar si una fecha está dentro de un rango
+ * @param {string} timestamp - Timestamp a verificar
+ * @param {string} startDate - Fecha de inicio (YYYY-MM-DD)
+ * @param {string} endDate - Fecha de fin (YYYY-MM-DD)
+ * @returns {boolean} - true si está en el rango
+ */
+export const isDateInRange = (timestamp, startDate, endDate) => {
+  if (!timestamp || !startDate || !endDate) return false;
+  
+  const entryDate = safeDate(timestamp);
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T23:59:59`);
+  
+  return entryDate >= start && entryDate <= end;
+};
+
+/**
+ * Validar si una fecha es válida
+ * @param {string|Date} date - Fecha a validar
+ * @returns {boolean} - true si es válida
+ */
+export const isValidDate = (date) => {
+  if (!date) return false;
+  const d = date instanceof Date ? date : new Date(date);
+  return d instanceof Date && !isNaN(d);
+};
