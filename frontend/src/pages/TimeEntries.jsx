@@ -20,6 +20,7 @@ export const TimeEntries = () => {
   const { 
     timeEntries,
     setTimeEntries,
+    loading,
     createEntry,
     updateEntry,
     deleteEntry 
@@ -32,7 +33,7 @@ export const TimeEntries = () => {
   const [editingEntry, setEditingEntry] = useState(null);
   const [editForm, setEditForm] = useState({ startTime: '', endTime: '' });
   const [alert, setAlert] = useState(null);
-  const [saving, setSaving] = useState(false);
+  const [operationLoading, setOperationLoading] = useState(false);
   const [expandedDays, setExpandedDays] = useState(new Set());
   
   // Filtros
@@ -62,13 +63,10 @@ export const TimeEntries = () => {
   });
 
   const handleBulkSave = async (entries) => {
-    // Solo mostrar loading si estamos online (operaciones más lentas)
-    const isOnline = navigator.onLine;
-    if (isOnline) {
-      setSaving(true);
-    }
+    setOperationLoading(true);
 
     try {
+      const isOnline = navigator.onLine;
       let successCount = 0;
       let errorCount = 0;
       const errors = [];
@@ -97,9 +95,7 @@ export const TimeEntries = () => {
       console.error('Error creating entries:', error);
       setAlert({ type: 'error', message: `Error: ${error.message}` });
     } finally {
-      if (isOnline) {
-        setSaving(false);
-      }
+      setOperationLoading(false);
     }
   };
 
@@ -125,7 +121,7 @@ export const TimeEntries = () => {
   const handleSaveEdit = async () => {
     if (!editingEntry) return;
 
-    setSaving(true);
+    setOperationLoading(true);
     try {
       const date = extractDate(editingEntry.start_time);
       const newStartTime = `${date}T${editForm.startTime}:00`;
@@ -147,13 +143,13 @@ export const TimeEntries = () => {
       console.error('Error updating entry:', error);
       setAlert({ type: 'error', message: `Error: ${error.message}` });
     } finally {
-      setSaving(false);
+      setOperationLoading(false);
     }
   };
 
   const handleDelete = async (entry) => {
     // eslint-disable-next-line no-restricted-globals
-    if (!confirm('¿Estás seguro de eliminar este registro?')) return;
+    if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
 
     const result = await deleteEntry(entry.id || entry.client_id);
     
@@ -164,6 +160,18 @@ export const TimeEntries = () => {
     }
   };
 
+
+  // Mostrar loading mientras carga datos iniciales
+  if (loading && timeEntries.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando registros...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -423,7 +431,7 @@ export const TimeEntries = () => {
         onClose={() => setShowBulkEntry(false)}
         units={units}
         onSave={handleBulkSave}
-        loading={saving}
+        loading={operationLoading}
         currentUser={user}
         users={users}
       />
@@ -445,7 +453,7 @@ export const TimeEntries = () => {
               }}>
                 Cancelar
               </Button>
-              <Button onClick={handleSaveEdit} loading={saving}>
+              <Button onClick={handleSaveEdit} loading={operationLoading}>
                 💾 Guardar Cambios
               </Button>
             </>

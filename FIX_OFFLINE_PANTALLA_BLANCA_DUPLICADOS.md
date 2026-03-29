@@ -9,15 +9,20 @@
 ### 1. ❌ Pantalla en Blanco al Guardar Offline
 **Síntoma:** Al guardar un horario offline, la pantalla se queda en blanco.
 
-**Causa:**
+**Causa REAL:**
 ```javascript
-// ❌ MAL - Solo mostraba loading si estaba online
-if (navigator.onLine) {
-  setLoading(true);
-}
+// ❌ MAL - setLoading(true) en createEntry bloqueaba TODA la UI
+const createEntry = async (entryData) => {
+  try {
+    setLoading(true); // ❌ Bloquea toda la página
+    // ...
+  } finally {
+    setLoading(false);
+  }
+};
 ```
 
-El modal esperaba `loading=true` para mostrar el spinner, pero en offline nunca se ponía en true, dejando la UI en estado indefinido.
+El hook `useTimeEntries` usaba `setLoading(true)` en `createEntry`, `updateEntry` y `deleteEntry`, lo cual bloqueaba TODA la UI mientras se guardaba. Esto causaba que la página quedara en blanco porque el componente mostraba un spinner de carga completo.
 
 ---
 
@@ -45,45 +50,56 @@ for (const pending of pendingEntries) {
 
 ## ✅ SOLUCIONES IMPLEMENTADAS
 
-### Fix #1: SIEMPRE Mostrar Loading
+### Fix #1: NO Usar setLoading en Operaciones Individuales
 
 **Antes:**
 ```javascript
-// ❌ MAL
+// ❌ MAL - Bloqueaba toda la UI
 const createEntry = async (entryData) => {
   try {
-    if (navigator.onLine) {
-      setLoading(true); // Solo si online
-    }
+    setLoading(true); // ❌ Bloquea toda la página
     // ...
   } finally {
-    if (navigator.onLine) {
-      setLoading(false); // Solo si online
-    }
+    setLoading(false);
   }
 };
 ```
 
 **Ahora:**
 ```javascript
-// ✅ BIEN
+// ✅ BIEN - Solo loading para carga inicial
 const createEntry = async (entryData) => {
   try {
     setError(null);
-    setLoading(true); // ✅ SIEMPRE mostrar loading
+    // NO usar setLoading - solo para carga inicial
+    // Las operaciones individuales usan su propio loading local
     
     if (navigator.onLine) {
       // Online...
     } else {
       // Offline...
     }
+  }
+  // NO finally con setLoading
+};
+
+// En TimeEntries.jsx - loading local para operaciones
+const [operationLoading, setOperationLoading] = useState(false);
+
+const handleBulkSave = async (entries) => {
+  setOperationLoading(true); // ✅ Loading local, no bloquea toda la UI
+  try {
+    // ...
   } finally {
-    setLoading(false); // ✅ SIEMPRE quitar loading
+    setOperationLoading(false);
   }
 };
 ```
 
-**Beneficio:** El modal muestra el spinner correctamente tanto online como offline.
+**Beneficio:** 
+- `loading` del hook solo se usa para carga inicial de datos
+- Operaciones individuales usan `operationLoading` local
+- La UI NO se bloquea al guardar/editar/eliminar
 
 ---
 

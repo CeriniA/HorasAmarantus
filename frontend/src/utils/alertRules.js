@@ -4,19 +4,20 @@
  */
 
 import { isSameDay, isWeekend, getHours, differenceInDays, startOfWeek, endOfWeek } from 'date-fns';
+import { safeDate, calculateHours, extractDate } from './dateHelpers';
 
 /**
  * Evalúa todas las reglas y genera alertas
  */
 export const evaluateAlerts = (timeEntries, user) => {
   const alerts = [];
-  const today = new Date();
+  const today = new Date(); // OK: fecha actual del sistema
   const weeklyGoal = user?.weekly_goal || 40;
 
   // Regla 1: Sin registros hoy (después de las 6 PM)
   if (getHours(today) >= 18) {
     const todayEntries = timeEntries.filter(e => 
-      isSameDay(new Date(e.start_time), today)
+      isSameDay(safeDate(e.start_time), today)
     );
     
     if (todayEntries.length === 0 && !isWeekend(today)) {
@@ -78,7 +79,7 @@ export const evaluateAlerts = (timeEntries, user) => {
   // Calcular días laborables restantes (sin domingo)
   let workDaysRemaining = 0;
   for (let i = 1; i <= daysRemaining; i++) {
-    const checkDate = new Date(today);
+    const checkDate = new Date(today); // OK: fecha actual del sistema
     checkDate.setDate(checkDate.getDate() + i);
     if (checkDate.getDay() !== 0) workDaysRemaining++;
   }
@@ -223,17 +224,17 @@ export const evaluateAlerts = (timeEntries, user) => {
  * Calcula días consecutivos sin registros
  */
 const getDaysWithoutEntries = (timeEntries) => {
-  const today = new Date();
+  const today = new Date(); // OK: fecha actual
   let daysWithout = 0;
   
   for (let i = 1; i <= 7; i++) {
-    const checkDate = new Date(today);
+    const checkDate = new Date(today); // OK: fecha actual
     checkDate.setDate(checkDate.getDate() - i);
     
     if (isWeekend(checkDate)) continue;
     
     const hasEntries = timeEntries.some(e => 
-      isSameDay(new Date(e.start_time), checkDate)
+      isSameDay(safeDate(e.start_time), checkDate)
     );
     
     if (!hasEntries) {
@@ -250,18 +251,16 @@ const getDaysWithoutEntries = (timeEntries) => {
  * Calcula horas de la semana actual
  */
 const getWeekHours = (timeEntries) => {
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // OK: fecha actual
+  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 }); // OK: fecha actual
   
   return timeEntries
     .filter(e => {
-      const entryDate = new Date(e.start_time);
+      const entryDate = safeDate(e.start_time);
       return entryDate >= weekStart && entryDate <= weekEnd;
     })
     .reduce((sum, entry) => {
-      const start = new Date(entry.start_time);
-      const end = new Date(entry.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
+      const hours = calculateHours(entry.start_time, entry.end_time);
       return sum + hours;
     }, 0);
 };
@@ -276,16 +275,14 @@ const getAvgWeekHours = (timeEntries) => {
   const weeklyHours = {};
   
   timeEntries.forEach(entry => {
-    const weekStart = startOfWeek(new Date(entry.start_time), { weekStartsOn: 1 });
+    const weekStart = startOfWeek(safeDate(entry.start_time), { weekStartsOn: 1 });
     const weekKey = weekStart.toISOString();
     
     if (!weeklyHours[weekKey]) {
       weeklyHours[weekKey] = 0;
     }
     
-    const start = new Date(entry.start_time);
-    const end = new Date(entry.end_time);
-    const hours = (end - start) / (1000 * 60 * 60);
+    const hours = calculateHours(entry.start_time, entry.end_time);
     weeklyHours[weekKey] += hours;
   });
   
@@ -298,21 +295,19 @@ const getAvgWeekHours = (timeEntries) => {
  */
 const detectIrregularPattern = (timeEntries) => {
   const last30Days = timeEntries.filter(e => {
-    const entryDate = new Date(e.start_time);
-    const daysAgo = differenceInDays(new Date(), entryDate);
+    const entryDate = safeDate(e.start_time);
+    const daysAgo = differenceInDays(new Date(), entryDate); // OK: fecha actual
     return daysAgo <= 30;
   });
   
   // Agrupar por día
   const dailyHours = {};
   last30Days.forEach(entry => {
-    const dateKey = new Date(entry.start_time).toDateString();
+    const dateKey = extractDate(entry.start_time);
     if (!dailyHours[dateKey]) {
       dailyHours[dateKey] = 0;
     }
-    const start = new Date(entry.start_time);
-    const end = new Date(entry.end_time);
-    const hours = (end - start) / (1000 * 60 * 60);
+    const hours = calculateHours(entry.start_time, entry.end_time);
     dailyHours[dateKey] += hours;
   });
   
@@ -340,21 +335,19 @@ const detectIrregularPattern = (timeEntries) => {
  */
 const detectOvertimePattern = (timeEntries) => {
   const last30Days = timeEntries.filter(e => {
-    const entryDate = new Date(e.start_time);
-    const daysAgo = differenceInDays(new Date(), entryDate);
+    const entryDate = safeDate(e.start_time);
+    const daysAgo = differenceInDays(new Date(), entryDate); // OK: fecha actual
     return daysAgo <= 30;
   });
   
   // Agrupar por día
   const dailyHours = {};
   last30Days.forEach(entry => {
-    const dateKey = new Date(entry.start_time).toDateString();
+    const dateKey = extractDate(entry.start_time);
     if (!dailyHours[dateKey]) {
       dailyHours[dateKey] = 0;
     }
-    const start = new Date(entry.start_time);
-    const end = new Date(entry.end_time);
-    const hours = (end - start) / (1000 * 60 * 60);
+    const hours = calculateHours(entry.start_time, entry.end_time);
     dailyHours[dateKey] += hours;
   });
   
@@ -374,23 +367,21 @@ const detectOvertimePattern = (timeEntries) => {
  */
 const calculateConsistency = (timeEntries) => {
   const last30Days = timeEntries.filter(e => {
-    const entryDate = new Date(e.start_time);
-    const daysAgo = differenceInDays(new Date(), entryDate);
+    const entryDate = safeDate(e.start_time);
+    const daysAgo = differenceInDays(new Date(), entryDate); // OK: fecha actual
     return daysAgo <= 30;
   });
   
-  if (last30Days.length < 5) return 0;
+  if (last30Days.length === 0) return 0;
   
   // Agrupar por día
   const dailyHours = {};
   last30Days.forEach(entry => {
-    const dateKey = new Date(entry.start_time).toDateString();
+    const dateKey = extractDate(entry.start_time);
     if (!dailyHours[dateKey]) {
       dailyHours[dateKey] = 0;
     }
-    const start = new Date(entry.start_time);
-    const end = new Date(entry.end_time);
-    const hours = (end - start) / (1000 * 60 * 60);
+    const hours = calculateHours(entry.start_time, entry.end_time);
     dailyHours[dateKey] += hours;
   });
   

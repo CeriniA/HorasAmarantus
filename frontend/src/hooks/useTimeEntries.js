@@ -115,8 +115,8 @@ export const useTimeEntries = (userId) => {
   const createEntry = async (entryData) => {
     try {
       setError(null);
-      // SIEMPRE mostrar loading para evitar pantalla blanca
-      setLoading(true);
+      // NO usar setLoading aquí - solo para carga inicial
+      // Las operaciones individuales usan su propio loading local
 
       if (navigator.onLine) {
         // Online: crear en backend
@@ -151,16 +151,13 @@ export const useTimeEntries = (userId) => {
       console.error('Error creating entry:', err);
       setError(err.message);
       return { success: false, error: err.message };
-    } finally {
-      // SIEMPRE quitar loading
-      setLoading(false);
     }
   };
 
   const updateEntry = async (entryId, updates) => {
     try {
-      setLoading(true);
       setError(null);
+      // NO usar setLoading - solo para carga inicial
 
       if (navigator.onLine) {
         // Online: actualizar en backend
@@ -202,15 +199,13 @@ export const useTimeEntries = (userId) => {
       console.error('Error updating entry:', err);
       setError(err.message);
       return { success: false, error: err.message };
-    } finally {
-      setLoading(false);
     }
   };
 
   const deleteEntry = async (entryId) => {
     try {
-      setLoading(true);
       setError(null);
+      // NO usar setLoading - solo para carga inicial
 
       if (navigator.onLine) {
         // Online: eliminar en backend
@@ -234,8 +229,6 @@ export const useTimeEntries = (userId) => {
       console.error('Error deleting entry:', err);
       setError(err.message);
       return { success: false, error: err.message };
-    } finally {
-      setLoading(false);
     }
   };
 

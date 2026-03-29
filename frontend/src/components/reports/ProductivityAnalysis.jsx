@@ -9,6 +9,7 @@ import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { TrendingUp, Clock, Calendar, Zap } from 'lucide-react';
+import { safeDate, calculateHours, extractDate } from '../../utils/dateHelpers';
 
 export const ProductivityAnalysis = ({ timeEntries }) => {
   // Calcular métricas de productividad
@@ -25,21 +26,19 @@ export const ProductivityAnalysis = ({ timeEntries }) => {
 
     // Filtrar últimos 30 días
     const last30Days = timeEntries.filter(e => {
-      const entryDate = new Date(e.start_time);
-      const daysAgo = differenceInDays(new Date(), entryDate);
+      const entryDate = safeDate(e.start_time);
+      const daysAgo = differenceInDays(new Date(), entryDate); // OK: fecha actual
       return daysAgo <= 30;
     });
 
     // Agrupar por día
     const dailyHours = {};
     last30Days.forEach(entry => {
-      const dateKey = new Date(entry.start_time).toDateString();
+      const dateKey = extractDate(entry.start_time);
       if (!dailyHours[dateKey]) {
         dailyHours[dateKey] = 0;
       }
-      const start = new Date(entry.start_time);
-      const end = new Date(entry.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
+      const hours = calculateHours(entry.start_time, entry.end_time);
       dailyHours[dateKey] += hours;
     });
 
@@ -55,13 +54,11 @@ export const ProductivityAnalysis = ({ timeEntries }) => {
     // Encontrar días pico (por día de la semana)
     const byDayOfWeek = {};
     last30Days.forEach(entry => {
-      const dayName = format(new Date(entry.start_time), 'EEEE', { locale: es });
+      const dayName = format(safeDate(entry.start_time), 'EEEE', { locale: es });
       if (!byDayOfWeek[dayName]) {
         byDayOfWeek[dayName] = { hours: 0, count: 0 };
       }
-      const start = new Date(entry.start_time);
-      const end = new Date(entry.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
+      const hours = calculateHours(entry.start_time, entry.end_time);
       byDayOfWeek[dayName].hours += hours;
       byDayOfWeek[dayName].count += 1;
     });
@@ -77,13 +74,13 @@ export const ProductivityAnalysis = ({ timeEntries }) => {
       .map(d => d.day);
 
     // Detectar patrones
-    const hourDistribution = last30Days.map(e => getHours(new Date(e.start_time)));
+    const hourDistribution = last30Days.map(e => getHours(safeDate(e.start_time)));
     const avgStartHour = hourDistribution.reduce((sum, h) => sum + h, 0) / hourDistribution.length;
     
     const patterns = {
       morningPerson: avgStartHour < 9,
       avgStartTime: `${Math.floor(avgStartHour)}:${String(Math.round((avgStartHour % 1) * 60)).padStart(2, '0')}`,
-      weekendWorker: last30Days.some(e => isWeekend(new Date(e.start_time))),
+      weekendWorker: last30Days.some(e => isWeekend(safeDate(e.start_time))),
       avgHoursPerDay: avg
     };
 

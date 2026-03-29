@@ -10,6 +10,7 @@ import Card from '../common/Card';
 import Button from '../common/Button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Plus, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import { safeDate, calculateHours, extractDate } from '../../utils/dateHelpers';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
@@ -18,13 +19,13 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
     {
       id: 1,
       name: 'Período 1',
-      month: format(new Date(), 'yyyy-MM'),
+      month: format(new Date(), 'yyyy-MM'), // OK: fecha actual
       color: COLORS[0]
     },
     {
       id: 2,
       name: 'Período 2',
-      month: format(new Date(new Date().setMonth(new Date().getMonth() - 1)), 'yyyy-MM'),
+      month: format(new Date(new Date().setMonth(new Date().getMonth() - 1)), 'yyyy-MM'), // OK: fecha actual
       color: COLORS[1]
     }
   ]);
@@ -48,18 +49,16 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
         const end = endOfMonth(start);
         
         const periodEntries = timeEntries.filter(e => {
-          const entryDate = new Date(e.start_time);
+          const entryDate = safeDate(e.start_time);
           return entryDate >= start && entryDate <= end;
         });
         
         const totalHours = periodEntries.reduce((sum, entry) => {
-          const start = new Date(entry.start_time);
-          const end = new Date(entry.end_time);
-          return sum + (end - start) / (1000 * 60 * 60);
+          return sum + calculateHours(entry.start_time, entry.end_time);
         }, 0);
         
         const daysWorked = new Set(
-          periodEntries.map(e => new Date(e.start_time).toDateString())
+          periodEntries.map(e => extractDate(e.start_time))
         ).size;
         
         let value = 0;
@@ -95,14 +94,12 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
       const end = endOfMonth(start);
       
       const periodEntries = timeEntries.filter(e => {
-        const entryDate = new Date(e.start_time);
+        const entryDate = safeDate(e.start_time);
         return entryDate >= start && entryDate <= end;
       });
       
       const totalHours = periodEntries.reduce((sum, entry) => {
-        const start = new Date(entry.start_time);
-        const end = new Date(entry.end_time);
-        return sum + (end - start) / (1000 * 60 * 60);
+        return sum + calculateHours(entry.start_time, entry.end_time);
       }, 0);
       
       return {
@@ -124,9 +121,9 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
       return {
         ...period,
         entries: timeEntries.filter(e => {
-          const entryDate = new Date(e.start_time);
+          const entryDate = safeDate(e.start_time);
           const [year, month] = period.month.split('-');
-          const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+          const start = startOfMonth(new Date(parseInt(year), parseInt(month) - 1)); // OK: construir fecha
           const end = endOfMonth(start);
           return entryDate >= start && entryDate <= end;
         }).length,
@@ -144,7 +141,7 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
     setPeriods([...periods, {
       id: newId,
       name: `Período ${newId}`,
-      month: format(new Date(new Date().setMonth(new Date().getMonth() - newId)), 'yyyy-MM'),
+      month: format(new Date(new Date().setMonth(new Date().getMonth() - newId)), 'yyyy-MM'), // OK: fecha actual
       color: COLORS[newId - 1] || COLORS[0]
     }]);
   };
@@ -208,6 +205,7 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
           <div key={period.id} className="p-4 bg-gray-50 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">
+                {/* OK: construir fecha desde string YYYY-MM */}
                 {format(new Date(period.month + '-01'), 'MMMM yyyy', { locale: es })}
               </span>
               {period.change !== null && (
@@ -243,14 +241,18 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
             <YAxis />
             <Tooltip />
             <Legend />
-            {periods.map(period => (
-              <Bar
-                key={period.id}
-                dataKey={`period${period.id}`}
-                name={format(new Date(period.month + '-01'), 'MMM yyyy', { locale: es })}
-                fill={period.color}
-              />
-            ))}
+            {periods.map(period => {
+              // OK: construir fecha desde string YYYY-MM
+              const periodName = format(new Date(period.month + '-01'), 'MMM yyyy', { locale: es });
+              return (
+                <Bar
+                  key={period.id}
+                  dataKey={`period${period.id}`}
+                  name={periodName}
+                  fill={period.color}
+                />
+              );
+            })}
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -265,11 +267,15 @@ export const ComparativeAnalysis = ({ timeEntries }) => {
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">
                   Métrica
                 </th>
-                {periods.map(period => (
-                  <th key={period.id} className="text-right py-3 px-4 font-semibold text-gray-700">
-                    {format(new Date(period.month + '-01'), 'MMM yyyy', { locale: es })}
-                  </th>
-                ))}
+                {periods.map(period => {
+                  // OK: construir fecha desde string YYYY-MM
+                  const periodName = format(new Date(period.month + '-01'), 'MMM yyyy', { locale: es });
+                  return (
+                    <th key={period.id} className="text-right py-3 px-4 font-semibold text-gray-700">
+                      {periodName}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
