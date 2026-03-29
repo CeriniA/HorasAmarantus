@@ -21,7 +21,7 @@ export const QuickTimeEntry = ({
 }) => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd')); // OK: fecha actual
   const [description, setDescription] = useState('');
 
   const handleTaskSelect = (task) => {
@@ -55,7 +55,7 @@ export const QuickTimeEntry = ({
   const handleClose = () => {
     setSelectedTask(null);
     setSelectedTime(null);
-    setDate(format(new Date(), 'yyyy-MM-dd'));
+    setDate(format(new Date(), 'yyyy-MM-dd')); // OK: fecha actual
     setDescription('');
     onClose();
   };
@@ -99,14 +99,14 @@ export const QuickTimeEntry = ({
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => setDate(format(new Date(), 'yyyy-MM-dd'))}
+                onClick={() => setDate(format(new Date(), 'yyyy-MM-dd'))} // OK: fecha actual
                 className="px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
               >
                 Hoy
               </button>
               <button
                 onClick={() => {
-                  const yesterday = new Date();
+                  const yesterday = new Date(); // OK: fecha actual
                   yesterday.setDate(yesterday.getDate() - 1);
                   setDate(format(yesterday, 'yyyy-MM-dd'));
                 }}

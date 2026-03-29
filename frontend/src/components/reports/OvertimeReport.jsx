@@ -71,7 +71,7 @@ export const OvertimeReport = ({ timeEntries }) => {
     const weeklyHours = {};
     Object.values(dailyHours).forEach((day) => {
       // Usar safeDate para crear Date object desde fecha YYYY-MM-DD
-      const date = safeDate(day.date);
+      const date = new Date(day.date + 'T12:00:00'); // OK: construir fecha desde YYYY-MM-DD
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
       const weekKey = format(weekStart, 'yyyy-MM-dd');
 

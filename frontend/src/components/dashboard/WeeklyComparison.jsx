@@ -4,24 +4,24 @@
  */
 
 import { useMemo } from 'react';
-import { startOfWeek, endOfWeek, subWeeks, format, differenceInWeeks } from 'date-fns';
+import { format, startOfWeek, endOfWeek, subWeeks, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
+import { safeDate, calculateHours } from '../../utils/dateHelpers';
 import { TrendingUp, TrendingDown, BarChart3, Calendar } from 'lucide-react';
-import { calculateHours } from '../../utils/dateHelpers';
 
 export const WeeklyComparison = ({ timeEntries, user }) => {
   const comparisonData = useMemo(() => {
-    const today = new Date();
+    const today = new Date(); // OK: fecha actual
     const weeks = [];
 
     // Calcular cuántas semanas mostrar (máximo 4, o menos si el usuario es nuevo)
     let maxWeeks = 4;
     if (user?.created_at) {
-      const userCreatedDate = new Date(user.created_at);
+      const userCreatedDate = new Date(user.created_at); // OK: created_at es timestamp
       // Validar que la fecha sea válida
       if (!isNaN(userCreatedDate.getTime())) {
-        const weeksSinceCreation = differenceInWeeks(today, userCreatedDate);
+        const weeksSinceCreation = Math.floor(differenceInDays(today, userCreatedDate) / 7);
         // Mostrar como máximo las semanas que el usuario ha existido + 1 (semana actual)
         maxWeeks = Math.min(4, Math.max(1, weeksSinceCreation + 1));
       }
@@ -35,7 +35,7 @@ export const WeeklyComparison = ({ timeEntries, user }) => {
 
       // Filtrar entries de esta semana
       const weekEntries = timeEntries.filter(entry => {
-        const entryDate = new Date(entry.start_time);
+        const entryDate = safeDate(entry.start_time);
         return entryDate >= weekStart && entryDate <= weekEnd;
       });
 
@@ -46,7 +46,7 @@ export const WeeklyComparison = ({ timeEntries, user }) => {
 
       // Calcular días trabajados
       const daysWorked = new Set(
-        weekEntries.map(e => new Date(e.start_time).toDateString())
+        weekEntries.map(e => safeDate(e.start_time).toDateString())
       ).size;
 
       weeks.push({

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Edit2, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useAuthContext } from '../context/AuthContext';
 import { useTimeEntries } from '../hooks/useTimeEntries';
@@ -25,6 +25,22 @@ export const TimeEntries = () => {
     updateEntry,
     deleteEntry 
   } = useTimeEntries(user?.id);
+  
+  // Detectar si está offline
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const { units } = useOrganizationalUnits();
   const { users } = useUsers(); // Para el selector de usuarios en admins
 
@@ -44,19 +60,22 @@ export const TimeEntries = () => {
   // Filtrar registros según modo seleccionado
   // TODOS los usuarios (incluyendo admins) solo ven SUS PROPIOS registros
   const filteredEntries = timeEntries.filter(entry => {
-    const entryDate = safeDate(entry.start_time);
-    
     // Filtro 1: Solo registros del usuario actual
     const isMyEntry = entry.user_id === user?.id;
     
     // Filtro 2: Por fecha
     let dateMatch = true;
-    if (filterMode === 'month') {
-      const entryMonth = format(entryDate, 'yyyy-MM');
-      dateMatch = entryMonth === selectedMonth;
-    } else if (filterMode === 'year') {
-      const entryYear = format(entryDate, 'yyyy');
-      dateMatch = entryYear === selectedYear;
+    if (filterMode === 'month' || filterMode === 'year') {
+      const entryDate = safeDate(entry.start_time);
+      if (!entryDate) return false; // Ignorar entries sin fecha válida
+      
+      if (filterMode === 'month') {
+        const entryMonth = format(entryDate, 'yyyy-MM');
+        dateMatch = entryMonth === selectedMonth;
+      } else if (filterMode === 'year') {
+        const entryYear = format(entryDate, 'yyyy');
+        dateMatch = entryYear === selectedYear;
+      }
     }
     
     return isMyEntry && dateMatch;
@@ -161,8 +180,8 @@ export const TimeEntries = () => {
   };
 
 
-  // Mostrar loading mientras carga datos iniciales
-  if (loading && timeEntries.length === 0) {
+  // Mostrar loading SOLO en carga inicial (sin datos previos)
+  if (loading && timeEntries.length === 0 && !operationLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -335,6 +354,10 @@ export const TimeEntries = () => {
                 <button
                   onClick={async (e) => {
                     e.stopPropagation();
+                    if (isOffline) {
+                      setAlert({ type: 'warning', message: 'Debes estar conectado para eliminar registros' });
+                      return;
+                    }
                     // eslint-disable-next-line no-restricted-globals
                     if (window.confirm(`¿Eliminar todos los ${entries.length} registros del ${format(safeDate(date), "dd/MM/yyyy", { locale: es })}?`)) {
                       try {
@@ -351,8 +374,13 @@ export const TimeEntries = () => {
                       }
                     }
                   }}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
-                  title="Eliminar día completo"
+                  className={`p-2 rounded transition-colors flex-shrink-0 ${
+                    isOffline 
+                      ? 'text-gray-400 cursor-not-allowed' 
+                      : 'text-red-600 hover:bg-red-50'
+                  }`}
+                  title={isOffline ? 'Debes estar conectado para eliminar' : 'Eliminar día completo'}
+                  disabled={isOffline}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -390,16 +418,38 @@ export const TimeEntries = () => {
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-right">
                             <div className="flex gap-1 justify-end">
                               <button
-                                onClick={() => handleEdit(entry)}
-                                className="p-1 text-primary-600 hover:bg-primary-50 rounded"
-                                title="Editar"
+                                onClick={() => {
+                                  if (isOffline) {
+                                    setAlert({ type: 'warning', message: 'Debes estar conectado para editar registros' });
+                                    return;
+                                  }
+                                  handleEdit(entry);
+                                }}
+                                className={`p-1 rounded ${
+                                  isOffline 
+                                    ? 'text-gray-400 cursor-not-allowed' 
+                                    : 'text-primary-600 hover:bg-primary-50'
+                                }`}
+                                title={isOffline ? 'Debes estar conectado para editar' : 'Editar'}
+                                disabled={isOffline}
                               >
                                 <Edit2 className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleDelete(entry)}
-                                className="p-1 text-red-600 hover:bg-red-50 rounded"
-                                title="Eliminar"
+                                onClick={() => {
+                                  if (isOffline) {
+                                    setAlert({ type: 'warning', message: 'Debes estar conectado para eliminar registros' });
+                                    return;
+                                  }
+                                  handleDelete(entry);
+                                }}
+                                className={`p-1 rounded ${
+                                  isOffline 
+                                    ? 'text-gray-400 cursor-not-allowed' 
+                                    : 'text-red-600 hover:bg-red-50'
+                                }`}
+                                title={isOffline ? 'Debes estar conectado para eliminar' : 'Eliminar'}
+                                disabled={isOffline}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </button>

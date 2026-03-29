@@ -8,6 +8,7 @@ import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-f
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { Target, TrendingUp, Award, AlertCircle } from 'lucide-react';
+import { safeDate, calculateHours } from '../../utils/dateHelpers';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 const DEFAULT_WEEKLY_GOAL = 40;
@@ -31,7 +32,7 @@ export const GoalComplianceReport = ({ timeEntries }) => {
     const userStats = {};
 
     timeEntries.forEach(entry => {
-      const entryDate = new Date(entry.start_time);
+      const entryDate = safeDate(entry.start_time);
       
       // Solo contar entradas del período actual
       if (entryDate >= periodStart && entryDate <= periodEnd) {
@@ -51,9 +52,7 @@ export const GoalComplianceReport = ({ timeEntries }) => {
           };
         }
 
-        const start = new Date(entry.start_time);
-        const end = new Date(entry.end_time);
-        const hours = (end - start) / (1000 * 60 * 60);
+        const hours = calculateHours(entry.start_time, entry.end_time);
         
         userStats[userId].hours += hours;
         userStats[userId].entries++;

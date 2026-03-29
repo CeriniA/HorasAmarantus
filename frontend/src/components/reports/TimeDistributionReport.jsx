@@ -8,6 +8,7 @@ import { getHours, getDay } from 'date-fns';
 import Card from '../common/Card';
 import { Clock, Calendar, TrendingUp, Sun } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { safeDate, calculateHours } from '../../utils/dateHelpers';
 
 const DAYS_OF_WEEK = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const HOURS_OF_DAY = Array.from({ length: 24 }, (_, i) => i);
@@ -48,9 +49,8 @@ export const TimeDistributionReport = ({ timeEntries }) => {
 
     // Procesar entradas
     timeEntries.forEach(entry => {
-      const start = new Date(entry.start_time);
-      const end = new Date(entry.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
+      const start = safeDate(entry.start_time);
+      const hours = calculateHours(entry.start_time, entry.end_time);
       
       const startHour = getHours(start);
       const dayOfWeek = getDay(start);
@@ -93,10 +93,10 @@ export const TimeDistributionReport = ({ timeEntries }) => {
     , weeklyData[0] || { day: 'N/A', totalHours: 0 });
 
     // Calcular horarios típicos
-    const startTimes = timeEntries.map(e => getHours(new Date(e.start_time)));
+    const startTimes = timeEntries.map(e => getHours(safeDate(e.start_time)));
     const avgStartTime = startTimes.reduce((sum, h) => sum + h, 0) / startTimes.length;
     
-    const endTimes = timeEntries.map(e => getHours(new Date(e.end_time)));
+    const endTimes = timeEntries.map(e => getHours(safeDate(e.end_time)));
     const avgEndTime = endTimes.reduce((sum, h) => sum + h, 0) / endTimes.length;
 
     return {

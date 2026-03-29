@@ -4,15 +4,15 @@
  */
 
 import { useMemo } from 'react';
-import { startOfWeek, endOfWeek, subWeeks, format, differenceInWeeks } from 'date-fns';
+import { format, subWeeks, startOfWeek, endOfWeek, differenceInWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
+import { safeDate, calculateHours } from '../../utils/dateHelpers';
 import { Award, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
-import { calculateHours } from '../../utils/dateHelpers';
 
 export const GoalHistory = ({ timeEntries, weeklyGoal = 40, user }) => {
   const historyData = useMemo(() => {
-    const today = new Date();
+    const today = new Date(); // OK: fecha actual
     const history = [];
 
     // Calcular cuántas semanas mostrar (máximo 8, o menos si el usuario es nuevo)
@@ -48,7 +48,7 @@ export const GoalHistory = ({ timeEntries, weeklyGoal = 40, user }) => {
 
       // Filtrar entries de esta semana
       const weekEntries = timeEntries.filter(entry => {
-        const entryDate = new Date(entry.start_time);
+        const entryDate = safeDate(entry.start_time);
         return entryDate >= weekStart && entryDate <= weekEnd;
       });
 

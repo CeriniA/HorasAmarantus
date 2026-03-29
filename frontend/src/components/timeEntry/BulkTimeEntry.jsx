@@ -23,7 +23,7 @@ export const BulkTimeEntry = ({
   currentUser = null,
   users = [] // Lista de usuarios para admins
 }) => {
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd')); // OK: fecha actual
   const [timeEntries, setTimeEntries] = useState({});
   const [expandedAreas, setExpandedAreas] = useState(new Set());
   const [showTemplates, setShowTemplates] = useState(false);
@@ -75,7 +75,7 @@ export const BulkTimeEntry = ({
   // Resetear fecha a HOY cuando se abre el modal
   useEffect(() => {
     if (isOpen) {
-      setDate(format(new Date(), 'yyyy-MM-dd'));
+      setDate(format(new Date(), 'yyyy-MM-dd')); // OK: fecha actual
       setTimeEntries({});
     }
   }, [isOpen]);
@@ -242,7 +242,7 @@ export const BulkTimeEntry = ({
 
   const handleClose = () => {
     setTimeEntries({});
-    setDate(format(new Date(), 'yyyy-MM-dd'));
+    setDate(format(new Date(), 'yyyy-MM-dd')); // OK: fecha actual
     onClose();
   };
 
@@ -320,14 +320,14 @@ export const BulkTimeEntry = ({
                 Plantillas
               </button>
               <button
-                onClick={() => setDate(format(new Date(), 'yyyy-MM-dd'))}
+                onClick={() => setDate(format(new Date(), 'yyyy-MM-dd'))} // OK: fecha actual
                 className="px-3 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
               >
                 Hoy
               </button>
               <button
                 onClick={() => {
-                  const yesterday = new Date();
+                  const yesterday = new Date(); // OK: fecha actual
                   yesterday.setDate(yesterday.getDate() - 1);
                   setDate(format(yesterday, 'yyyy-MM-dd'));
                 }}

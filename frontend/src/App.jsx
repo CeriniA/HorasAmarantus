@@ -19,37 +19,26 @@ function App() {
     // 1. Sincronización inicial al cargar la app
     syncManager.sync();
 
-    // 2. Sincronización periódica más espaciada (5 minutos en lugar de 30 segundos)
-    // Solo como fallback, la sincronización principal es por eventos
+    // 2. Iniciar sincronización automática
+    // startAutoSync YA maneja el evento 'online' internamente
     syncManager.startAutoSync(300000); // 5 minutos
 
-    // 3. Sincronizar cuando se vuelve online
-    const handleOnline = () => {
-      if (import.meta.env.DEV) {
-        console.log('📶 Conexión restaurada - sincronizando...');
-      }
-      syncManager.sync();
-    };
-
-    // 4. Sincronizar cuando la ventana vuelve a tener foco
-    // (usuario regresa a la app después de estar en otra pestaña)
+    // 3. Sincronizar cuando la app vuelve a estar visible
     const handleVisibilityChange = () => {
-      if (!document.hidden && navigator.onLine) {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
         if (import.meta.env.DEV) {
-          console.log('👁️ App visible - verificando sincronización...');
+          console.log('👁️ App visible - sincronizando...');
         }
         syncManager.sync();
       }
     };
 
     // Agregar event listeners
-    window.addEventListener('online', handleOnline);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Cleanup
     return () => {
       syncManager.stopAutoSync();
-      window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);

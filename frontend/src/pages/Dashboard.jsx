@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAuthContext } from '../context/AuthContext';
+import { safeDate, calculateHours } from '../utils/dateHelpers';
 import { useTimeEntries } from '../hooks/useTimeEntries';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
 import Card from '../components/common/Card';
@@ -206,8 +207,8 @@ export const Dashboard = () => {
                       </p>
                     )}
                     <p className="text-xs text-gray-400 mt-1">
-                      {format(new Date(entry.start_time), "d MMM, HH:mm", { locale: es })}
-                      {entry.end_time && ` - ${format(new Date(entry.end_time), "HH:mm")}`}
+                      {format(safeDate(entry.start_time), "d MMM, HH:mm", { locale: es })}
+                      {entry.end_time && ` - ${format(safeDate(entry.end_time), "HH:mm")}`}
                     </p>
                   </div>
                   <div className="ml-4 text-right">

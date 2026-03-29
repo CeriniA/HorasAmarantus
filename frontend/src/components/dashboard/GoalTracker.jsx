@@ -8,11 +8,12 @@ import { startOfWeek, endOfWeek, differenceInDays, isSameDay, format } from 'dat
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { Target, TrendingUp, Calendar, Sparkles } from 'lucide-react';
+import { safeDate, calculateHours, extractDate } from '../../utils/dateHelpers';
 
 export const GoalTracker = ({ timeEntries, goalType = 'weekly', customGoal = null }) => {
   // Calcular progreso
   const goalData = useMemo(() => {
-    const today = new Date();
+    const today = new Date(); // OK: fecha actual
     let targetHours = customGoal || 40; // Default: 40h semanales
     let periodStart, periodEnd;
     
@@ -21,28 +22,25 @@ export const GoalTracker = ({ timeEntries, goalType = 'weekly', customGoal = nul
       periodEnd = endOfWeek(today, { weekStartsOn: 1 });
       targetHours = customGoal || 40;
     } else if (goalType === 'monthly') {
-      periodStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      periodStart = new Date(today.getFullYear(), today.getMonth(), 1); // OK: construir fecha
+      periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0); // OK: construir fecha
       targetHours = customGoal || 160;
     }
     
     // Filtrar entries del período
     const periodEntries = timeEntries.filter(entry => {
-      const entryDate = new Date(entry.start_time);
+      const entryDate = safeDate(entry.start_time);
       return entryDate >= periodStart && entryDate <= periodEnd;
     });
     
     // Calcular horas actuales
     const currentHours = periodEntries.reduce((sum, entry) => {
-      const start = new Date(entry.start_time);
-      const end = new Date(entry.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
-      return sum + hours;
+      return sum + calculateHours(entry.start_time, entry.end_time);
     }, 0);
     
     // Calcular días trabajados y días restantes
     const daysWorked = new Set(
-      periodEntries.map(e => new Date(e.start_time).toDateString())
+      periodEntries.map(e => extractDate(e.start_time))
     ).size;
     
     const daysRemaining = differenceInDays(periodEnd, today);
@@ -51,7 +49,7 @@ export const GoalTracker = ({ timeEntries, goalType = 'weekly', customGoal = nul
     // Empezar desde mañana (i=1) porque hoy ya está en curso
     let workDaysRemaining = 0;
     for (let i = 1; i <= daysRemaining; i++) {
-      const checkDate = new Date(today);
+      const checkDate = new Date(today); // OK: fecha actual
       checkDate.setDate(checkDate.getDate() + i);
       const dayOfWeek = checkDate.getDay();
       // Excluir domingo (0)
@@ -140,7 +138,7 @@ export const GoalTracker = ({ timeEntries, goalType = 'weekly', customGoal = nul
   };
 
   // Verificar si es lunes (inicio de semana)
-  const today = new Date();
+  const today = new Date(); // OK: fecha actual
   const isMonday = today.getDay() === 1;
   const isNewWeek = isMonday && isSameDay(today, goalData.periodStart);
 

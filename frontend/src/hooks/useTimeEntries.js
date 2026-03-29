@@ -14,11 +14,14 @@ export const useTimeEntries = (userId) => {
       setError(null);
 
       if (navigator.onLine) {
+        if (import.meta.env.DEV) console.log('🔄 LOAD: Cargando desde backend...');
         // Cargar desde backend
         const { timeEntries: data } = await timeEntriesService.getAll();
+        if (import.meta.env.DEV) console.log('📥 LOAD: Backend devolvió', data.length, 'entries');
         
         // Obtener entries pendientes de IndexedDB
         const pendingEntries = await timeEntryRepository.findPending();
+        if (import.meta.env.DEV) console.log('💾 LOAD: IndexedDB tiene', pendingEntries.length, 'pendientes');
         
         // Combinar: backend + pendientes locales
         const combined = [...data];
@@ -32,20 +35,23 @@ export const useTimeEntries = (userId) => {
             d.id === pending.id || d.client_id === pending.client_id
           );
           if (!existsInBackend) {
+            if (import.meta.env.DEV) console.log('➕ LOAD: Agregando pending', pending.client_id, 'a combined');
             combined.push(pending);
             entriesToKeep.push(pending);
           } else {
-            // Entry ya está en backend, eliminar de IndexedDB
+            if (import.meta.env.DEV) console.log('🗑️ LOAD: Pending', pending.client_id, 'ya existe en backend, marcado para borrar');
             entriesToDelete.push(pending);
           }
         }
         
         // Limpiar entries sincronizados de IndexedDB
+        if (import.meta.env.DEV) console.log('🧹 LOAD: Limpiando', entriesToDelete.length, 'entries de IndexedDB');
         for (const entry of entriesToDelete) {
           try {
             await timeEntryRepository.delete(entry.id);
+            if (import.meta.env.DEV) console.log('✅ LOAD: Eliminado de IndexedDB:', entry.id);
           } catch (err) {
-            console.error('Error eliminando entry sincronizado:', err);
+            console.error('❌ LOAD: Error eliminando entry sincronizado:', err);
           }
         }
         
@@ -64,14 +70,18 @@ export const useTimeEntries = (userId) => {
           uniqueEntries.push(entry);
         }
         
+        if (import.meta.env.DEV) console.log('✅ LOAD: Total final después de dedup:', uniqueEntries.length, 'entries');
         setTimeEntries(uniqueEntries);
         
         // NO guardar en IndexedDB - solo mantener pendientes
         // IndexedDB es solo para offline, no para cache
       } else {
-        // Modo offline: cargar desde IndexedDB
-        const localEntries = await timeEntryRepository.findByUser(userId);
-        setTimeEntries(localEntries);
+        if (import.meta.env.DEV) console.log('📴 LOAD: Modo offline, cargando desde IndexedDB');
+        // Modo offline: cargar SOLO entries pendientes del usuario actual
+        const pendingEntries = await timeEntryRepository.findPending();
+        const userPendingEntries = pendingEntries.filter(e => e.user_id === userId);
+        if (import.meta.env.DEV) console.log('💾 LOAD: Offline tiene', userPendingEntries.length, 'entries pendientes del usuario');
+        setTimeEntries(userPendingEntries);
       }
     } catch (err) {
       console.error('Error loading time entries:', err);
@@ -100,8 +110,9 @@ export const useTimeEntries = (userId) => {
   useEffect(() => {
     const handleSyncComplete = (event) => {
       if (event.type === 'sync_complete' && event.data.synced > 0) {
-        // Recargar datos después de sincronizar
-        loadTimeEntries();
+        if (import.meta.env.DEV) console.log('🎉 EVENT: sync_complete recibido, synced:', event.data.synced);
+        // NO recargar - los entries ya están en la UI
+        // Solo actualizar IDs si es necesario
       }
     };
 
@@ -128,21 +139,32 @@ export const useTimeEntries = (userId) => {
 
         return { success: true, data: timeEntry };
       } else {
+        if (import.meta.env.DEV) console.log('📴 CREATE: Modo offline, guardando localmente');
         // Offline: guardar localmente
         const prepared = timeEntryRepository.prepareForLocal({
           ...entryData,
           status: 'completed'
         }, userId);
         
+        if (import.meta.env.DEV) console.log('💾 CREATE: Guardando en IndexedDB:', prepared.client_id);
         await timeEntryRepository.save(prepared);
         await syncQueue.add('time_entries', prepared.id, 'create', prepared);
         
         // Agregar a la UI inmediatamente
-        setTimeEntries(prev => [prepared, ...prev]);
+        if (import.meta.env.DEV) console.log('➕ CREATE: Agregando a UI:', prepared.client_id);
+        setTimeEntries(prev => {
+          if (import.meta.env.DEV) console.log('📊 CREATE: UI tenía', prev.length, 'entries');
+          return [prepared, ...prev];
+        });
 
-        // Sincronizar en background (sin esperar)
-        syncManager.sync().catch(err => {
-          console.error('Error en sincronización automática:', err);
+        // Sincronizar en background Y actualizar ID cuando vuelva
+        if (import.meta.env.DEV) console.log('🔄 CREATE: Iniciando sync en background...');
+        syncManager.sync().then(() => {
+          if (import.meta.env.DEV) console.log('✅ SYNC: Completado, recargando entries...');
+          // Después de sincronizar, recargar para obtener IDs reales del backend
+          loadTimeEntries();
+        }).catch(err => {
+          console.error('❌ SYNC: Error en sincronización automática:', err);
         });
 
         return { success: true, data: prepared };

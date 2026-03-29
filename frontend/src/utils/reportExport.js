@@ -4,6 +4,7 @@
  */
 
 import { format } from 'date-fns';
+import { safeDate, calculateHours } from './dateHelpers';
 
 /**
  * Exporta registros a CSV
@@ -19,8 +20,8 @@ export const exportToCSV = (entries, startDate, endDate) => {
   const headers = ['Fecha', 'Usuario', 'Unidad', 'Tipo Unidad', 'Descripción', 'Hora Inicio', 'Hora Fin', 'Total Horas'];
   
   const rows = entries.map(entry => {
-    const startTime = new Date(entry.start_time);
-    const endTime = entry.end_time ? new Date(entry.end_time) : null;
+    const startTime = safeDate(entry.start_time);
+    const endTime = entry.end_time ? safeDate(entry.end_time) : null;
     
     return [
       format(startTime, 'yyyy-MM-dd'),

@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { format, subDays, isSameDay, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
+import { safeDate, calculateHours } from '../../utils/dateHelpers';
 
 export const ActivityHeatmap = ({ timeEntries }) => {
   // Generar datos de los últimos 30 días
@@ -15,16 +16,13 @@ export const ActivityHeatmap = ({ timeEntries }) => {
     const data = [];
     
     for (let i = days - 1; i >= 0; i--) {
-      const date = subDays(new Date(), i);
+      const date = subDays(new Date(), i); // OK: fecha actual
       const dayEntries = timeEntries.filter(entry => 
-        isSameDay(new Date(entry.start_time), date)
+        isSameDay(safeDate(entry.start_time), date)
       );
       
       const hours = dayEntries.reduce((sum, entry) => {
-        const start = new Date(entry.start_time);
-        const end = new Date(entry.end_time);
-        const duration = (end - start) / (1000 * 60 * 60);
-        return sum + duration;
+        return sum + calculateHours(entry.start_time, entry.end_time);
       }, 0);
       
       data.push({

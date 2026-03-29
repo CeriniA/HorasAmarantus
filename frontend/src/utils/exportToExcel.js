@@ -9,6 +9,7 @@
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { safeDate, calculateHours } from './dateHelpers';
 
 /**
  * Exporta datos a Excel con múltiples hojas
@@ -20,7 +21,7 @@ export const exportToExcel = (data, filename = 'reporte_horas') => {
   const summaryData = [
     ['REPORTE DE HORAS TRABAJADAS'],
     [''],
-    ['Generado:', format(new Date(), "dd/MM/yyyy HH:mm")],
+    ['Generado:', format(new Date(), "dd/MM/yyyy HH:mm")], // OK: fecha actual
     ['Período:', `${data.startDate} - ${data.endDate}`],
     [''],
     ['RESUMEN GENERAL'],
@@ -87,12 +88,15 @@ export const exportToExcel = (data, filename = 'reporte_horas') => {
 
   // === HOJA 4: POR DÍA ===
   if (data.byDay && data.byDay.length > 0) {
-    const dailyData = data.byDay.map(d => ({
-      'Fecha': format(new Date(d.date), 'dd/MM/yyyy', { locale: es }),
-      'Día': format(new Date(d.date), 'EEEE', { locale: es }),
-      'Horas': parseFloat(d.hours.toFixed(2)),
-      'Registros': d.entries || 0
-    }));
+    const dailyData = data.byDay.map(d => {
+      const date = safeDate(d.date);
+      return {
+        'Fecha': format(date, 'dd/MM/yyyy', { locale: es }),
+        'Día': format(date, 'EEEE', { locale: es }),
+        'Horas': parseFloat(d.hours.toFixed(2)),
+        'Registros': d.entries || 0
+      };
+    });
 
     const ws4 = XLSX.utils.json_to_sheet(dailyData);
     ws4['!cols'] = [
@@ -108,9 +112,9 @@ export const exportToExcel = (data, filename = 'reporte_horas') => {
   // === HOJA 5: DETALLE COMPLETO ===
   if (data.entries && data.entries.length > 0) {
     const detailData = data.entries.map(e => {
-      const start = new Date(e.start_time);
-      const end = new Date(e.end_time);
-      const hours = (end - start) / (1000 * 60 * 60);
+      const start = safeDate(e.start_time);
+      const end = safeDate(e.end_time);
+      const hours = calculateHours(e.start_time, e.end_time);
       
       return {
         'Fecha': format(start, 'dd/MM/yyyy'),
@@ -140,7 +144,7 @@ export const exportToExcel = (data, filename = 'reporte_horas') => {
   }
 
   // Generar y descargar archivo
-  const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
+  const timestamp = format(new Date(), 'yyyyMMdd_HHmmss'); // OK: fecha actual
   XLSX.writeFile(wb, `${filename}_${timestamp}.xlsx`);
 };
 
@@ -149,9 +153,9 @@ export const exportToExcel = (data, filename = 'reporte_horas') => {
  */
 export const exportToExcelBasic = (entries, filename = 'horas') => {
   const data = entries.map(e => {
-    const start = new Date(e.start_time);
-    const end = new Date(e.end_time);
-    const hours = (end - start) / (1000 * 60 * 60);
+    const start = safeDate(e.start_time);
+    const end = safeDate(e.end_time);
+    const hours = calculateHours(e.start_time, e.end_time);
     
     return {
       'Fecha': format(start, 'dd/MM/yyyy'),
@@ -168,7 +172,7 @@ export const exportToExcelBasic = (entries, filename = 'horas') => {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Registros');
 
-  const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
+  const timestamp = format(new Date(), 'yyyyMMdd_HHmmss'); // OK: fecha actual
   XLSX.writeFile(wb, `${filename}_${timestamp}.xlsx`);
 };
 

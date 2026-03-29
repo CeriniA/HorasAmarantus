@@ -26,22 +26,45 @@ export const parseDBTimestamp = (timestamp) => {
 
 /**
  * Extraer solo la fecha de un timestamp (YYYY-MM-DD)
- * @param {string} timestamp - Timestamp en formato ISO
+ * @param {string|Date} timestamp - Timestamp en formato ISO o Date object
  * @returns {string} - Fecha en formato YYYY-MM-DD
  */
 export const extractDate = (timestamp) => {
   if (!timestamp) return '';
-  return timestamp.split('T')[0];
+  
+  // Si es un Date object, convertir a string ISO
+  if (timestamp instanceof Date) {
+    return timestamp.toISOString().split('T')[0];
+  }
+  
+  // Si es string, extraer la parte de fecha
+  if (typeof timestamp === 'string') {
+    return timestamp.split('T')[0];
+  }
+  
+  return '';
 };
 
 /**
  * Formatear fecha para mostrar, evitando problemas de zona horaria
- * @param {string} timestamp - Timestamp de la DB
- * @returns {Date} - Date object seguro para formatear
+ * @param {string|Date} timestamp - Timestamp de la DB o Date object
+ * @returns {Date|null} - Date object seguro para formatear, o null si timestamp es inválido
  */
 export const safeDate = (timestamp) => {
+  if (!timestamp) return null;
+  
+  // Si ya es un Date object, validar que sea válido
+  if (timestamp instanceof Date) {
+    return isNaN(timestamp.getTime()) ? null : timestamp;
+  }
+  
+  // Si es string, extraer fecha y crear Date con mediodía
   const dateStr = extractDate(timestamp);
-  return new Date(dateStr + 'T12:00:00');
+  if (!dateStr) return null;
+  
+  const date = new Date(dateStr + 'T12:00:00');
+  // Validar que el Date creado sea válido
+  return isNaN(date.getTime()) ? null : date;
 };
 
 /**

@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Card from '../common/Card';
 import { TrendingUp, Users, Clock, Award } from 'lucide-react';
+import { calculateHours, extractDate } from '../../utils/dateHelpers';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
@@ -39,9 +40,7 @@ export const AreaEfficiencyReport = ({ timeEntries, units }) => {
       
       // Calcular horas totales
       const totalHours = areaEntries.reduce((sum, entry) => {
-        const start = new Date(entry.start_time);
-        const end = new Date(entry.end_time);
-        return sum + (end - start) / (1000 * 60 * 60);
+        return sum + calculateHours(entry.start_time, entry.end_time);
       }, 0);
       
       // Usuarios únicos
@@ -53,7 +52,7 @@ export const AreaEfficiencyReport = ({ timeEntries, units }) => {
       
       // Días trabajados
       const uniqueDays = new Set(
-        areaEntries.map(e => new Date(e.start_time).toDateString())
+        areaEntries.map(e => extractDate(e.start_time))
       );
       const daysWorked = uniqueDays.size;
       

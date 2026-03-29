@@ -3,17 +3,15 @@
  * Calcula métricas y comparaciones entre diferentes rangos de fechas
  */
 
-import { differenceInDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { differenceInDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths } from 'date-fns';
+import { safeDate, calculateHours } from './dateHelpers';
 
 /**
  * Calcula total de horas de un array de time entries
  */
 export const getTotalHours = (entries) => {
   return entries.reduce((sum, entry) => {
-    const start = new Date(entry.start_time);
-    const end = new Date(entry.end_time);
-    const hours = (end - start) / (1000 * 60 * 60);
-    return sum + hours;
+    return sum + calculateHours(entry.start_time, entry.end_time);
   }, 0);
 };
 
@@ -81,7 +79,7 @@ export const getPreviousMonth = (date = new Date()) => {
  */
 export const filterByDateRange = (entries, startDate, endDate) => {
   return entries.filter(entry => {
-    const entryDate = new Date(entry.start_time);
+    const entryDate = safeDate(entry.start_time);
     return entryDate >= startDate && entryDate <= endDate;
   });
 };

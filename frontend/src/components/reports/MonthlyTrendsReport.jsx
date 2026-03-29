@@ -9,12 +9,13 @@ import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { TrendingUp, TrendingDown, Calendar, BarChart3 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { safeDate, calculateHours, extractDate } from '../../utils/dateHelpers';
 
 export const MonthlyTrendsReport = ({ timeEntries }) => {
   const trendsData = useMemo(() => {
     if (!timeEntries.length) return null;
 
-    const now = new Date();
+    const now = new Date(); // OK: fecha actual
     const monthsData = [];
 
     // Generar últimos 12 meses
@@ -26,20 +27,18 @@ export const MonthlyTrendsReport = ({ timeEntries }) => {
 
       // Filtrar entradas del mes
       const monthEntries = timeEntries.filter(e => {
-        const entryDate = new Date(e.start_time);
+        const entryDate = safeDate(e.start_time);
         return entryDate >= monthStart && entryDate <= monthEnd;
       });
 
       // Calcular horas
       const totalHours = monthEntries.reduce((sum, entry) => {
-        const start = new Date(entry.start_time);
-        const end = new Date(entry.end_time);
-        return sum + (end - start) / (1000 * 60 * 60);
+        return sum + calculateHours(entry.start_time, entry.end_time);
       }, 0);
 
       // Días trabajados
       const uniqueDays = new Set(
-        monthEntries.map(e => new Date(e.start_time).toDateString())
+        monthEntries.map(e => extractDate(e.start_time))
       );
 
       // Usuarios únicos

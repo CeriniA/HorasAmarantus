@@ -10,6 +10,7 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { safeDate, calculateHours } from './dateHelpers';
 
 /**
  * Exporta reporte a PDF con diseño profesional
@@ -43,7 +44,7 @@ export const exportToPDF = (data, filename = 'reporte_horas') => {
   // Información de generación
   doc.setTextColor(...textColor);
   doc.setFontSize(9);
-  doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 50);
+  doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 50); // OK: fecha actual
 
   // Resumen en cards
   const cardY = 60;
@@ -171,12 +172,15 @@ export const exportToPDF = (data, filename = 'reporte_horas') => {
     doc.autoTable({
       startY: 30,
       head: [['Fecha', 'Día', 'Horas', 'Registros']],
-      body: data.byDay.map(d => [
-        format(new Date(d.date), 'dd/MM/yyyy'),
-        format(new Date(d.date), 'EEEE', { locale: es }),
-        `${d.hours.toFixed(1)}h`,
-        d.entries || 0
-      ]),
+      body: data.byDay.map(d => {
+        const date = safeDate(d.date);
+        return [
+          format(date, 'dd/MM/yyyy'),
+          format(date, 'EEEE', { locale: es }),
+          `${d.hours.toFixed(1)}h`,
+          d.entries || 0
+        ];
+      }),
       theme: 'grid',
       headStyles: {
         fillColor: secondaryColor,
@@ -208,7 +212,7 @@ export const exportToPDF = (data, filename = 'reporte_horas') => {
   }
 
   // Guardar PDF
-  const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
+  const timestamp = format(new Date(), 'yyyyMMdd_HHmmss'); // OK: fecha actual
   doc.save(`${filename}_${timestamp}.pdf`);
 };
 
@@ -222,12 +226,12 @@ export const exportToPDFSimple = (entries, filename = 'registros') => {
   doc.text('Registros de Horas', 14, 20);
   
   doc.setFontSize(10);
-  doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 28);
+  doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 28); // OK: fecha actual
 
   const tableData = entries.map(e => {
-    const start = new Date(e.start_time);
-    const end = new Date(e.end_time);
-    const hours = (end - start) / (1000 * 60 * 60);
+    const start = safeDate(e.start_time);
+    const end = safeDate(e.end_time);
+    const hours = calculateHours(e.start_time, e.end_time);
     
     return [
       format(start, 'dd/MM/yyyy'),
@@ -247,7 +251,7 @@ export const exportToPDFSimple = (entries, filename = 'registros') => {
     headStyles: { fillColor: [16, 185, 129] }
   });
 
-  const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
+  const timestamp = format(new Date(), 'yyyyMMdd_HHmmss'); // OK: fecha actual
   doc.save(`${filename}_${timestamp}.pdf`);
 };
 

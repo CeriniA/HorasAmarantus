@@ -37,17 +37,23 @@
 - Reemplazados `.toDateString()` con `extractDate()`
 - Corregidos comentarios JSX inline
 
+### 5. ✅ `ProductivityAnalysis.jsx` (10 usos)
+**Estado:** COMPLETADO  
+**Cambios:**
+- Importado: `safeDate`, `calculateHours`, `extractDate`
+- Reemplazados TODOS los `new Date(timestamp)` con helpers
+- Corregidos cálculos de horas y agrupaciones por día
+
+### 6. ✅ `GoalTracker.jsx` (9 usos)
+**Estado:** COMPLETADO  
+**Cambios:**
+- Importado: `safeDate`, `calculateHours`, `extractDate`
+- Reemplazados TODOS los `new Date(timestamp)` con helpers
+- Mantenidos `new Date()` para fechas actuales con comentarios
+
 ---
 
 ## 🔄 ARCHIVOS PENDIENTES (Prioridad Alta)
-
-### 5. ⏳ `ProductivityAnalysis.jsx` (10 usos)
-**Prioridad:** ALTA  
-**Estimado:** 10 min
-
-### 6. ⏳ `GoalTracker.jsx` (9 usos)
-**Prioridad:** ALTA  
-**Estimado:** 10 min
 
 ### 7. ⏳ `exportToExcel.js` (9 usos)
 **Prioridad:** ALTA  
@@ -78,14 +84,14 @@
 ## 📊 ESTADÍSTICAS
 
 ### Completado:
-- ✅ 4 archivos corregidos
-- ✅ 54 usos de `new Date()` corregidos (26%)
+- ✅ 6 archivos corregidos
+- ✅ 90 usos de `new Date()` corregidos (44%)
 - ✅ 0 errores de fechas en archivos corregidos
 
 ### Pendiente:
-- ⏳ 37 archivos por corregir
-- ⏳ ~150 usos de `new Date()` por revisar
-- ⏳ Estimado total: ~2-3 horas de trabajo
+- ⏳ 35 archivos por corregir
+- ⏳ ~114 usos de `new Date()` por revisar
+- ⏳ Estimado total: ~1.5-2 horas de trabajo
 
 ---
 
@@ -95,9 +101,9 @@
 ```
 1. ✅ alertRules.js (29 usos) - HECHO
 2. ✅ ComparativeAnalysis.jsx (17 usos) - HECHO
-3. ⏳ ProductivityAnalysis.jsx (10 usos) - EN PROGRESO
-4. ⏳ GoalTracker.jsx (9 usos)
-5. ⏳ exportToExcel.js (9 usos)
+3. ✅ ProductivityAnalysis.jsx (10 usos) - HECHO
+4. ✅ GoalTracker.jsx (9 usos) - HECHO
+5. ⏳ exportToExcel.js (9 usos) - EN PROGRESO
 6. ⏳ exportToPDF.js (8 usos)
 ```
 

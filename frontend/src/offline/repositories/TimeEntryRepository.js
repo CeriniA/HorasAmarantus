@@ -5,6 +5,7 @@
 
 import { BaseRepository } from './BaseRepository.js';
 import { TIME_ENTRY_STATUS } from '../../constants';
+import { safeDate } from '../../utils/dateHelpers.js';
 import { generateUUID } from '../../utils/uuid.js';
 
 export class TimeEntryRepository extends BaseRepository {
@@ -40,8 +41,8 @@ export class TimeEntryRepository extends BaseRepository {
   async findByDateRange(startDate, endDate) {
     const all = await this.findAll();
     return all.filter(entry => {
-      const entryDate = new Date(entry.start_time);
-      return entryDate >= new Date(startDate) && entryDate <= new Date(endDate);
+      const entryDate = safeDate(entry.start_time);
+      return entryDate >= new Date(startDate) && entryDate <= new Date(endDate); // OK: comparar con rangos
     });
   }
 
@@ -61,8 +62,8 @@ export class TimeEntryRepository extends BaseRepository {
       status: entry.status || TIME_ENTRY_STATUS.COMPLETED,
       pending_sync: true,
       synced_at: null,
-      created_at: entry.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: entry.created_at || new Date().toISOString(), // OK: timestamp actual
+      updated_at: new Date().toISOString() // OK: timestamp actual
     };
   }
 
@@ -77,7 +78,7 @@ export class TimeEntryRepository extends BaseRepository {
       ...entry,
       ...serverData,
       pending_sync: false,
-      synced_at: new Date().toISOString()
+      synced_at: new Date().toISOString() // OK: timestamp actual
     };
 
     return await this.save(synced);
@@ -87,8 +88,8 @@ export class TimeEntryRepository extends BaseRepository {
    * Calcular horas entre dos timestamps
    */
   calculateHours(startTime, endTime) {
-    const start = new Date(startTime);
-    const end = new Date(endTime);
+    const start = safeDate(startTime);
+    const end = safeDate(endTime);
     const diffMs = end - start;
     return Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
   }
