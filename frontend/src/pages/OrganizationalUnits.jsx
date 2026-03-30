@@ -177,21 +177,21 @@ export const OrganizationalUnits = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Estructura Organizacional</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Estructura Organizacional</h1>
           <p className="mt-1 text-sm text-gray-500">
             Gestiona la estructura jerárquica de la organización
           </p>
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setShowBulkImport(true)}>
-            <Upload className="h-5 w-5 mr-2" />
-            Importar CSV
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <Button variant="outline" onClick={() => setShowBulkImport(true)} className="w-full sm:w-auto">
+            <Upload className="h-5 w-5 sm:mr-2" />
+            <span className="ml-2 sm:ml-0">Importar CSV</span>
           </Button>
-          <Button onClick={handleCreate}>
-            <Plus className="h-5 w-5 mr-2" />
-            Nueva Unidad
+          <Button onClick={handleCreate} className="w-full sm:w-auto">
+            <Plus className="h-5 w-5 sm:mr-2" />
+            <span className="ml-2 sm:ml-0">Nueva Unidad</span>
           </Button>
         </div>
       </div>
