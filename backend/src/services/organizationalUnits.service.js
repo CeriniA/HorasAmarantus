@@ -35,11 +35,16 @@ const getById = async (id) => {
 };
 
 const create = async (unitData) => {
-  const { name, type, parent_id } = unitData;
+  // Explicitly create the object to insert, ignoring any other properties.
+  const newUnit = {
+    name: unitData.name,
+    type: unitData.type,
+    parent_id: unitData.parent_id
+  };
 
   const { data, error } = await supabase
     .from('organizational_units')
-    .insert({ name, type, parent_id })
+    .insert(newUnit)
     .select()
     .single();
 
@@ -69,6 +74,19 @@ const update = async (id, updates) => {
   return data;
 };
 
+const createBulk = async (units) => {
+  // Llamar a la función RPC de Supabase para la inserción masiva
+  const { data, error } = await supabase.rpc('bulk_insert_org_units', { units_to_insert: units });
+
+  if (error) {
+    logger.error('Error en la inserción masiva de unidades:', error);
+    throw new Error('Error en la inserción masiva de unidades organizacionales');
+  }
+
+  logger.info('Inserción masiva completada:', { created: data.created_count, updated: data.updated_count, errors: data.errors });
+  return data;
+};
+
 const deleteUnit = async (id) => {
   const { error } = await supabase
     .from('organizational_units')
@@ -89,5 +107,6 @@ export default {
   getById,
   create,
   update,
-  deleteUnit
+  deleteUnit,
+  createBulk
 };

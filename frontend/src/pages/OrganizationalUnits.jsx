@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Upload } from 'lucide-react';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -8,18 +8,16 @@ import Input from '../components/common/Input';
 import Select from '../components/common/Select';
 import Alert from '../components/common/Alert';
 import HierarchicalSelect from '../components/common/HierarchicalSelect';
+import { BulkOrgUnitImport } from '../components/organizationalUnits/BulkOrgUnitImport';
 import { ORG_UNIT_TYPES, ORG_UNIT_TYPE_OPTIONS, getChildType, getUnitStyle, getUnitTypeLabel } from '../constants';
 
 const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = node.children && node.children.length > 0;
 
-  // Usar estilos desde constantes
-
   return (
     <div className="ml-4">
       <div className="flex items-center py-2 hover:bg-gray-50 rounded-lg px-2 group">
-        {/* Expand/Collapse button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="mr-2 text-gray-400 hover:text-gray-600"
@@ -36,7 +34,6 @@ const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
           )}
         </button>
 
-        {/* Node info */}
         <div className="flex-1 flex items-center space-x-3">
           <span className={`px-2 py-1 rounded text-xs font-medium ${getUnitStyle(node.type, 'badge')}`}>
             {getUnitTypeLabel(node.type)}
@@ -45,7 +42,6 @@ const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
           <span className="text-xs text-gray-500">Nivel {node.level}</span>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => onAddChild(node)}
@@ -71,7 +67,6 @@ const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
         </div>
       </div>
 
-      {/* Children */}
       {hasChildren && isExpanded && (
         <div className="ml-4 border-l-2 border-gray-200">
           {node.children.map(child => (
@@ -92,7 +87,8 @@ const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
 export const OrganizationalUnits = () => {
   const { units, loading, createUnit, updateUnit, deleteUnit, buildTree } = useOrganizationalUnits();
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // 'create' | 'edit'
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [modalMode, setModalMode] = useState('create');
   const [currentUnit, setCurrentUnit] = useState(null);
   const [parentUnit, setParentUnit] = useState(null);
   const [alert, setAlert] = useState(null);
@@ -121,10 +117,7 @@ export const OrganizationalUnits = () => {
     setModalMode('create');
     setParentUnit(parent);
     setCurrentUnit(null);
-    
-    // Determinar el tipo automáticamente basado en el nivel
     const childType = getChildType(parent.type) || ORG_UNIT_TYPES.TAREA;
-
     setFormData({
       name: '',
       type: childType,
@@ -149,9 +142,7 @@ export const OrganizationalUnits = () => {
     if (!window.confirm(`¿Estás seguro de eliminar "${unit.name}"? Esto también eliminará todas sus unidades hijas.`)) {
       return;
     }
-
     const result = await deleteUnit(unit.id);
-    
     if (result.success) {
       setAlert({ type: 'success', message: 'Unidad eliminada correctamente' });
     } else {
@@ -164,15 +155,12 @@ export const OrganizationalUnits = () => {
       setAlert({ type: 'error', message: 'El nombre es requerido' });
       return;
     }
-
     let result;
-    
     if (modalMode === 'create') {
       result = await createUnit(formData);
     } else {
       result = await updateUnit(currentUnit.id, formData);
     }
-
     if (result.success) {
       setAlert({
         type: 'success',
@@ -189,7 +177,6 @@ export const OrganizationalUnits = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Estructura Organizacional</h1>
@@ -197,13 +184,18 @@ export const OrganizationalUnits = () => {
             Gestiona la estructura jerárquica de la organización
           </p>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="h-5 w-5 mr-2" />
-          Nueva Unidad
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => setShowBulkImport(true)}>
+            <Upload className="h-5 w-5 mr-2" />
+            Importar CSV
+          </Button>
+          <Button onClick={handleCreate}>
+            <Plus className="h-5 w-5 mr-2" />
+            Nueva Unidad
+          </Button>
+        </div>
       </div>
 
-      {/* Alertas */}
       {alert && (
         <Alert
           type={alert.type}
@@ -212,7 +204,6 @@ export const OrganizationalUnits = () => {
         />
       )}
 
-      {/* Leyenda de colores */}
       <Card>
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center space-x-2">
@@ -242,7 +233,6 @@ export const OrganizationalUnits = () => {
         </div>
       </Card>
 
-      {/* Árbol */}
       <Card title="Jerarquía" subtitle={`${units.length} unidades en total`}>
         {loading ? (
           <div className="flex justify-center py-12">
@@ -270,7 +260,6 @@ export const OrganizationalUnits = () => {
         )}
       </Card>
 
-      {/* Modal de crear/editar */}
       {showModal && (
         <Modal
           isOpen={showModal}
@@ -319,7 +308,7 @@ export const OrganizationalUnits = () => {
               onChange={(e) => setFormData({ 
                 ...formData, 
                 type: e.target.value,
-                parent_id: e.target.value === ORG_UNIT_TYPES.AREA ? null : formData.parent_id // Resetear si es área
+                parent_id: e.target.value === ORG_UNIT_TYPES.AREA ? null : formData.parent_id
               })}
               options={typeOptions}
               disabled={!!parentUnit}
@@ -347,7 +336,6 @@ export const OrganizationalUnits = () => {
                   {formData.parent_id !== null && (
                     <HierarchicalSelect
                       units={units.filter(u => {
-                        // Filtrar según el tipo que estamos creando
                         if (formData.type === ORG_UNIT_TYPES.PROCESO) return u.type === ORG_UNIT_TYPES.AREA;
                         if (formData.type === ORG_UNIT_TYPES.SUBPROCESO) return u.type === ORG_UNIT_TYPES.AREA || u.type === ORG_UNIT_TYPES.PROCESO;
                         if (formData.type === ORG_UNIT_TYPES.TAREA) return u.type === ORG_UNIT_TYPES.AREA || u.type === ORG_UNIT_TYPES.PROCESO || u.type === ORG_UNIT_TYPES.SUBPROCESO;
@@ -380,6 +368,15 @@ export const OrganizationalUnits = () => {
           </div>
         </Modal>
       )}
+
+      <BulkOrgUnitImport
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        existingUnits={units}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

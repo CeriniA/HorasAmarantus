@@ -391,6 +391,7 @@ export const UserManagement = () => {
       <BulkUserImport
         isOpen={showBulkImport}
         onClose={() => setShowBulkImport(false)}
+        existingUsers={users}
         onSuccess={() => {
           // Recargar usuarios después de importar
           window.location.reload();

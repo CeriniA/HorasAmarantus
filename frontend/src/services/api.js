@@ -229,6 +229,7 @@ export const orgUnitsService = {
   create: (data) => api.post('/organizational-units', data),
   update: (id, data) => api.put(`/organizational-units/${id}`, data),
   delete: (id) => api.delete(`/organizational-units/${id}`),
+  createBulk: (units) => api.post('/organizational-units/bulk', { units }),
 };
 
 export const reportsService = {

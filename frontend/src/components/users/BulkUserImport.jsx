@@ -10,23 +10,34 @@ import Modal from '../common/Modal';
 import Button from '../common/Button';
 import { usersService } from '../../services/api';
 
-export const BulkUserImport = ({ isOpen, onClose, onSuccess }) => {
+export const BulkUserImport = ({ isOpen, onClose, onSuccess, existingUsers = [] }) => {
   const [preview, setPreview] = useState([]);
   const [errors, setErrors] = useState([]);
   const [importing, setImporting] = useState(false);
   const [results, setResults] = useState(null);
 
-  // Template CSV para descargar
+  // Template CSV para descargar (con usuarios existentes)
   const downloadTemplate = () => {
-    const template = `nombre,email,username,rol,password
-Juan Pérez,,jperez,operario,12345678
-María García,maria@empresa.com,mgarcia,admin,admin123
-Pedro López,,plopez,operario,12345678`;
+    let csvContent = 'nombre,email,username,rol,password\n';
+    
+    if (existingUsers.length > 0) {
+      // Agregar usuarios existentes (sin password por seguridad)
+      existingUsers.forEach(user => {
+        const email = user.email || '';
+        const role = user.role || 'operario';
+        csvContent += `${user.name},${email},${user.username},${role},\n`;
+      });
+    } else {
+      // Si no hay usuarios, mostrar ejemplos
+      csvContent += `Juan Pérez,,jperez,operario,12345678\n`;
+      csvContent += `María García,maria@empresa.com,mgarcia,admin,admin123\n`;
+      csvContent += `Pedro López,,plopez,operario,12345678`;
+    }
 
-    const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'plantilla_usuarios.csv';
+    link.download = existingUsers.length > 0 ? 'usuarios_existentes.csv' : 'plantilla_usuarios.csv';
     link.click();
   };
 

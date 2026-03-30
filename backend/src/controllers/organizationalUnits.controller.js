@@ -52,6 +52,20 @@ const update = async (req, res) => {
   }
 };
 
+const createBulk = async (req, res) => {
+  try {
+    const { units } = req.body;
+    if (!units || !Array.isArray(units)) {
+      return res.status(400).json({ error: 'El campo "units" es requerido y debe ser un array.' });
+    }
+    const result = await organizationalUnitsService.createBulk(units);
+    res.status(201).json(result);
+  } catch (error) {
+    logger.error('Error en createBulk orgUnits controller:', error);
+    res.status(500).json({ error: error.message || 'Error en el servidor' });
+  }
+};
+
 const deleteUnit = async (req, res) => {
   try {
     const { id } = req.params;
@@ -68,5 +82,6 @@ export default {
   getById,
   create,
   update,
-  deleteUnit
+  deleteUnit,
+  createBulk
 };
