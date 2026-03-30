@@ -13,6 +13,7 @@ import { supabase } from '../config/database.js';
 import { USER_ROLES } from '../models/constants.js';
 import { hasPermission } from '../models/types.js';
 import logger from '../utils/logger.js';
+import { ConflictError, ValidationError, NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
 
 /**
  * Obtener todos los usuarios según el rol
@@ -85,7 +86,24 @@ const create = async (userData) => {
 
   if (error) {
     logger.error('Error creando usuario:', error);
-    throw new Error('Error creando usuario');
+    
+    // Errores de duplicados
+    if (error.code === '23505') {
+      if (error.message.includes('username')) {
+        throw new ConflictError('El username ya existe');
+      }
+      if (error.message.includes('email')) {
+        throw new ConflictError('El email ya existe');
+      }
+      throw new ConflictError('El usuario ya existe');
+    }
+    
+    // Otros errores de constraint
+    if (error.code?.startsWith('23')) {
+      throw new ValidationError(`Error de validación: ${error.message}`);
+    }
+    
+    throw new Error(error.message || 'Error creando usuario');
   }
 
   logger.info('Usuario creado:', username);

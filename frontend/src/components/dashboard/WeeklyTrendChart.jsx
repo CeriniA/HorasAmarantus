@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { format, subDays, isSameDay } from 'date-fns';
-import { safeDate, calculateHours } from '../../utils/dateHelpers';
+import { safeDate, calculateHours, safeNumber } from '../../utils/dateHelpers';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
@@ -55,7 +55,15 @@ export const WeeklyTrendChart = ({ timeEntries }) => {
     const secondHalfAvg = secondHalf.reduce((sum, d) => sum + d.hours, 0) / secondHalf.length;
     
     const trendDirection = secondHalfAvg > firstHalfAvg ? 'up' : 'down';
-    const trendPercent = Math.abs(((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100).toFixed(1);
+    
+    // Evitar NaN cuando firstHalfAvg es 0
+    let trendPercent = 0;
+    if (firstHalfAvg > 0) {
+      trendPercent = Math.abs(((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100);
+    } else if (secondHalfAvg > 0) {
+      trendPercent = 100; // Si no había nada y ahora hay algo, es 100% de aumento
+    }
+    trendPercent = safeNumber(trendPercent, 1);
     
     return {
       total: totalHours,

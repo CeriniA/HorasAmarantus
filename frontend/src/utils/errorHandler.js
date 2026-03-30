@@ -1,6 +1,8 @@
+import logger from './logger';
+
 // Manejador centralizado de errores
 export const handleApiError = (error) => {
-  console.error('API Error:', error);
+  logger.error('API Error:', error);
 
   // Errores de red
   if (!error.response && error.message === 'Failed to fetch') {

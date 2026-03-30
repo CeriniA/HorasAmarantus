@@ -7,8 +7,6 @@ import { useUsers } from '../hooks/useUsers';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Alert from '../components/common/Alert';
-import Modal from '../components/common/Modal';
-import Input from '../components/common/Input';
 import { BulkTimeEntry } from '../components/timeEntry/BulkTimeEntry';
 import { timeEntriesService } from '../services/api';
 import { format } from 'date-fns';
@@ -22,7 +20,6 @@ export const TimeEntries = () => {
     setTimeEntries,
     loading,
     createEntry,
-    updateEntry,
     deleteEntry 
   } = useTimeEntries(user?.id);
   
@@ -45,9 +42,9 @@ export const TimeEntries = () => {
   const { users } = useUsers(); // Para el selector de usuarios en admins
 
   const [showBulkEntry, setShowBulkEntry] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingEntry, setEditingEntry] = useState(null);
-  const [editForm, setEditForm] = useState({ startTime: '', endTime: '' });
+  const [bulkMode, setBulkMode] = useState('create'); // 'create' | 'edit'
+  const [editingDate, setEditingDate] = useState(null);
+  const [editingEntries, setEditingEntries] = useState([]);
   const [alert, setAlert] = useState(null);
   const [operationLoading, setOperationLoading] = useState(false);
   const [expandedDays, setExpandedDays] = useState(new Set());
@@ -129,55 +126,55 @@ export const TimeEntries = () => {
   };
 
   const handleEdit = (entry) => {
-    setEditingEntry(entry);
-    setEditForm({
-      startTime: format(safeDate(entry.start_time), 'HH:mm'),
-      endTime: format(safeDate(entry.end_time), 'HH:mm')
-    });
-    setShowEditModal(true);
+    // Obtener todos los registros del mismo día
+    const entryDate = extractDate(entry.start_time);
+    const dayEntries = timeEntries.filter(e => extractDate(e.start_time) === entryDate);
+    
+    setEditingDate(entryDate);
+    setEditingEntries(dayEntries);
+    setBulkMode('edit');
+    setShowBulkEntry(true);
   };
 
-  const handleSaveEdit = async () => {
-    if (!editingEntry) return;
-
+  const handleBulkEdit = async (newEntries) => {
     setOperationLoading(true);
+    
     try {
-      const date = extractDate(editingEntry.start_time);
-      const newStartTime = `${date}T${editForm.startTime}:00`;
-      const newEndTime = `${date}T${editForm.endTime}:00`;
-
-      const result = await updateEntry(editingEntry.id, {
-        start_time: newStartTime,
-        end_time: newEndTime
-      });
-
-      if (result.success) {
-        setAlert({ type: 'success', message: '✅ Registro actualizado correctamente' });
-        setShowEditModal(false);
-        setEditingEntry(null);
+      // Eliminar todos los registros del día
+      for (const entry of editingEntries) {
+        await deleteEntry(entry.id || entry.client_id);
+      }
+      
+      // Crear los nuevos registros
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const entryData of newEntries) {
+        const result = await createEntry(entryData);
+        if (result.success) {
+          successCount++;
+        } else {
+          errorCount++;
+        }
+      }
+      
+      if (errorCount === 0) {
+        setAlert({ type: 'success', message: `✅ Día actualizado: ${successCount} ${successCount === 1 ? 'registro' : 'registros'}` });
+        setShowBulkEntry(false);
+        setBulkMode('create');
+        setEditingDate(null);
+        setEditingEntries([]);
       } else {
-        setAlert({ type: 'error', message: result.error || 'Error al actualizar' });
+        setAlert({ type: 'warning', message: `⚠️ ${successCount} actualizados, ${errorCount} con error` });
       }
     } catch (error) {
-      console.error('Error updating entry:', error);
+      console.error('Error editing entries:', error);
       setAlert({ type: 'error', message: `Error: ${error.message}` });
     } finally {
       setOperationLoading(false);
     }
   };
 
-  const handleDelete = async (entry) => {
-    // eslint-disable-next-line no-restricted-globals
-    if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
-
-    const result = await deleteEntry(entry.id || entry.client_id);
-    
-    if (result.success) {
-      setAlert({ type: 'success', message: 'Registro eliminado correctamente' });
-    } else {
-      setAlert({ type: 'error', message: result.error });
-    }
-  };
 
 
   // Mostrar loading SOLO en carga inicial (sin datos previos)
@@ -290,7 +287,10 @@ export const TimeEntries = () => {
           </div>
 
           {/* Botón Cargar */}
-          <Button onClick={() => setShowBulkEntry(true)} className="w-full sm:w-auto">
+          <Button onClick={() => {
+            setBulkMode('create');
+            setShowBulkEntry(true);
+          }} className="w-full sm:w-auto">
             📋 Cargar Horas
           </Button>
         </div>
@@ -351,39 +351,62 @@ export const TimeEntries = () => {
                     </p>
                   </div>
                 </button>
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    if (isOffline) {
-                      setAlert({ type: 'warning', message: 'Debes estar conectado para eliminar registros' });
-                      return;
-                    }
-                    // eslint-disable-next-line no-restricted-globals
-                    if (window.confirm(`¿Eliminar todos los ${entries.length} registros del ${format(safeDate(date), "dd/MM/yyyy", { locale: es })}?`)) {
-                      try {
-                        // Eliminar todos en una sola petición al backend
-                        const ids = entries.map(entry => entry.id);
-                        await timeEntriesService.deleteBulk(ids);
-                        
-                        // Actualizar estado local filtrando los eliminados
-                        setTimeEntries(prev => prev.filter(entry => !ids.includes(entry.id)));
-                        
-                        setAlert({ type: 'success', message: `${entries.length} registros eliminados` });
-                      } catch (error) {
-                        setAlert({ type: 'error', message: 'Error al eliminar registros' });
+                
+                {/* Botones de acción del día */}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isOffline) {
+                        setAlert({ type: 'warning', message: 'Debes estar conectado para editar registros' });
+                        return;
                       }
-                    }
-                  }}
-                  className={`p-2 rounded transition-colors flex-shrink-0 ${
-                    isOffline 
-                      ? 'text-gray-400 cursor-not-allowed' 
-                      : 'text-red-600 hover:bg-red-50'
-                  }`}
-                  title={isOffline ? 'Debes estar conectado para eliminar' : 'Eliminar día completo'}
-                  disabled={isOffline}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                      handleEdit(entries[0]); // Pasamos cualquier entry del día
+                    }}
+                    className={`p-2 rounded transition-colors ${
+                      isOffline 
+                        ? 'text-gray-400 cursor-not-allowed' 
+                        : 'text-primary-600 hover:bg-primary-50'
+                    }`}
+                    title={isOffline ? 'Debes estar conectado para editar' : 'Editar día completo'}
+                    disabled={isOffline}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (isOffline) {
+                        setAlert({ type: 'warning', message: 'Debes estar conectado para eliminar registros' });
+                        return;
+                      }
+                      // eslint-disable-next-line no-restricted-globals
+                      if (window.confirm(`¿Eliminar todos los ${entries.length} registros del ${format(safeDate(date), "dd/MM/yyyy", { locale: es })}?`)) {
+                        try {
+                          // Eliminar todos en una sola petición al backend
+                          const ids = entries.map(entry => entry.id);
+                          await timeEntriesService.deleteBulk(ids);
+                          
+                          // Actualizar estado local filtrando los eliminados
+                          setTimeEntries(prev => prev.filter(entry => !ids.includes(entry.id)));
+                          
+                          setAlert({ type: 'success', message: `${entries.length} registros eliminados` });
+                        } catch (error) {
+                          setAlert({ type: 'error', message: 'Error al eliminar registros' });
+                        }
+                      }
+                    }}
+                    className={`p-2 rounded transition-colors ${
+                      isOffline 
+                        ? 'text-gray-400 cursor-not-allowed' 
+                        : 'text-red-600 hover:bg-red-50'
+                    }`}
+                    title={isOffline ? 'Debes estar conectado para eliminar' : 'Eliminar día completo'}
+                    disabled={isOffline}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Tabla de registros del día - COLAPSABLE */}
@@ -398,9 +421,6 @@ export const TimeEntries = () => {
                       <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
                         Horas
                       </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
-                        
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
@@ -411,49 +431,12 @@ export const TimeEntries = () => {
                         <tr key={entry.id} className="hover:bg-gray-50">
                           <td className="px-3 py-2 text-sm text-gray-900">
                             <div className="font-medium">{entry.organizational_units?.name || 'Sin asignar'}</div>
+                            {entry.description && (
+                              <div className="text-xs text-gray-500 mt-1">{entry.description}</div>
+                            )}
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap text-base font-bold text-primary-600 text-right">
                             {hours}h
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap text-sm text-right">
-                            <div className="flex gap-1 justify-end">
-                              <button
-                                onClick={() => {
-                                  if (isOffline) {
-                                    setAlert({ type: 'warning', message: 'Debes estar conectado para editar registros' });
-                                    return;
-                                  }
-                                  handleEdit(entry);
-                                }}
-                                className={`p-1 rounded ${
-                                  isOffline 
-                                    ? 'text-gray-400 cursor-not-allowed' 
-                                    : 'text-primary-600 hover:bg-primary-50'
-                                }`}
-                                title={isOffline ? 'Debes estar conectado para editar' : 'Editar'}
-                                disabled={isOffline}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (isOffline) {
-                                    setAlert({ type: 'warning', message: 'Debes estar conectado para eliminar registros' });
-                                    return;
-                                  }
-                                  handleDelete(entry);
-                                }}
-                                className={`p-1 rounded ${
-                                  isOffline 
-                                    ? 'text-gray-400 cursor-not-allowed' 
-                                    : 'text-red-600 hover:bg-red-50'
-                                }`}
-                                title={isOffline ? 'Debes estar conectado para eliminar' : 'Eliminar'}
-                                disabled={isOffline}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
                           </td>
                         </tr>
                       );
@@ -475,80 +458,25 @@ export const TimeEntries = () => {
         </div>
       </Card>
 
-      {/* Modal de carga múltiple */}
+      {/* Modal de carga/edición múltiple */}
       <BulkTimeEntry
         isOpen={showBulkEntry}
-        onClose={() => setShowBulkEntry(false)}
+        onClose={() => {
+          setShowBulkEntry(false);
+          setBulkMode('create');
+          setEditingDate(null);
+          setEditingEntries([]);
+        }}
         units={units}
-        onSave={handleBulkSave}
+        onSave={bulkMode === 'edit' ? handleBulkEdit : handleBulkSave}
         loading={operationLoading}
         currentUser={user}
         users={users}
+        mode={bulkMode}
+        editingDate={editingDate}
+        existingEntries={editingEntries}
+        allTimeEntries={timeEntries}
       />
-
-      {/* Modal de edición */}
-      {editingEntry && (
-        <Modal
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setEditingEntry(null);
-          }}
-          title="✏️ Editar Registro"
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => {
-                setShowEditModal(false);
-                setEditingEntry(null);
-              }}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSaveEdit} loading={operationLoading}>
-                💾 Guardar Cambios
-              </Button>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            <Input
-              label="Fecha"
-              type="date"
-              value={extractDate(editingEntry.start_time)}
-              disabled
-            />
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Hora Inicio"
-                type="time"
-                value={editForm.startTime}
-                onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })}
-                required
-              />
-              <Input
-                label="Hora Fin"
-                type="time"
-                value={editForm.endTime}
-                onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })}
-                required
-              />
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
-                <strong>Tarea:</strong> {editingEntry.organizational_units?.name || 'Sin asignar'}
-              </p>
-              <p className="text-sm text-blue-800 mt-2">
-                <strong>Total:</strong> {(() => {
-                  if (!editForm.startTime || !editForm.endTime) return '0.00';
-                  const start = new Date(`2000-01-01T${editForm.startTime}:00`);
-                  const end = new Date(`2000-01-01T${editForm.endTime}:00`);
-                  const hours = (end - start) / (1000 * 60 * 60);
-                  return hours > 0 ? hours.toFixed(2) : '0.00';
-                })()}h
-              </p>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 };

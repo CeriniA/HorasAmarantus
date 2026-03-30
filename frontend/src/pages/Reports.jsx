@@ -325,7 +325,7 @@ export const Reports = () => {
           <ReportMetrics reportData={reportData} />
 
           {/* Gráficos */}
-          <ReportCharts reportData={reportData} />
+          <ReportCharts reportData={reportData} user={user} />
 
           {/* Tabla */}
           <ReportTable 

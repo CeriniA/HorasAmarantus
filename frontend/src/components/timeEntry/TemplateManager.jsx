@@ -8,7 +8,7 @@ import { Save, Trash2, FileText, Plus, Check } from 'lucide-react';
 import Button from '../common/Button';
 import Input from '../common/Input';
 
-export const TemplateManager = ({ timeEntries, onApplyTemplate }) => {
+export const TemplateManager = ({ timeEntries, onApplyTemplate, units = [] }) => {
   const [templates, setTemplates] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
@@ -44,10 +44,21 @@ export const TemplateManager = ({ timeEntries, onApplyTemplate }) => {
       return;
     }
 
+    // Enriquecer entries con nombres de tareas
+    const enrichedEntries = {};
+    Object.entries(timeEntries).forEach(([unitId, time]) => {
+      const unit = units.find(u => u.id === unitId);
+      enrichedEntries[unitId] = {
+        ...time,
+        taskName: unit?.name || 'Tarea desconocida',
+        taskPath: getTaskPath(unitId)
+      };
+    });
+
     const newTemplate = {
       id: Date.now().toString(),
       name: newTemplateName.trim(),
-      entries: { ...timeEntries },
+      entries: enrichedEntries,
       createdAt: new Date().toISOString(),
       totalHours: Object.values(timeEntries).reduce((sum, t) => sum + t.total, 0)
     };
@@ -56,6 +67,19 @@ export const TemplateManager = ({ timeEntries, onApplyTemplate }) => {
     saveTemplates(updated);
     setNewTemplateName('');
     setShowCreateForm(false);
+  };
+
+  // Helper: Obtener path completo de una tarea
+  const getTaskPath = (unitId) => {
+    const path = [];
+    let current = units.find(u => u.id === unitId);
+    
+    while (current) {
+      path.unshift(current.name);
+      current = units.find(u => u.id === current.parent_id);
+    }
+    
+    return path.join(' > ');
   };
 
   // Eliminar plantilla
@@ -71,8 +95,38 @@ export const TemplateManager = ({ timeEntries, onApplyTemplate }) => {
 
   // Aplicar plantilla
   const handleApplyTemplate = (template) => {
+    // Validar que las tareas de la plantilla aún existan
+    const validEntries = {};
+    const missingTasks = [];
+    
+    Object.entries(template.entries).forEach(([unitId, time]) => {
+      const unitExists = units.some(u => u.id === unitId);
+      if (unitExists) {
+        // Limpiar datos extra (taskName, taskPath) antes de aplicar
+        validEntries[unitId] = {
+          hours: time.hours,
+          minutes: time.minutes,
+          total: time.total
+        };
+      } else {
+        missingTasks.push(time.taskName || unitId);
+      }
+    });
+    
+    if (missingTasks.length > 0) {
+      const message = `⚠️ Algunas tareas de la plantilla ya no existen:\n\n${missingTasks.join('\n')}\n\n¿Aplicar solo las tareas válidas?`;
+      if (!window.confirm(message)) {
+        return;
+      }
+    }
+    
+    if (Object.keys(validEntries).length === 0) {
+      window.alert('❌ Ninguna tarea de la plantilla existe actualmente. No se puede aplicar.');
+      return;
+    }
+    
     if (window.confirm(`¿Aplicar plantilla "${template.name}"? Esto reemplazará las horas actuales.`)) {
-      onApplyTemplate(template.entries);
+      onApplyTemplate(validEntries);
       setSelectedTemplate(template);
     }
   };
@@ -170,12 +224,17 @@ export const TemplateManager = ({ timeEntries, onApplyTemplate }) => {
 
               {/* Detalles de la plantilla */}
               <div className="space-y-1 mb-3 max-h-32 overflow-y-auto">
-                {Object.entries(template.entries).map(([unitId, time]) => (
-                  <div key={unitId} className="text-xs text-gray-600 flex justify-between">
-                    <span className="truncate">Tarea {unitId.slice(-4)}</span>
-                    <span className="font-medium">{time.total.toFixed(1)}h</span>
-                  </div>
-                ))}
+                {Object.entries(template.entries).map(([unitId, time]) => {
+                  const unitExists = units.some(u => u.id === unitId);
+                  return (
+                    <div key={unitId} className="text-xs flex justify-between items-center gap-2">
+                      <span className={`truncate ${unitExists ? 'text-gray-700' : 'text-red-500 line-through'}`}>
+                        {time.taskName || 'Tarea desconocida'}
+                      </span>
+                      <span className="font-medium text-gray-900">{time.total.toFixed(1)}h</span>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Acciones */}

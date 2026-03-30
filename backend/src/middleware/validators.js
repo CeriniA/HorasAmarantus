@@ -113,8 +113,14 @@ export const validateCreateTimeEntry = [
       const maxPast = new Date();
       maxPast.setDate(maxPast.getDate() - VALIDATION_RULES.timeEntry.maxDaysInPast);
       
-      if (date > now) {
-        throw new Error('La fecha de inicio no puede ser futura');
+      // Permitir horas del día actual (incluso futuras)
+      // Solo rechazar días completamente futuros
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      
+      if (date >= tomorrow) {
+        throw new Error('No se pueden cargar horas de días futuros');
       }
       if (date < maxPast) {
         throw new Error(`La fecha no puede ser mayor a ${VALIDATION_RULES.timeEntry.maxDaysInPast} días en el pasado`);

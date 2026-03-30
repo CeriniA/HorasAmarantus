@@ -7,6 +7,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import { USER_ROLES, getRoleLabel } from '../constants';
 import { getRoleBadgeColor } from '../utils/roleHelpers';
 import { MESSAGES } from '../constants/messages';
+import { BulkUserImport } from '../components/users/BulkUserImport';
 
 export const UserManagement = () => {
   const { users, loading, createUser, updateUser, deleteUser } = useUsers();
@@ -14,6 +15,7 @@ export const UserManagement = () => {
   const { can } = usePermissions();
   
   const [showModal, setShowModal] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [formData, setFormData] = useState({
     email: '',
@@ -137,25 +139,34 @@ export const UserManagement = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestión de Usuarios</h1>
           <p className="text-gray-600 mt-1">Administra los usuarios del sistema</p>
         </div>
         
         {can('create', 'users', { role: USER_ROLES.OPERARIO }) && (
-          <button
-            onClick={handleOpenCreate}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            + Nuevo Usuario
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowBulkImport(true)}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+            >
+              📥 Importar CSV
+            </button>
+            <button
+              onClick={handleOpenCreate}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
+            >
+              + Nuevo Usuario
+            </button>
+          </div>
         )}
       </div>
 
       {/* Tabla de Usuarios */}
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -230,7 +241,8 @@ export const UserManagement = () => {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
 
         {users.length === 0 && (
           <div className="text-center py-12">
@@ -241,8 +253,8 @@ export const UserManagement = () => {
 
       {/* Modal de Crear/Editar */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">
               {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
             </h2>
@@ -374,6 +386,16 @@ export const UserManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de importación masiva */}
+      <BulkUserImport
+        isOpen={showBulkImport}
+        onClose={() => setShowBulkImport(false)}
+        onSuccess={() => {
+          // Recargar usuarios después de importar
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

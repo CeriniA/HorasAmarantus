@@ -144,3 +144,19 @@ export const isValidDate = (date) => {
   const d = date instanceof Date ? date : new Date(date);
   return d instanceof Date && !isNaN(d);
 };
+
+/**
+ * Crear timestamp con zona horaria local
+ * @param {string} date - Fecha en formato YYYY-MM-DD
+ * @param {string} time - Hora en formato HH:MM
+ * @returns {string} - Timestamp en formato ISO con zona horaria (YYYY-MM-DDTHH:MM:SS±HH:MM)
+ */
+export const createTimestampWithTimezone = (date, time) => {
+  // Obtener offset de zona horaria en minutos
+  const offset = -new Date().getTimezoneOffset();
+  const sign = offset >= 0 ? '+' : '-';
+  const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+  const minutes = String(Math.abs(offset) % 60).padStart(2, '0');
+  
+  return `${date}T${time}:00${sign}${hours}:${minutes}`;
+};

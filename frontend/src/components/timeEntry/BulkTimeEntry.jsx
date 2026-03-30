@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Calendar, Save, X, Clock, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import Input from '../common/Input';
@@ -9,10 +10,18 @@ import { TemplateManager } from './TemplateManager';
 import { isAdminOrSuperadmin, filterUsersByPermission } from '../../utils/roleHelpers';
 import { CONFIG } from '../../constants/config';
 import { getStorageKey } from '../../constants/config';
+import { calculateHours, createTimestampWithTimezone } from '../../utils/dateHelpers';
 
 /**
- * Componente de carga múltiple de tiempo
+ * Componente de carga/edición múltiple de tiempo
  * Permite cargar varias tareas con sus tiempos en una sola vista
+ * Soporta modo creación y edición
+ * 
+ * @param {string} mode - 'create' o 'edit'
+ * @param {string} editingDate - Fecha del día a editar (solo en modo edit)
+ * @param {Array} existingEntries - Registros existentes del día (solo en modo edit)
+ * @param {Function} onUpdate - Callback para actualizar registros (solo en modo edit)
+ * @param {Function} onDelete - Callback para eliminar registros (solo en modo edit)
  */
 export const BulkTimeEntry = ({ 
   isOpen, 
@@ -21,10 +30,15 @@ export const BulkTimeEntry = ({
   onSave,
   loading = false,
   currentUser = null,
-  users = [] // Lista de usuarios para admins
+  users = [], // Lista de usuarios para admins
+  mode = 'create', // 'create' | 'edit'
+  editingDate = null,
+  existingEntries = [],
+  allTimeEntries = [] // Todos los registros para validar duplicados
 }) => {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd')); // OK: fecha actual
   const [timeEntries, setTimeEntries] = useState({});
+  const [descriptions, setDescriptions] = useState({}); // Descripciones por tarea
   const [expandedAreas, setExpandedAreas] = useState(new Set());
   const [showTemplates, setShowTemplates] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(currentUser?.id || null);
@@ -72,13 +86,54 @@ export const BulkTimeEntry = ({
     }
   }, [workdayStart, workdayEnd]);
   
-  // Resetear fecha a HOY cuando se abre el modal
+  // Resetear o pre-cargar datos cuando se abre el modal
   useEffect(() => {
     if (isOpen) {
-      setDate(format(new Date(), 'yyyy-MM-dd')); // OK: fecha actual
-      setTimeEntries({});
+      if (mode === 'edit' && editingDate && existingEntries.length > 0) {
+        // Modo edición: pre-cargar datos
+        setDate(editingDate);
+        
+        const entries = {};
+        const descs = {};
+        let minStart = null;
+        let maxEnd = null;
+        
+        existingEntries.forEach(entry => {
+          const hours = calculateHours(entry.start_time, entry.end_time);
+          const hoursInt = Math.floor(hours);
+          const minutesInt = Math.round((hours % 1) * 60);
+          
+          entries[entry.organizational_unit_id] = {
+            hours: String(hoursInt),
+            minutes: String(minutesInt),
+            total: hours
+          };
+          
+          if (entry.description) {
+            descs[entry.organizational_unit_id] = entry.description;
+          }
+          
+          // Calcular rango horario desde los registros
+          const startTime = format(new Date(entry.start_time), 'HH:mm');
+          const endTime = format(new Date(entry.end_time), 'HH:mm');
+          
+          if (!minStart || startTime < minStart) minStart = startTime;
+          if (!maxEnd || endTime > maxEnd) maxEnd = endTime;
+        });
+        
+        setTimeEntries(entries);
+        setDescriptions(descs);
+        
+        if (minStart) setWorkdayStart(minStart);
+        if (maxEnd) setWorkdayEnd(maxEnd);
+      } else {
+        // Modo creación: resetear
+        setDate(format(new Date(), 'yyyy-MM-dd'));
+        setTimeEntries({});
+        setDescriptions({});
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, mode, editingDate, existingEntries]);
 
   // Organizar unidades por jerarquía
   const hierarchy = useMemo(() => {
@@ -208,10 +263,10 @@ export const BulkTimeEntry = ({
       const endH = Math.floor(endMinutes / 60);
       const endM = Math.round(endMinutes % 60);
       
-      // Timestamps simples: la fecha y hora que el usuario pone es la que se guarda
-      // Sin conversiones de zona horaria - 8:00 es 8:00, punto.
-      const startDateTime = `${date} ${currentTime}:00`;
-      const endDateTime = `${date} ${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`;
+      // Crear timestamps con zona horaria usando helper
+      const startDateTime = createTimestampWithTimezone(date, currentTime);
+      const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+      const endDateTime = createTimestampWithTimezone(date, endTime);
       
       // Actualizar currentTime para la siguiente tarea
       currentTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
@@ -220,7 +275,7 @@ export const BulkTimeEntry = ({
         organizational_unit_id: unitId,
         start_time: startDateTime,
         end_time: endDateTime,
-        description: null
+        description: descriptions[unitId] || null
       };
       
       // Si es admin y seleccionó un usuario específico, incluir user_id
@@ -242,6 +297,7 @@ export const BulkTimeEntry = ({
 
   const handleClose = () => {
     setTimeEntries({});
+    setDescriptions({});
     setDate(format(new Date(), 'yyyy-MM-dd')); // OK: fecha actual
     onClose();
   };
@@ -260,7 +316,7 @@ export const BulkTimeEntry = ({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="📋 Carga de Horas por Tarea"
+      title={mode === 'edit' ? `✏️ Editar Horas del ${format(new Date(date), "d 'de' MMMM", { locale: es })}` : "📋 Carga de Horas por Tarea"}
       size="3xl"
       footer={
         <>
@@ -281,6 +337,21 @@ export const BulkTimeEntry = ({
       <div className="space-y-6">
         {/* Selector de fecha y usuario */}
         <div className="bg-white p-4 rounded-lg border border-gray-200">
+          {/* Aviso si la fecha ya tiene registros */}
+          {mode === 'create' && allTimeEntries.some(e => e.start_time?.startsWith(date)) && (
+            <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
+              <span className="text-yellow-600 text-lg">⚠️</span>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-yellow-800">
+                  Ya tienes registros cargados para esta fecha
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  Si querés modificarlos, usa el botón ✏️ Editar en la lista de registros.
+                </p>
+              </div>
+            </div>
+          )}
+          
           <div className="flex items-center gap-3">
             <Calendar className="h-5 w-5 text-primary-600" />
             <div className="flex-1">
@@ -344,6 +415,7 @@ export const BulkTimeEntry = ({
               <TemplateManager
                 timeEntries={timeEntries}
                 onApplyTemplate={handleApplyTemplate}
+                units={units}
               />
             </div>
           )}
@@ -445,59 +517,77 @@ export const BulkTimeEntry = ({
                           <div
                             key={unit.id}
                             className={`
-                              flex items-center gap-4 p-4 border-t border-gray-200
+                              p-4 border-t border-gray-200
                               ${hasTime ? 'bg-green-50' : 'hover:bg-white'}
                               transition-colors
                             `}
                           >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">
-                                {unit.name}
-                              </p>
-                              <p className="text-xs text-gray-500 truncate">
-                                {unit.fullPath}
-                              </p>
-                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {unit.name}
+                                </p>
+                                <p className="text-xs text-gray-500 truncate">
+                                  {unit.fullPath}
+                                </p>
+                              </div>
 
-                            <div className="flex items-center gap-2">
-                              <div className="w-20">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="24"
-                                  placeholder="Hs"
-                                  value={entry?.hours || ''}
-                                  onChange={(e) => handleTimeChange(unit.id, e.target.value, entry?.minutes || '0')}
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
+                              <div className="flex items-center gap-2">
+                                <div className="w-20">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="24"
+                                    placeholder="Hs"
+                                    value={entry?.hours || ''}
+                                    onChange={(e) => handleTimeChange(unit.id, e.target.value, entry?.minutes || '0')}
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                  />
+                                </div>
+                                <span className="text-gray-400">:</span>
+                                <div className="w-20">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="59"
+                                    step="15"
+                                    placeholder="Min"
+                                    value={entry?.minutes || ''}
+                                    onChange={(e) => handleTimeChange(unit.id, entry?.hours || '0', e.target.value)}
+                                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                  />
+                                </div>
+                                {hasTime && (
+                                  <>
+                                    <span className="text-sm font-medium text-green-600 w-16 text-right">
+                                      {entry.total.toFixed(2)}h
+                                    </span>
+                                    <button
+                                      onClick={() => handleTimeChange(unit.id, '0', '0')}
+                                      className="text-red-500 hover:text-red-700"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
-                              <span className="text-gray-400">:</span>
-                              <div className="w-20">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="59"
-                                  step="15"
-                                  placeholder="Min"
-                                  value={entry?.minutes || ''}
-                                  onChange={(e) => handleTimeChange(unit.id, entry?.hours || '0', e.target.value)}
-                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
-                              </div>
-                              {hasTime && (
-                                <>
-                                  <span className="text-sm font-medium text-green-600 w-16 text-right">
-                                    {entry.total.toFixed(2)}h
-                                  </span>
-                                  <button
-                                    onClick={() => handleTimeChange(unit.id, '0', '0')}
-                                    className="text-red-500 hover:text-red-700"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
                             </div>
+                            
+                            {/* Campo de descripción (solo si tiene horas) */}
+                            {hasTime && (
+                              <div className="mt-2">
+                                <textarea
+                                  value={descriptions[unit.id] || ''}
+                                  onChange={(e) => setDescriptions(prev => ({
+                                    ...prev,
+                                    [unit.id]: e.target.value
+                                  }))}
+                                  placeholder="Descripción (opcional)"
+                                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                                  rows={2}
+                                />
+                              </div>
+                            )}
                           </div>
                         );
                       })}
