@@ -10,7 +10,7 @@ import { safeDate } from '../../utils/dateHelpers';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-export const ReportCharts = ({ reportData, user }) => {
+export const ReportCharts = ({ reportData, topUsers = [], user }) => {
   return (
     <>
       {/* Gráfico de horas por día */}
@@ -40,16 +40,16 @@ export const ReportCharts = ({ reportData, user }) => {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top usuarios - Solo para admins */}
+        {/* Top usuarios - Solo para admins - SIN FILTROS */}
         {user?.role !== 'operario' && (
-          <Card title="Top Usuarios" subtitle="Por horas trabajadas">
-            {reportData.byUser.length === 0 ? (
+          <Card title="Top Usuarios" subtitle="Ranking general (sin filtros)">
+            {topUsers.length === 0 ? (
               <p className="text-center text-gray-500 py-12">
                 No hay datos
               </p>
             ) : (
               <div className="space-y-4">
-                {reportData.byUser.map((item, index) => (
+                {topUsers.map((item, index) => (
                   <div key={index} className="flex items-center">
                     <div className="flex-shrink-0 w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                       <span className="text-sm font-semibold text-primary-600">

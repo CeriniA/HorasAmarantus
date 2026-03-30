@@ -41,6 +41,7 @@ export const Reports = () => {
   const [users, setUsers] = useState([]);
   const [units, setUnits] = useState([]);
   const [filteredEntries, setFilteredEntries] = useState([]);
+  const [topUsers, setTopUsers] = useState([]); // Top general (sin filtros)
   const [reportData, setReportData] = useState({
     totalHours: 0,
     totalEntries: 0,
@@ -107,6 +108,13 @@ export const Reports = () => {
       setLoading(true);
 
       const { timeEntries: entries } = await timeEntriesService.getAll();
+
+      // Calcular Top de Usuarios GENERAL (sin filtros) - Solo para admins
+      if (isAdminOrSuperadmin(user)) {
+        const allCompleted = entries.filter(e => e.status === TIME_ENTRY_STATUS.COMPLETED);
+        const topMetrics = calculateReportMetrics(allCompleted, units);
+        setTopUsers(topMetrics.byUser);
+      }
 
       // Filtrar por fechas (usando helper)
       let filtered = entries.filter(entry => {
@@ -325,7 +333,7 @@ export const Reports = () => {
           <ReportMetrics reportData={reportData} />
 
           {/* Gráficos */}
-          <ReportCharts reportData={reportData} user={user} />
+          <ReportCharts reportData={reportData} topUsers={topUsers} user={user} />
 
           {/* Tabla */}
           <ReportTable 

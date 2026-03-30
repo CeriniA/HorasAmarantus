@@ -41,11 +41,19 @@ export const GoalHistory = ({ timeEntries, weeklyGoal = 40, user }) => {
       };
     }
 
+    // Fecha de creación del usuario
+    const userCreatedDate = user?.created_at ? new Date(user.created_at) : null;
+
     // Obtener últimas N semanas (excluyendo la actual)
     for (let i = 1; i <= maxWeeks; i++) {
       const weekDate = subWeeks(today, i);
       const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(weekDate, { weekStartsOn: 1 });
+
+      // Saltar semanas anteriores a la creación del usuario
+      if (userCreatedDate && weekEnd < userCreatedDate) {
+        continue;
+      }
 
       // Filtrar entries de esta semana
       const weekEntries = timeEntries.filter(entry => {
