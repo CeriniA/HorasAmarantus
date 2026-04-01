@@ -160,3 +160,38 @@ export const createTimestampWithTimezone = (date, time) => {
   
   return `${date}T${time}:00${sign}${hours}:${minutes}`;
 };
+
+/**
+ * Parsear timestamp de la DB como hora local (sin conversión de zona horaria)
+ * Útil cuando necesitas la hora exacta que se guardó, no la fecha
+ * @param {string} timestamp - Timestamp en formato "YYYY-MM-DD HH:MM:SS" o "YYYY-MM-DDTHH:MM:SS"
+ * @returns {Date} - Date object interpretado como hora local
+ */
+export const parseLocalTime = (timestamp) => {
+  if (!timestamp) return null;
+  
+  // Normalizar formato (convertir espacio a T si es necesario)
+  const normalized = timestamp.replace(' ', 'T');
+  
+  // Si ya tiene zona horaria, usarlo directamente
+  if (normalized.includes('+') || normalized.includes('Z') || /[+-]\d{2}:\d{2}$/.test(normalized)) {
+    return new Date(normalized);
+  }
+  
+  // Si no tiene zona horaria, parsearlo como hora local
+  // Extraer componentes
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+  if (!match) return null;
+  
+  const [, year, month, day, hour, minute, second] = match;
+  
+  // Crear Date usando el constructor local (no UTC)
+  return new Date(
+    parseInt(year),
+    parseInt(month) - 1, // Los meses en JS son 0-indexed
+    parseInt(day),
+    parseInt(hour),
+    parseInt(minute),
+    parseInt(second)
+  );
+};

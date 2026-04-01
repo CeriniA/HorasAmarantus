@@ -53,7 +53,7 @@ const create = async (unitData) => {
     throw new Error('Error creando unidad organizacional');
   }
 
-  logger.info('Unidad organizacional creada:', name);
+  logger.info('Unidad organizacional creada:', data.name);
   return data;
 };
 

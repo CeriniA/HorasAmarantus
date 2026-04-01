@@ -20,11 +20,12 @@ export const exportToCSV = (entries, startDate, endDate) => {
   const headers = ['Fecha', 'Usuario', 'Unidad', 'Tipo Unidad', 'Descripción', 'Hora Inicio', 'Hora Fin', 'Total Horas'];
   
   const rows = entries.map(entry => {
-    const startTime = safeDate(entry.start_time);
-    const endTime = entry.end_time ? safeDate(entry.end_time) : null;
+    const startDate = safeDate(entry.start_time);
+    const startTime = new Date(entry.start_time);
+    const endTime = entry.end_time ? new Date(entry.end_time) : null;
     
     return [
-      format(startTime, 'yyyy-MM-dd'),
+      format(startDate, 'yyyy-MM-dd'),
       entry.users?.name || 'Desconocido',
       entry.organizational_units?.name || 'Sin unidad',
       entry.organizational_units?.type || '',

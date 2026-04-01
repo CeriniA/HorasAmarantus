@@ -9,7 +9,7 @@ import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Clock, Calendar, Target } from 'lucide-react';
-import { safeDate, calculateHours, extractDate } from '../../utils/dateHelpers';
+import { safeDate, calculateHours, extractDate, parseLocalTime } from '../../utils/dateHelpers';
 
 export const ProductivityAnalysis = ({ timeEntries }) => {
   // Calcular datos objetivos de trabajo
@@ -83,7 +83,7 @@ export const ProductivityAnalysis = ({ timeEntries }) => {
       .map(d => d.day);
 
     // Detectar patrones de horario
-    const hourDistribution = last30Days.map(e => getHours(safeDate(e.start_time)));
+    const hourDistribution = last30Days.map(e => getHours(parseLocalTime(e.start_time)));
     const avgStartHour = hourDistribution.length > 0 
       ? hourDistribution.reduce((sum, h) => sum + h, 0) / hourDistribution.length 
       : 0;

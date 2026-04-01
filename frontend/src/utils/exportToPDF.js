@@ -229,12 +229,13 @@ export const exportToPDFSimple = (entries, filename = 'registros') => {
   doc.text(`Generado: ${format(new Date(), "dd/MM/yyyy HH:mm")}`, 14, 28); // OK: fecha actual
 
   const tableData = entries.map(e => {
-    const start = safeDate(e.start_time);
-    const end = safeDate(e.end_time);
+    const startDate = safeDate(e.start_time);
+    const start = new Date(e.start_time);
+    const end = new Date(e.end_time);
     const hours = calculateHours(e.start_time, e.end_time);
     
     return [
-      format(start, 'dd/MM/yyyy'),
+      format(startDate, 'dd/MM/yyyy'),
       e.user_name || 'N/A',
       e.unit_name || e.organizational_units?.name || 'N/A',
       format(start, 'HH:mm'),

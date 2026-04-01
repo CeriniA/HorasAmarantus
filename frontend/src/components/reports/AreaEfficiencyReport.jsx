@@ -15,8 +15,8 @@ export const AreaEfficiencyReport = ({ timeEntries, units }) => {
   const areaStats = useMemo(() => {
     if (!timeEntries.length || !units.length) return [];
 
-    // Agrupar por área (parent_id === null o type === 'area')
-    const areas = units.filter(u => u.type === 'area' || !u.parent_id);
+    // Agrupar por unidades raíz (sin parent_id) - pueden ser áreas, procesos, etc.
+    const areas = units.filter(u => !u.parent_id);
     
     const stats = areas.map(area => {
       // Obtener todas las unidades de esta área (incluyendo procesos, subprocesos)

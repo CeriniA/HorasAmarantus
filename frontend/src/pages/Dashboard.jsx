@@ -207,8 +207,8 @@ export const Dashboard = () => {
                       </p>
                     )}
                     <p className="text-xs text-gray-400 mt-1">
-                      {format(safeDate(entry.start_time), "d MMM, HH:mm", { locale: es })}
-                      {entry.end_time && ` - ${format(safeDate(entry.end_time), "HH:mm")}`}
+                      {format(safeDate(entry.start_time), "d MMM", { locale: es })}, {format(new Date(entry.start_time), "HH:mm")}
+                      {entry.end_time && ` - ${format(new Date(entry.end_time), "HH:mm")}`}
                     </p>
                   </div>
                   <div className="ml-4 text-right">
