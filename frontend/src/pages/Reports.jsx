@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Download, Filter, BarChart2, TrendingUp, AlertTriangle, LineChart, Target, Clock } from 'lucide-react';
+import { Download, Filter, BarChart2, TrendingUp, AlertTriangle, LineChart, Target, Clock, FileText, Users } from 'lucide-react';
 import { timeEntriesService, usersService, orgUnitsService } from '../services/api';
 import { useAuthContext } from '../context/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subYears } from 'date-fns';
 import { TIME_ENTRY_STATUS } from '../constants';
 import { isAdminOrSuperadmin, isOperario } from '../utils/roleHelpers';
 import { isDateInRange } from '../utils/dateHelpers';
@@ -21,6 +21,8 @@ import { OvertimeReport } from '../components/reports/OvertimeReport';
 import { MonthlyTrendsReport } from '../components/reports/MonthlyTrendsReport';
 import { GoalComplianceReport } from '../components/reports/GoalComplianceReport';
 import { TimeDistributionReport } from '../components/reports/TimeDistributionReport';
+import { DetailedEntriesReport } from '../components/reports/DetailedEntriesReport';
+import { UserComparisonReport } from '../components/reports/UserComparisonReport';
 
 // Utilidades
 import { getUnitAndChildren, calculateReportMetrics } from '../utils/reportCalculations';
@@ -36,6 +38,10 @@ export const Reports = () => {
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
   const [selectedUser, setSelectedUser] = useState('all');
+  const [selectedUsers, setSelectedUsers] = useState([]); // Para comparativas multi-usuario
+  const [selectedAreas, setSelectedAreas] = useState([]); // Para comparativa de áreas
+  const [selectedProcesses, setSelectedProcesses] = useState([]); // Para comparativa de procesos
+  const [comparisonType, setComparisonType] = useState('users'); // users, areas, processes, top10
   const [selectedUnit, setSelectedUnit] = useState('all');
   
   const [users, setUsers] = useState([]);
@@ -77,11 +83,38 @@ export const Reports = () => {
         setStartDate(format(startOfMonth(today), 'yyyy-MM-dd'));
         setEndDate(format(endOfMonth(today), 'yyyy-MM-dd'));
         break;
+      case 'year':
+        setStartDate(format(startOfYear(today), 'yyyy-MM-dd'));
+        setEndDate(format(endOfYear(today), 'yyyy-MM-dd'));
+        break;
+      case 'lastYear': {
+        const lastYear = subYears(today, 1);
+        setStartDate(format(startOfYear(lastYear), 'yyyy-MM-dd'));
+        setEndDate(format(endOfYear(lastYear), 'yyyy-MM-dd'));
+        break;
+      }
       case 'custom':
         break;
       default:
         break;
     }
+  };
+
+  // Validar que startDate <= endDate
+  const handleStartDateChange = (newStartDate) => {
+    setStartDate(newStartDate);
+    // Si la fecha de inicio es mayor que la de fin, ajustar la de fin
+    if (new Date(newStartDate) > new Date(endDate)) {
+      setEndDate(newStartDate);
+    }
+  };
+
+  const handleEndDateChange = (newEndDate) => {
+    // Si la fecha de fin es menor que la de inicio, ajustar la de inicio
+    if (new Date(newEndDate) < new Date(startDate)) {
+      setStartDate(newEndDate);
+    }
+    setEndDate(newEndDate);
   };
 
   const loadFilters = async () => {
@@ -219,10 +252,22 @@ export const Reports = () => {
           setEndDate={setEndDate}
           selectedUser={selectedUser}
           setSelectedUser={setSelectedUser}
+          selectedUsers={selectedUsers}
+          setSelectedUsers={setSelectedUsers}
+          selectedAreas={selectedAreas}
+          setSelectedAreas={setSelectedAreas}
+          selectedProcesses={selectedProcesses}
+          setSelectedProcesses={setSelectedProcesses}
+          comparisonType={comparisonType}
+          setComparisonType={setComparisonType}
           selectedUnit={selectedUnit}
           setSelectedUnit={setSelectedUnit}
           users={users}
           units={units}
+          onStartDateChange={handleStartDateChange}
+          onEndDateChange={handleEndDateChange}
+          showMultiUserSelect={false}
+          showComparisonTypeSelector={activeTab === 'comparison'}
         />
       </Card>
 
@@ -322,6 +367,28 @@ export const Reports = () => {
               <Clock className="h-4 w-4 mr-2" />
               Distribución Horaria
             </button>
+            <button
+              onClick={() => setActiveTab('detail')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'detail'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Detalle
+            </button>
+            <button
+              onClick={() => setActiveTab('comparison')}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'comparison'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Comparativa
+            </button>
           </nav>
         </div>
       </Card>
@@ -372,7 +439,11 @@ export const Reports = () => {
 
       {/* Reporte de Tendencias Mensuales */}
       {activeTab === 'trends' && (
-        <MonthlyTrendsReport timeEntries={filteredEntries} />
+        <MonthlyTrendsReport 
+          timeEntries={filteredEntries}
+          users={users}
+          selectedUser={selectedUser}
+        />
       )}
 
       {/* Reporte de Cumplimiento de Objetivos */}
@@ -383,6 +454,27 @@ export const Reports = () => {
       {/* Reporte de Distribución Horaria */}
       {activeTab === 'distribution' && (
         <TimeDistributionReport timeEntries={filteredEntries} />
+      )}
+
+      {/* Reporte Detallado de Registros */}
+      {activeTab === 'detail' && (
+        <DetailedEntriesReport 
+          timeEntries={filteredEntries}
+          user={user}
+        />
+      )}
+
+      {/* Reporte de Comparativa de Usuarios */}
+      {activeTab === 'comparison' && (
+        <UserComparisonReport 
+          timeEntries={filteredEntries}
+          users={users}
+          selectedUsers={selectedUsers}
+          selectedAreas={selectedAreas}
+          selectedProcesses={selectedProcesses}
+          comparisonType={comparisonType}
+          units={units}
+        />
       )}
     </div>
   );

@@ -201,6 +201,26 @@ export const ORG_UNIT_TYPE_OPTIONS = [
   { value: ORG_UNIT_TYPES.TAREA, label: ORG_UNIT_TYPE_LABELS[ORG_UNIT_TYPES.TAREA] }
 ];
 
+/**
+ * Opciones de estados para componentes Select
+ */
+export const STATUS_OPTIONS = [
+  { value: TIME_ENTRY_STATUS.COMPLETED, label: 'Completado' },
+  { value: TIME_ENTRY_STATUS.IN_PROGRESS, label: 'En Progreso' },
+  { value: TIME_ENTRY_STATUS.PENDING, label: 'Pendiente' }
+];
+
+// ============================================================================
+// CONSTANTES DE REPORTES
+// ============================================================================
+export const REPORT_CONSTANTS = {
+  DAILY_GOAL_HOURS: 8,
+  MAX_USERS_COMPARISON: 5,
+  ENTRIES_PER_PAGE_DETAIL: 20,
+  MAX_MONTHS_TRENDS: 12,
+  COMPARISON_COLORS: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16']
+};
+
 // ============================================================================
 // EXPORT DEFAULT
 // ============================================================================
@@ -219,6 +239,8 @@ export default {
   ORG_UNIT_TYPE_LABELS_PLURAL,
   ROLE_OPTIONS,
   ORG_UNIT_TYPE_OPTIONS,
+  STATUS_OPTIONS,
+  REPORT_CONSTANTS,
   isValidRole,
   isValidOrgUnitType,
   isValidTimeEntryStatus,

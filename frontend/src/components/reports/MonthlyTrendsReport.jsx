@@ -11,19 +11,42 @@ import { TrendingUp, TrendingDown, Calendar, BarChart3 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { safeDate, calculateHours, extractDate } from '../../utils/dateHelpers';
 
-export const MonthlyTrendsReport = ({ timeEntries }) => {
+export const MonthlyTrendsReport = ({ timeEntries, users, selectedUser }) => {
   const trendsData = useMemo(() => {
     if (!timeEntries.length) return null;
 
-    const now = new Date(); // OK: fecha actual
+    const now = new Date();
     const monthsData = [];
 
-    // Generar últimos 12 meses
-    for (let i = 11; i >= 0; i--) {
+    // Determinar fecha de inicio basada en:
+    // 1. Si hay usuario seleccionado, usar su fecha de creación
+    // 2. Si no, usar la fecha del primer registro
+    let startDate = new Date(Math.min(...timeEntries.map(e => new Date(e.start_time))));
+    
+    if (selectedUser && selectedUser !== 'all' && users) {
+      const user = users.find(u => u.id === selectedUser);
+      if (user && user.created_at) {
+        const userCreatedDate = new Date(user.created_at);
+        // Usar la fecha más reciente entre creación de usuario y primer registro
+        startDate = new Date(Math.max(userCreatedDate, startDate));
+      }
+    }
+
+    // Calcular número de meses desde el inicio hasta ahora
+    const monthsToShow = Math.min(
+      12, // Máximo 12 meses
+      Math.ceil((now - startDate) / (1000 * 60 * 60 * 24 * 30)) + 1 // Meses desde inicio
+    );
+
+    // Generar meses dinámicamente
+    for (let i = monthsToShow - 1; i >= 0; i--) {
       const monthDate = subMonths(now, i);
       const monthStart = startOfMonth(monthDate);
       const monthEnd = endOfMonth(monthDate);
       const monthKey = format(monthDate, 'yyyy-MM');
+
+      // Solo incluir meses después de la fecha de inicio
+      if (monthEnd < startDate) continue;
 
       // Filtrar entradas del mes
       const monthEntries = timeEntries.filter(e => {
@@ -90,9 +113,11 @@ export const MonthlyTrendsReport = ({ timeEntries }) => {
       projection,
       trend,
       totalYearHours: monthsData.reduce((sum, m) => sum + m.totalHours, 0),
-      avgMonthlyHours: monthsData.reduce((sum, m) => sum + m.totalHours, 0) / monthsData.length
+      avgMonthlyHours: monthsData.reduce((sum, m) => sum + m.totalHours, 0) / monthsData.length,
+      startDate, // Fecha desde la que se muestran datos
+      monthsShown: monthsData.length
     };
-  }, [timeEntries]);
+  }, [timeEntries, users, selectedUser]);
 
   if (!trendsData) {
     return (
@@ -104,8 +129,34 @@ export const MonthlyTrendsReport = ({ timeEntries }) => {
     );
   }
 
+  // Verificar si es usuario nuevo (menos de 12 meses de datos)
+  const isNewUser = trendsData.monthsShown < 12;
+  const userCreatedRecently = selectedUser && selectedUser !== 'all' && users;
+
   return (
     <div className="space-y-6">
+      {/* Alerta si es usuario nuevo */}
+      {isNewUser && userCreatedRecently && (
+        <Card>
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <Calendar className="h-5 w-5 text-blue-400" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-blue-800">
+                  Datos desde {format(trendsData.startDate, 'MMMM yyyy', { locale: es })}
+                </h3>
+                <p className="mt-1 text-sm text-blue-700">
+                  Mostrando {trendsData.monthsShown} mes{trendsData.monthsShown !== 1 ? 'es' : ''} de datos. 
+                  Las comparaciones interanuales pueden no ser representativas para usuarios nuevos.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Resumen */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>

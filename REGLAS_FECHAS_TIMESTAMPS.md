@@ -39,18 +39,36 @@ const date = extractDate(entry.start_time);
 ```
 
 ### 3. `safeDate(timestamp)`
-Crea un Date object seguro para formatear sin cambios de día.
+Crea un Date object seguro para formatear **FECHAS** (día/mes/año) sin cambios de día.
+
+**⚠️ IMPORTANTE:** Solo usar para FECHAS, NO para extraer HORAS.
 
 ```javascript
-// ❌ MAL
-format(new Date(entry.start_time), 'dd/MM/yyyy')
-
-// ✅ BIEN
+// ✅ BIEN - Para mostrar fechas
 import { safeDate } from '../utils/dateHelpers';
 format(safeDate(entry.start_time), 'dd/MM/yyyy')
+isSameDay(safeDate(entry.start_time), today)
+
+// ❌ MAL - Para extraer horas (siempre devuelve 12)
+getHours(safeDate(entry.start_time)) // ❌ Siempre 12!
 ```
 
-### 4. `createDBTimestamp(date, time)`
+### 4. `parseLocalTime(timestamp)`
+**NUEVO:** Parsea timestamp preservando la hora exacta del día.
+
+**Usar cuando necesitas la HORA (7am, 8am, etc.), no la fecha.**
+
+```javascript
+// ✅ BIEN - Para extraer hora del día
+import { parseLocalTime } from '../utils/dateHelpers';
+const hour = getHours(parseLocalTime(entry.start_time)); // 8, 14, etc.
+format(parseLocalTime(entry.start_time), 'HH:mm') // "08:00", "14:00"
+
+// ❌ MAL - Usar safeDate para horas
+const hour = getHours(safeDate(entry.start_time)); // ❌ Siempre 12!
+```
+
+### 5. `createDBTimestamp(date, time)`
 Crea timestamp para guardar en DB (sin zona horaria).
 
 ```javascript
@@ -97,35 +115,38 @@ Antes de aprobar un PR, verificar:
 
 - [ ] ¿Se usa `calculateHours()` en vez de cálculo manual?
 - [ ] ¿Se usa `extractDate()` para obtener fechas?
-- [ ] ¿Se usa `safeDate()` para formatear fechas?
+- [ ] ¿Se usa `safeDate()` para formatear **fechas** (día/mes/año)?
+- [ ] ¿Se usa `parseLocalTime()` para extraer **horas** (7am, 8am, etc.)?
 - [ ] ¿Los timestamps se guardan sin zona horaria?
 - [ ] ¿Las columnas de DB son `WITHOUT TIME ZONE`?
-- [ ] ¿No hay `new Date(timestamp)` directo en el código?
+- [ ] ¿No hay `getHours(safeDate(...))` en el código? (bug común)
 
 ---
 
 ## 📂 Archivos que DEBEN usar helpers
 
-### Alta prioridad (ya arreglados):
+### ✅ Arreglados (Abril 2026):
 - ✅ `pages/TimeEntries.jsx`
-- ✅ `utils/dateHelpers.js` (creado)
+- ✅ `utils/dateHelpers.js` (agregado `parseLocalTime()`)
+- ✅ `components/reports/TimeDistributionReport.jsx`
+- ✅ `components/reports/ProductivityAnalysis.jsx`
+- ✅ `components/reports/AreaEfficiencyReport.jsx`
+- ✅ `pages/Dashboard.jsx`
+- ✅ `utils/reportExport.js` (CSV)
+- ✅ `utils/exportToExcel.js`
+- ✅ `utils/exportToPDF.js`
 
-### Pendientes de arreglar:
-- ⚠️ `pages/Reports.jsx`
-- ⚠️ `utils/reportCalculations.js`
-- ⚠️ `utils/periodComparison.js`
-- ⚠️ `utils/alertRules.js`
-- ⚠️ `utils/exportToPDF.js`
-- ⚠️ `utils/exportToExcel.js`
-- ⚠️ `utils/reportExport.js`
-- ⚠️ `components/dashboard/*`
-- ⚠️ `hooks/useTimeEntries.js`
-
-Ver `ARREGLO_FECHAS_PENDIENTE.md` para detalles.
+### ⚠️ Archivos que usan `safeDate()` correctamente (no tocar):
+- ✅ `utils/periodComparison.js` (comparaciones de fechas)
+- ✅ `utils/alertRules.js` (comparaciones de días)
+- ✅ `pages/Reports.jsx` (filtros por fecha)
+- ✅ `components/reports/*` (la mayoría usa correctamente)
 
 ---
 
-## 🚨 Problema Común
+## 🚨 Problemas Comunes
+
+### Problema 1: Fechas aparecen un día antes
 
 **Síntoma:** Las fechas aparecen un día antes en el frontend.
 
@@ -142,6 +163,25 @@ const date = new Date("2026-03-26T08:00:00");
 
 **Solución:** Usar `safeDate()` que agrega `T12:00:00` para evitar cambios de día.
 
+### Problema 2: Todas las horas aparecen como 12:00
+
+**Síntoma:** En reportes de distribución horaria, todos los registros muestran que empiezan/terminan a las 12:00.
+
+**Causa:** Usar `safeDate()` para extraer horas. `safeDate()` normaliza TODO a las 12:00 para evitar cambios de día.
+
+**Ejemplo:**
+```javascript
+// ❌ MAL
+const hour = getHours(safeDate("2026-03-30T08:00:00"));
+// Resultado: 12 (siempre 12, sin importar la hora real)
+
+// ✅ BIEN
+const hour = getHours(parseLocalTime("2026-03-30T08:00:00"));
+// Resultado: 8 (hora real)
+```
+
+**Solución:** Usar `parseLocalTime()` cuando necesites la hora exacta del día.
+
 ---
 
 ## 📖 Documentación Completa
@@ -154,5 +194,6 @@ Ver `TEMPLATE/BUENAS_PRACTICAS_DEFINITIVAS.md` sección **"Manejo de Fechas y Ti
 
 ---
 
-**Última actualización:** 26 de marzo de 2026  
-**Estado:** Regla agregada a buenas prácticas base del proyecto
+**Última actualización:** 1 de abril de 2026  
+**Estado:** Agregado `parseLocalTime()` y corregidos todos los reportes  
+**Cambios:** Solucionado bug de horas mostrando 12:00 en distribución horaria
