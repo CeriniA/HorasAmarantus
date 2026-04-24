@@ -1,24 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usersService } from '../services/api';
 
 /**
  * Hook para gestión de usuarios
+ * @param {boolean} includeInactive - Si true, incluye usuarios inactivos
  */
-export const useUsers = () => {
+export const useUsers = (includeInactive = false) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const { users: data } = await usersService.getAll();
+      const { users: data } = await usersService.getAll(includeInactive);
       setUsers(data);
     } catch (err) {
       console.error('Error loading users:', err);
@@ -26,7 +23,11 @@ export const useUsers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [includeInactive]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
 
   const createUser = async (userData) => {
     try {

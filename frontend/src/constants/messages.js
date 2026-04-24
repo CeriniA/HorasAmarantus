@@ -22,6 +22,17 @@ export const MESSAGES = {
   UNIT_UPDATED_SUCCESS: 'Unidad organizacional actualizada exitosamente',
   UNIT_DELETED_SUCCESS: 'Unidad organizacional eliminada exitosamente',
   
+  OBJECTIVE_CREATED_SUCCESS: 'Objetivo creado correctamente',
+  OBJECTIVE_UPDATED_SUCCESS: 'Objetivo actualizado correctamente',
+  OBJECTIVE_DELETED_SUCCESS: 'Objetivo eliminado correctamente',
+  OBJECTIVE_ASSIGNED_SUCCESS: 'Objetivo asignado correctamente',
+  OBJECTIVE_COMPLETION_SUCCESS: 'Cumplimiento registrado correctamente',
+  
+  OBJECTIVE_DELETE_ERROR: 'Error al eliminar el objetivo',
+  OBJECTIVE_SAVE_ERROR: 'Error al guardar el objetivo',
+  OBJECTIVE_COMPLETION_ERROR: 'Error al registrar el cumplimiento',
+  OBJECTIVE_ASSIGN_ERROR: 'Error al asignar el objetivo',
+  
   PROFILE_UPDATED_SUCCESS: 'Perfil actualizado exitosamente',
   PASSWORD_UPDATED_SUCCESS: 'Contraseña actualizada exitosamente',
   
@@ -88,6 +99,7 @@ export const MESSAGES = {
   EMPTY_TIME_ENTRIES: 'No tienes registros de tiempo',
   EMPTY_USERS: 'No hay usuarios registrados',
   EMPTY_UNITS: 'No hay unidades organizacionales',
+  EMPTY_OBJECTIVES: 'No hay objetivos',
   
   // ============================================================================
   // VALIDACIONES
@@ -98,6 +110,10 @@ export const MESSAGES = {
   INVALID_DATE: 'La fecha no es válida',
   INVALID_TIME: 'La hora no es válida',
   INVALID_RANGE: 'El rango de fechas no es válido',
+  INVALID_END_DATE: 'La fecha de fin debe ser posterior a la fecha de inicio',
+  INVALID_TARGET_HOURS: 'Las horas objetivo deben ser mayores a 0',
+  INVALID_COMPLETION_FLAG: 'El campo is_completed debe ser true o false',
+  INVALID_SCHEDULE_ARRAY: 'El campo schedule debe ser un array',
   
   // ============================================================================
   // REPORTES
@@ -106,11 +122,22 @@ export const MESSAGES = {
   REPORT_EXPORTED: 'Reporte exportado exitosamente',
   REPORT_ERROR: 'Error al generar el reporte',
   
+  CONFIRM_DELETE_OBJECTIVE: (name) => `¿Estás seguro de eliminar el objetivo "${name}"?`,
+  
   // ============================================================================
   // ADMIN
   // ============================================================================
   ADMIN_NOTE_REPORTS: 'Para ver datos de otros usuarios, ve a la sección de Reportes',
   ADMIN_NOTE_PERSONAL_VIEW: 'Esta sección muestra solo tus propios registros',
+
+  // ============================================================================
+  // FORMULARIOS - TEXTOS DE AYUDA
+  // ============================================================================
+  HELP_TEXT_USERNAME: 'Solo letras, números, guiones y guiones bajos',
+  HELP_TEXT_EMAIL_OPTIONAL: 'Puede agregarse después',
+  HELP_TEXT_ROLES_LOADING: 'Cargando roles disponibles...',
+  
+  SELECT_LOADING_ROLES: 'Cargando roles...',
 };
 
 /**

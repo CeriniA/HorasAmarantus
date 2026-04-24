@@ -1,5 +1,5 @@
 /**
- * Reporte de Comparativa Mejorado
+ * Reporte de Comparativa Multi-Entidad
  * Soporta comparativas por: Usuarios, Áreas, Procesos, Top 10
  * Vista adaptativa según cantidad de elementos
  */
@@ -7,10 +7,10 @@
 import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { safeDate } from '../../utils/dateHelpers';
 import Card from '../common/Card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Users, TrendingUp, Clock, Target, AlertCircle, Award } from 'lucide-react';
-import { safeDate } from '../../utils/dateHelpers';
 import { REPORT_CONSTANTS } from '../../constants';
 import {
   getUsersComparison,
@@ -19,7 +19,7 @@ import {
   getTopUsersComparison
 } from '../../utils/comparisonHelpers';
 
-export const UserComparisonReport = ({ 
+export const MultiEntityComparisonReport = ({ 
   timeEntries, 
   users, 
   selectedUsers, 
@@ -90,7 +90,7 @@ export const UserComparisonReport = ({
     const sortedDays = Array.from(allDays).sort();
     return sortedDays.map(day => {
       const dataPoint = {
-        date: format(new Date(day), 'dd/MM', { locale: es }),
+        date: format(safeDate(day), 'dd/MM', { locale: es }),
         fullDate: day
       };
       comparisonData.forEach(entity => {
@@ -315,4 +315,4 @@ export const UserComparisonReport = ({
   );
 };
 
-export default UserComparisonReport;
+export default MultiEntityComparisonReport;

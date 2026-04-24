@@ -17,10 +17,17 @@ import logger from '../utils/logger.js';
  * Login de usuario
  */
 const login = async (username, password) => {
-  // Buscar usuario por username
+  // Buscar usuario por username con su rol
   const { data: user, error } = await supabase
     .from('users')
-    .select('*')
+    .select(`
+      *,
+      roles (
+        id,
+        slug,
+        name
+      )
+    `)
     .eq('username', username)
     .eq('is_active', true)
     .maybeSingle();
@@ -35,12 +42,13 @@ const login = async (username, password) => {
     throw new Error('Credenciales inválidas');
   }
 
-  // Generar JWT
+  // Generar JWT con role_id y slug del rol
   const token = generateToken({
     id: user.id,
     username: user.username,
     email: user.email,
-    role: user.role,
+    role_id: user.role_id,
+    role: user.roles?.slug || 'operario',  // Slug del rol para compatibilidad
     organizational_unit_id: user.organizational_unit_id
   });
 
@@ -53,7 +61,9 @@ const login = async (username, password) => {
       username: user.username,
       email: user.email,
       name: user.name,
-      role: user.role,
+      role_id: user.role_id,
+      role: user.roles?.slug || 'operario',  // Slug del rol
+      role_name: user.roles?.name || 'Operario',
       organizational_unit_id: user.organizational_unit_id,
       weekly_goal: user.weekly_goal || 40
     }
@@ -64,7 +74,7 @@ const login = async (username, password) => {
  * Registrar nuevo usuario
  */
 const register = async (userData) => {
-  const { username, email, password, name, role, organizational_unit_id } = userData;
+  const { username, email, password, name, role_id, organizational_unit_id } = userData;
 
   // Hash password
   const password_hash = await bcrypt.hash(password, 10);
@@ -77,10 +87,17 @@ const register = async (userData) => {
       email: email || null,
       password_hash,
       name,
-      role,
+      role_id,  // Ahora usa role_id en lugar de role
       organizational_unit_id
     })
-    .select()
+    .select(`
+      *,
+      roles (
+        id,
+        slug,
+        name
+      )
+    `)
     .single();
 
   if (error) {
@@ -95,7 +112,8 @@ const register = async (userData) => {
     username: user.username,
     email: user.email,
     name: user.name,
-    role: user.role
+    role_id: user.role_id,
+    role: user.roles?.slug || 'operario'
   };
 };
 
@@ -105,7 +123,22 @@ const register = async (userData) => {
 const getCurrentUser = async (userId) => {
   const { data: user, error } = await supabase
     .from('users')
-    .select('id, username, email, name, role, organizational_unit_id, is_active, created_at, weekly_goal')
+    .select(`
+      id,
+      username,
+      email,
+      name,
+      role_id,
+      organizational_unit_id,
+      is_active,
+      created_at,
+      weekly_goal,
+      roles (
+        id,
+        slug,
+        name
+      )
+    `)
     .eq('id', userId)
     .single();
 
@@ -113,7 +146,11 @@ const getCurrentUser = async (userId) => {
     throw new Error('Usuario no encontrado');
   }
 
-  return user;
+  // Agregar slug del rol para compatibilidad
+  return {
+    ...user,
+    role: user.roles?.slug || 'operario'
+  };
 };
 
 /**

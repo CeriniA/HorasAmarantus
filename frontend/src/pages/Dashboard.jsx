@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAuthContext } from '../context/AuthContext';
 import { safeDate, safeNumber } from '../utils/dateHelpers';
 import { useTimeEntries } from '../hooks/useTimeEntries';
@@ -17,14 +17,24 @@ import { ActivityHeatmap } from '../components/dashboard/ActivityHeatmap';
 import { GoalTracker } from '../components/dashboard/GoalTracker';
 import { WeeklyComparison } from '../components/dashboard/WeeklyComparison';
 import { GoalHistory } from '../components/dashboard/GoalHistory';
+import AssignedObjectiveWidget from '../components/objectives/AssignedObjectiveWidget';
+import PersonalObjectiveWidget from '../components/objectives/PersonalObjectiveWidget';
 
 // Utilidades
 import { evaluateAlerts } from '../utils/alertRules';
+import * as objectivesService from '../services/objectives.service';
+import { OBJECTIVE_TYPES, OBJECTIVE_STATUS } from '../constants';
+import logger from '../utils/logger';
 
 export const Dashboard = () => {
   const { user } = useAuthContext();
   const { timeEntries: allTimeEntries, getTotalHours, getEntriesByDateRange } = useTimeEntries(user?.id);
   const { units } = useOrganizationalUnits();
+
+  // Estados para objetivos
+  const [userObjective, setUserObjective] = useState(null);
+  const [canCreatePersonal, setCanCreatePersonal] = useState(false);
+  const [loadingObjective, setLoadingObjective] = useState(true);
 
   // Filtrar solo los registros del usuario actual (dashboard es personal)
   const timeEntries = useMemo(() => {
@@ -80,6 +90,71 @@ export const Dashboard = () => {
     [timeEntries, user]
   );
 
+  // Cargar objetivo del usuario (solo para operarios)
+  const loadUserObjective = useCallback(async () => {
+    if (!user?.id || !isOperario(user)) return;
+
+    try {
+      setLoadingObjective(true);
+      
+      // Buscar objetivo asignado o personal activo
+      const objectives = await objectivesService.getAllObjectives({
+        assigned_to_user_id: user.id,
+        status: `${OBJECTIVE_STATUS.IN_PROGRESS},${OBJECTIVE_STATUS.PLANNED}`
+      });
+
+      // Validar que objectives sea un array
+      const objectivesArray = Array.isArray(objectives) ? objectives : [];
+
+      // Prioridad: asignado > personal
+      const assigned = objectivesArray.find(obj => obj.objective_type === OBJECTIVE_TYPES.ASSIGNED);
+      const personal = objectivesArray.find(obj => obj.objective_type === OBJECTIVE_TYPES.PERSONAL);
+
+      if (assigned) {
+        setUserObjective(assigned);
+        setCanCreatePersonal(false);
+      } else if (personal) {
+        setUserObjective(personal);
+        setCanCreatePersonal(false);
+      } else {
+        setUserObjective(null);
+        // Verificar si puede crear personal
+        const response = await objectivesService.canUserCreatePersonal(user.id);
+        setCanCreatePersonal(response?.canCreate || false);
+      }
+    } catch (error) {
+      logger.error('Error al cargar objetivo del usuario:', error);
+    } finally {
+      setLoadingObjective(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadUserObjective();
+  }, [loadUserObjective]);
+
+  // Handler para crear objetivo personal
+  const handleCreatePersonal = useCallback(async (objectiveData) => {
+    try {
+      await objectivesService.createObjective({
+        ...objectiveData,
+        assigned_to_user_id: user.id
+      });
+      logger.info('Objetivo personal creado');
+      loadUserObjective();
+    } catch (error) {
+      logger.error('Error al crear objetivo personal:', error);
+      throw error;
+    }
+  }, [user?.id, loadUserObjective]);
+
+  // Handler para marcar objetivo como completado
+  const handleCompleteObjective = useCallback(async (objective) => {
+    // Aquí podrías abrir un modal de confirmación
+    // Por ahora solo log
+    logger.info('Marcar objetivo como completado:', objective.id);
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -95,6 +170,24 @@ export const Dashboard = () => {
       {/* Alertas Inteligentes */}
       {alerts.length > 0 && (
         <SmartAlerts alerts={alerts} />
+      )}
+
+      {/* Objetivo del Usuario - Solo para operarios */}
+      {isOperario(user) && !loadingObjective && (
+        <>
+          {userObjective ? (
+            <AssignedObjectiveWidget
+              objective={userObjective}
+              onComplete={handleCompleteObjective}
+            />
+          ) : (
+            <PersonalObjectiveWidget
+              onCreatePersonal={handleCreatePersonal}
+              canCreate={canCreatePersonal}
+              loading={loadingObjective}
+            />
+          )}
+        </>
       )}
 
       {/* Métricas principales */}

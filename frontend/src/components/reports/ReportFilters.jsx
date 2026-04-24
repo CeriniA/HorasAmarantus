@@ -35,7 +35,6 @@ export const ReportFilters = ({
   units,
   onStartDateChange,
   onEndDateChange,
-  showMultiUserSelect = false, // Para pestaña de comparativas
   showComparisonTypeSelector = false // Para mostrar selector de tipo de comparativa
 }) => {
   // Validar si hay error de fecha negativa
@@ -153,25 +152,41 @@ export const ReportFilters = ({
                 </div>
               )}
             </>
-          ) : showMultiUserSelect ? (
-            // Filtro multi-usuario para otras pestañas
-            <MultiUserSelect
-              users={users}
-              selectedUsers={selectedUsers}
-              onChange={setSelectedUsers}
-              label="Usuarios (Comparativa)"
-            />
           ) : (
-            // Filtro simple de usuario
-            <Select
-              label="Usuario"
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              options={[
-                { value: 'all', label: 'Todos' },
-                ...users.map(u => ({ value: u.id, label: u.name }))
-              ]}
-            />
+            // Filtro multi-usuario para tab Resumen
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="all-users"
+                  checked={selectedUser === 'all'}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedUser('all');
+                      setSelectedUsers([]);
+                    } else {
+                      setSelectedUser('');
+                    }
+                  }}
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="all-users" className="text-sm font-medium text-gray-700">
+                  Todos los usuarios
+                </label>
+              </div>
+              
+              {selectedUser !== 'all' && (
+                <MultiUserSelect
+                  users={users}
+                  selectedUsers={selectedUsers}
+                  onChange={(selected) => {
+                    setSelectedUsers(selected);
+                    setSelectedUser(selected.length === 0 ? 'all' : '');
+                  }}
+                  label="Seleccionar Usuarios"
+                />
+              )}
+            </div>
           )}
         </>
       )}

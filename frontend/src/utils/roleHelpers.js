@@ -9,11 +9,12 @@ import { USER_ROLES } from '../constants';
 
 /**
  * Verificar si el usuario es superadmin
- * @param {Object} user - Usuario a verificar
+ * @param {Object} user - Usuario
  * @returns {boolean}
  */
 export const isSuperadmin = (user) => {
   if (!user) return false;
+  // user.role es el slug del rol desde el backend
   return user.role === USER_ROLES.SUPERADMIN;
 };
 
@@ -28,33 +29,36 @@ export const isAdmin = (user) => {
 };
 
 /**
- * Verificar si el usuario es admin O superadmin
- * @param {Object} user - Usuario a verificar
+ * Verificar si el usuario es admin o superadmin
+ * @param {Object} user - Usuario
  * @returns {boolean}
  */
 export const isAdminOrSuperadmin = (user) => {
   if (!user) return false;
+  // user.role es el slug del rol desde el backend
   return user.role === USER_ROLES.ADMIN || user.role === USER_ROLES.SUPERADMIN;
 };
 
 /**
  * Verificar si el usuario es operario
- * @param {Object} user - Usuario a verificar
+ * @param {Object} user - Usuario
  * @returns {boolean}
  */
 export const isOperario = (user) => {
   if (!user) return false;
+  // user.role es el slug del rol desde el backend
   return user.role === USER_ROLES.OPERARIO;
 };
 
 /**
  * Verificar si el usuario tiene uno de los roles especificados
- * @param {Object} user - Usuario a verificar
+ * @param {Object} user - Usuario
  * @param {...string} roles - Roles a verificar
  * @returns {boolean}
  */
 export const hasRole = (user, ...roles) => {
   if (!user) return false;
+  // user.role es el slug del rol desde el backend
   return roles.includes(user.role);
 };
 
@@ -159,4 +163,47 @@ export const canCreateUserWithRole = (currentUser, targetRole) => {
   
   // Operarios no pueden crear usuarios
   return false;
+};
+
+/**
+ * Obtener el color del badge de forma segura (maneja roles eliminados)
+ * @param {string} roleName - Nombre del rol
+ * @returns {string} - Clases CSS del badge
+ */
+export const getRoleBadgeColorSafe = (roleName) => {
+  if (!roleName) {
+    return 'bg-gray-100 text-gray-800';
+  }
+  
+  const color = getRoleBadgeColor(roleName);
+  
+  // Si no tiene color definido (rol no existe en constantes), usar rojo (advertencia)
+  if (color === 'bg-gray-100 text-gray-800' && !Object.values(USER_ROLES).includes(roleName)) {
+    return 'bg-red-100 text-red-800 border border-red-300';
+  }
+  
+  return color;
+};
+
+/**
+ * Filtrar roles seleccionables según permisos del usuario actual
+ * @param {Array} roles - Lista de roles disponibles
+ * @param {Object} currentUser - Usuario actual
+ * @returns {Array} - Roles que puede asignar
+ */
+export const getSelectableRoles = (roles, currentUser) => {
+  if (!roles || !currentUser) return [];
+  
+  // Superadmin puede asignar cualquier rol
+  if (isSuperadmin(currentUser)) {
+    return roles;
+  }
+  
+  // Admin puede asignar todos menos superadmin
+  if (isAdmin(currentUser)) {
+    return roles.filter(r => r.name !== USER_ROLES.SUPERADMIN);
+  }
+  
+  // Otros no pueden asignar roles
+  return [];
 };

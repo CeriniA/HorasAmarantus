@@ -5,6 +5,7 @@
  */
 
 import { AlertCircle, CheckCircle, Info, AlertTriangle, X, Clock } from 'lucide-react';
+import logger from '../../utils/logger';
 import { useState, useEffect } from 'react';
 import Button from '../common/Button';
 
@@ -29,7 +30,7 @@ const loadDismissedAlerts = () => {
     
     return active;
   } catch (error) {
-    console.error('Error loading dismissed alerts:', error);
+    logger.error('Error loading dismissed alerts:', error);
     return {};
   }
 };
@@ -39,7 +40,7 @@ const saveDismissedAlerts = (dismissed) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(dismissed));
   } catch (error) {
-    console.error('Error saving dismissed alerts:', error);
+    logger.error('Error saving dismissed alerts:', error);
   }
 };
 

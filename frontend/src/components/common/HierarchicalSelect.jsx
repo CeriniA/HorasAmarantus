@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Select from './Select';
+import logger from '../../utils/logger';
 import { ORG_UNIT_TYPES } from '../../constants';
 
 /**
@@ -25,7 +26,7 @@ export const HierarchicalSelect = ({
 
   // Debug
   if (import.meta.env.DEV) {
-    console.log('🔍 HierarchicalSelect Debug:', {
+    logger.debug('🔍 HierarchicalSelect Debug:', {
       totalUnits: units.length,
       selectedArea,
       selectedProcess,

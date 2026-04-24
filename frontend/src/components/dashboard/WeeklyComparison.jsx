@@ -187,21 +187,25 @@ export const WeeklyComparison = ({ timeEntries, user }) => {
           </div>
         </div>
 
-        {/* Insights */}
-        {comparisonData.weeks[0].totalHours > comparisonData.avgTotal * 1.2 && (
-          <div className="p-3 bg-green-50 border-l-4 border-green-400 rounded">
-            <p className="text-sm text-green-800">
-              💪 <strong>¡Excelente!</strong> Esta semana superaste tu promedio en {comparisonData.trendPercent.toFixed(0)}%
-            </p>
-          </div>
-        )}
+        {/* Insights - Solo mostrar si hay datos suficientes */}
+        {comparisonData.avgTotal > 0 && comparisonData.weeks[0].totalHours > 0 && (
+          <>
+            {comparisonData.weeks[0].totalHours > comparisonData.avgTotal * 1.2 && (
+              <div className="p-3 bg-green-50 border-l-4 border-green-400 rounded">
+                <p className="text-sm text-green-800">
+                  💪 <strong>¡Excelente!</strong> Esta semana superaste tu promedio en {comparisonData.trendPercent.toFixed(0)}%
+                </p>
+              </div>
+            )}
 
-        {comparisonData.weeks[0].totalHours < comparisonData.avgTotal * 0.8 && (
-          <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-            <p className="text-sm text-yellow-800">
-              📊 Esta semana estás {comparisonData.trendPercent.toFixed(0)}% por debajo de tu promedio
-            </p>
-          </div>
+            {comparisonData.weeks[0].totalHours < comparisonData.avgTotal * 0.8 && (
+              <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                <p className="text-sm text-yellow-800">
+                  📊 Esta semana estás {comparisonData.trendPercent.toFixed(0)}% por debajo de tu promedio
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </Card>

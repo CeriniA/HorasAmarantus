@@ -10,11 +10,11 @@
 
 import { supabase } from '../config/database.js';
 import { USER_ROLES, TIME_ENTRY_STATUS } from '../models/constants.js';
-import { hasPermission, PERMISSIONS } from '../models/types.js';
+import permissionsService from './permissions.service.js';
 import logger from '../utils/logger.js';
 
 /**
- * Obtener todos los time entries según el rol del usuario
+ * Obtener todos los time entries según permisos RBAC
  */
 const getAll = async (user) => {
   let query = supabase
@@ -26,8 +26,9 @@ const getAll = async (user) => {
     `)
     .order('start_time', { ascending: false });
 
-  // Filtrar según rol
-  if (!hasPermission(user.role, 'VIEW_ALL_ENTRIES')) {
+  // Filtrar según permisos RBAC
+  const canViewAll = await permissionsService.userCan(user.id, 'time_entries', 'view', 'all');
+  if (!canViewAll) {
     query = query.eq('user_id', user.id);
   }
 
@@ -46,16 +47,27 @@ const getAll = async (user) => {
  */
 const validateCreatePermissions = async (requestingUser, targetUserId) => {
   // Solo usuarios con permiso pueden crear para otros
-  if (targetUserId !== requestingUser.id && 
-      !hasPermission(requestingUser.role, 'CREATE_ENTRY_FOR_OTHERS')) {
-    throw new Error('No puedes crear registros para otros usuarios');
-  }
+  if (targetUserId !== requestingUser.id) {
+    const canCreateForOthers = await permissionsService.userCan(
+      requestingUser.id,
+      'time_entries',
+      'create',
+      'all'
+    );
+    
+    if (!canCreateForOthers) {
+      throw new Error('No puedes crear registros para otros usuarios');
+    }
 
-  // Si se especifica user_id diferente, validar que el admin no cree para otros admins/superadmins
-  if (targetUserId && targetUserId !== requestingUser.id) {
+    // Si se especifica user_id diferente, validar que el admin no cree para otros admins/superadmins
     const { data: targetUser, error: userError } = await supabase
       .from('users')
-      .select('role')
+      .select(`
+        role_id,
+        roles (
+          slug
+        )
+      `)
       .eq('id', targetUserId)
       .single();
 
@@ -64,8 +76,9 @@ const validateCreatePermissions = async (requestingUser, targetUserId) => {
     }
 
     // Admin NO puede crear registros para otros admins o superadmins
+    const targetRoleSlug = targetUser.roles?.slug;
     if (requestingUser.role === USER_ROLES.ADMIN && 
-        (targetUser.role === USER_ROLES.ADMIN || targetUser.role === USER_ROLES.SUPERADMIN)) {
+        (targetRoleSlug === USER_ROLES.ADMIN || targetRoleSlug === USER_ROLES.SUPERADMIN)) {
       throw new Error('No puedes crear registros para usuarios admin o superadmin');
     }
   }
@@ -127,8 +140,15 @@ const validateUpdatePermissions = async (entryId, requestingUser) => {
     throw new Error('Registro no encontrado');
   }
 
-  if (existing.user_id !== requestingUser.id && 
-      !hasPermission(requestingUser.role, 'UPDATE_ANY_ENTRY')) {
+  // Verificar permisos RBAC
+  const canUpdateAny = await permissionsService.userCan(
+    requestingUser.id,
+    'time_entries',
+    'update',
+    'all'
+  );
+  
+  if (existing.user_id !== requestingUser.id && !canUpdateAny) {
     throw new Error('No puedes editar registros de otros usuarios');
   }
 
@@ -298,10 +318,16 @@ const validateDeletePermissions = async (entryIds, requestingUser) => {
     throw new Error('Error verificando permisos');
   }
 
-  // Verificar permisos
+  // Verificar permisos RBAC
+  const canDeleteAny = await permissionsService.userCan(
+    requestingUser.id,
+    'time_entries',
+    'delete',
+    'all'
+  );
+  
   const unauthorized = existing.some(entry => 
-    entry.user_id !== requestingUser.id && 
-    !hasPermission(requestingUser.role, 'DELETE_ANY_ENTRY')
+    entry.user_id !== requestingUser.id && !canDeleteAny
   );
 
   if (unauthorized) {

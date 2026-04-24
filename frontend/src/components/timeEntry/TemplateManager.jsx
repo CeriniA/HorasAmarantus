@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { Save, Trash2, FileText, Plus, Check } from 'lucide-react';
 import Button from '../common/Button';
 import Input from '../common/Input';
+import logger from '../../utils/logger';
 
 export const TemplateManager = ({ timeEntries, onApplyTemplate, units = [] }) => {
   const [templates, setTemplates] = useState([]);
@@ -21,7 +22,7 @@ export const TemplateManager = ({ timeEntries, onApplyTemplate, units = [] }) =>
       try {
         setTemplates(JSON.parse(stored));
       } catch (error) {
-        console.error('Error loading templates:', error);
+        logger.error('Error loading templates:', error);
       }
     }
   }, []);

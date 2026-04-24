@@ -3,8 +3,7 @@
  * Funciones puras extraídas de Reports.jsx
  */
 
-import { format } from 'date-fns';
-import { extractDate, calculateHours } from './dateHelpers';
+import { extractDate } from './dateHelpers';
 
 /**
  * Obtiene una unidad y todas sus sub-unidades (recursivo)
@@ -29,7 +28,7 @@ export const getUnitAndChildren = (unitId, units) => {
 };
 
 /**
- * Agrupa registros por usuario
+ * Agrupa registros por usuario (Top 10)
  * @param {Array} entries - Array de time entries
  * @returns {Array} Array de objetos { name, hours, entries }
  */
@@ -40,7 +39,9 @@ export const groupByUser = (entries) => {
     const userId = entry.user_id;
     if (!byUserMap[userId]) {
       byUserMap[userId] = {
+        userId,
         name: entry.users?.name || 'Desconocido',
+        email: entry.users?.email || '',
         hours: 0,
         entries: 0
       };
@@ -52,6 +53,33 @@ export const groupByUser = (entries) => {
   return Object.values(byUserMap)
     .sort((a, b) => b.hours - a.hours)
     .slice(0, 10);
+};
+
+/**
+ * Agrupa registros por usuario (TODOS)
+ * @param {Array} entries - Array de time entries
+ * @returns {Array} Array de objetos { userId, name, email, hours, entries }
+ */
+export const groupByUserAll = (entries) => {
+  const byUserMap = {};
+  
+  entries.forEach(entry => {
+    const userId = entry.user_id;
+    if (!byUserMap[userId]) {
+      byUserMap[userId] = {
+        userId,
+        name: entry.users?.name || 'Desconocido',
+        email: entry.users?.email || '',
+        hours: 0,
+        entries: 0
+      };
+    }
+    byUserMap[userId].hours += entry.total_hours || 0;
+    byUserMap[userId].entries += 1;
+  });
+
+  return Object.values(byUserMap)
+    .sort((a, b) => b.hours - a.hours); // Sin límite
 };
 
 /**
@@ -124,7 +152,8 @@ export const calculateReportMetrics = (entries, units) => {
   const totalHours = entries.reduce((sum, e) => sum + (e.total_hours || 0), 0);
   const totalEntries = entries.length;
   
-  const byUser = groupByUser(entries);
+  const byUser = groupByUser(entries); // Top 10
+  const byUserAll = groupByUserAll(entries); // Todos
   const byUnit = groupByUnit(entries, units);
   const byDay = groupByDay(entries);
 
@@ -132,6 +161,7 @@ export const calculateReportMetrics = (entries, units) => {
     totalHours,
     totalEntries,
     byUser,
+    byUserAll,
     byUnit,
     byDay
   };

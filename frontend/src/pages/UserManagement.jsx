@@ -1,18 +1,29 @@
 /* eslint-disable no-alert, no-restricted-globals */
 // TODO: Reemplazar alert/confirm con componente de notificaciones (Toast/Modal)
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useUsers } from '../hooks/useUsers';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
 import { usePermissions } from '../hooks/usePermissions';
+import { useRoles } from '../hooks/useRoles';
+import { useAuth } from '../hooks/useAuth';
 import { USER_ROLES, getRoleLabel } from '../constants';
-import { getRoleBadgeColor } from '../utils/roleHelpers';
+import { getRoleBadgeColor, getSelectableRoles } from '../utils/roleHelpers';
 import { MESSAGES } from '../constants/messages';
 import { BulkUserImport } from '../components/users/BulkUserImport';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const UserManagement = () => {
-  const { users, loading, createUser, updateUser, deleteUser } = useUsers();
+  // Estados para paginación y filtros (ANTES del hook)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [showInactive, setShowInactive] = useState(false);
+  
+  // Hooks
+  const { users, loading, createUser, updateUser, deleteUser } = useUsers(showInactive);
   const { units } = useOrganizationalUnits();
   const { can } = usePermissions();
+  const { roles: availableRoles, loading: rolesLoading } = useRoles();
+  const { user: currentUser } = useAuth();
   
   const [showModal, setShowModal] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
@@ -128,6 +139,20 @@ export const UserManagement = () => {
     }
   };
 
+  // Paginar usuarios (el filtro ya se aplica en el hook)
+  const totalPages = Math.ceil(users.length / itemsPerPage);
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return users.slice(startIndex, endIndex);
+  }, [users, currentPage, itemsPerPage]);
+
+  // Resetear a página 1 cuando cambia el filtro
+  const handleToggleInactive = () => {
+    setShowInactive(!showInactive);
+    setCurrentPage(1);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -163,6 +188,28 @@ export const UserManagement = () => {
         )}
       </div>
 
+      {/* Filtros */}
+      <div className="bg-white shadow-md rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={handleToggleInactive}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Mostrar usuarios inactivos
+              </span>
+            </label>
+          </div>
+          <div className="text-sm text-gray-600">
+            Mostrando {paginatedUsers.length} de {users.length} usuarios
+          </div>
+        </div>
+      </div>
+
       {/* Tabla de Usuarios */}
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
@@ -190,7 +237,7 @@ export const UserManagement = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {users.map((user) => (
+            {paginatedUsers.map((user) => (
               <tr key={user.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">{user.name}</div>
@@ -246,10 +293,61 @@ export const UserManagement = () => {
 
         {users.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">No hay usuarios registrados</p>
+            <p className="text-gray-500">
+              {showInactive 
+                ? 'No hay usuarios registrados'
+                : 'No hay usuarios activos. Activa "Mostrar usuarios inactivos" para ver todos.'}
+            </p>
           </div>
         )}
       </div>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <div className="bg-white shadow-md rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Página {currentPage} de {totalPages}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Anterior
+              </button>
+              
+              {/* Números de página */}
+              <div className="flex gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-2 rounded-lg ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white'
+                        : 'border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="flex items-center gap-1 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Crear/Editar */}
       {showModal && (
@@ -284,11 +382,10 @@ export const UserManagement = () => {
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="superamarantus"
                   required
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Solo letras, números, guiones y guiones bajos
+                  {MESSAGES.HELP_TEXT_USERNAME}
                 </p>
               </div>
 
@@ -302,10 +399,9 @@ export const UserManagement = () => {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="usuario@ejemplo.com"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Puede agregarse después
+                  {MESSAGES.HELP_TEXT_EMAIL_OPTIONAL}
                 </p>
               </div>
 
@@ -320,8 +416,12 @@ export const UserManagement = () => {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required={!editingUser}
-                  placeholder={editingUser ? 'Dejar vacío para no cambiar' : ''}
                 />
+                {editingUser && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Dejar vacío para mantener la contraseña actual
+                  </p>
+                )}
               </div>
 
               {/* Rol */}
@@ -334,10 +434,23 @@ export const UserManagement = () => {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
+                  disabled={rolesLoading}
                 >
-                  <option value={USER_ROLES.ADMIN}>{getRoleLabel(USER_ROLES.ADMIN)}</option>
-                  <option value={USER_ROLES.OPERARIO}>{getRoleLabel(USER_ROLES.OPERARIO)}</option>
+                  {rolesLoading ? (
+                    <option value="">{MESSAGES.SELECT_LOADING_ROLES}</option>
+                  ) : (
+                    getSelectableRoles(availableRoles, currentUser).map((role) => (
+                      <option key={role.id} value={role.name}>
+                        {getRoleLabel(role.name)}
+                      </option>
+                    ))
+                  )}
                 </select>
+                {rolesLoading && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {MESSAGES.HELP_TEXT_ROLES_LOADING}
+                  </p>
+                )}
               </div>
 
               {/* Área */}

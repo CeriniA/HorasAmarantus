@@ -6,8 +6,9 @@
 import express from 'express';
 import { supabase } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import { checkAnyPermission } from '../middleware/permissions.js';
 import logger from '../utils/logger.js';
-import { USER_ROLES } from '../models/constants.js';
+import permissionsService from '../services/permissions.service.js';
 
 const router = express.Router();
 
@@ -23,37 +24,59 @@ router.use(authenticate);
  *   - unit_id: filtrar por unidad organizacional (opcional)
  *   - group_by: agrupar por (user, unit, day, week, month)
  */
-router.get('/summary', async (req, res) => {
-  try {
-    const { role, id: currentUserId } = req.user;
-    const { start_date, end_date, user_id, unit_id, group_by = 'user' } = req.query;
+router.get('/summary', 
+  checkAnyPermission([
+    { resource: 'reports', action: 'view', scope: 'all' },
+    { resource: 'reports', action: 'view', scope: 'team' },
+    { resource: 'reports', action: 'view', scope: 'own' }
+  ]),
+  async (req, res) => {
+    try {
+      const { id: currentUserId } = req.user;
+      const { start_date, end_date, user_id, unit_id, group_by = 'user' } = req.query;
 
-    // Validar fechas
-    if (!start_date || !end_date) {
-      return res.status(400).json({ error: 'start_date y end_date son requeridos' });
-    }
-
-    // Base query
-    let query = supabase
-      .from('time_entries')
-      .select(`
-        *,
-        organizational_units (id, name, type),
-        users (id, name, email, weekly_goal, monthly_goal, standard_daily_hours)
-      `)
-      .gte('start_time', `${start_date} 00:00:00`)
-      .lte('start_time', `${end_date} 23:59:59`)
-      .not('end_time', 'is', null);
-
-    // Filtrar por rol
-    if (role === USER_ROLES.OPERARIO) {
-      query = query.eq('user_id', currentUserId);
-    } else {
-      // Admin/SuperAdmin pueden filtrar por usuario específico
-      if (user_id) {
-        query = query.eq('user_id', user_id);
+      // Validar fechas
+      if (!start_date || !end_date) {
+        return res.status(400).json({ error: 'start_date y end_date son requeridos' });
       }
-    }
+
+      // Verificar permisos para determinar alcance
+      const canViewAll = await permissionsService.userCan(currentUserId, 'reports', 'view', 'all');
+      const canViewTeam = await permissionsService.userCan(currentUserId, 'reports', 'view', 'team');
+
+      // Base query
+      let query = supabase
+        .from('time_entries')
+        .select(`
+          *,
+          organizational_units (id, name, type),
+          users (id, name, email, weekly_goal, monthly_goal, standard_daily_hours)
+        `)
+        .gte('start_time', `${start_date} 00:00:00`)
+        .lte('start_time', `${end_date} 23:59:59`)
+        .not('end_time', 'is', null);
+
+      // Filtrar por permisos RBAC
+      if (!canViewAll && !canViewTeam) {
+        // Solo puede ver sus propios reportes
+        query = query.eq('user_id', currentUserId);
+      } else if (canViewTeam && !canViewAll) {
+        // Puede ver reportes de su equipo
+        const { data: currentUser } = await supabase
+          .from('users')
+          .select('organizational_unit_id')
+          .eq('id', currentUserId)
+          .single();
+        
+        if (currentUser?.organizational_unit_id) {
+          query = query.eq('organizational_unit_id', currentUser.organizational_unit_id);
+        }
+      } else {
+        // Puede ver todos, aplicar filtro si se especifica
+        if (user_id) {
+          query = query.eq('user_id', user_id);
+        }
+      }
 
     // Filtrar por unidad organizacional
     if (unit_id) {
@@ -168,30 +191,54 @@ router.get('/summary', async (req, res) => {
  * GET /api/reports/overtime
  * Detecta horas extras y trabajo en fines de semana
  */
-router.get('/overtime', async (req, res) => {
-  try {
-    const { role, id: currentUserId } = req.user;
-    const { start_date, end_date, user_id } = req.query;
+router.get('/overtime',
+  checkAnyPermission([
+    { resource: 'reports', action: 'view', scope: 'all' },
+    { resource: 'reports', action: 'view', scope: 'team' },
+    { resource: 'reports', action: 'view', scope: 'own' }
+  ]),
+  async (req, res) => {
+    try {
+      const { id: currentUserId } = req.user;
+      const { start_date, end_date, user_id } = req.query;
 
-    if (!start_date || !end_date) {
-      return res.status(400).json({ error: 'start_date y end_date son requeridos' });
-    }
+      if (!start_date || !end_date) {
+        return res.status(400).json({ error: 'start_date y end_date son requeridos' });
+      }
 
-    let query = supabase
-      .from('time_entries')
-      .select(`
-        *,
-        users (id, name, standard_daily_hours, weekly_goal)
-      `)
-      .gte('start_time', `${start_date} 00:00:00`)
-      .lte('start_time', `${end_date} 23:59:59`)
-      .not('end_time', 'is', null);
+      // Verificar permisos para determinar alcance
+      const canViewAll = await permissionsService.userCan(currentUserId, 'reports', 'view', 'all');
+      const canViewTeam = await permissionsService.userCan(currentUserId, 'reports', 'view', 'team');
 
-    if (role === USER_ROLES.OPERARIO) {
-      query = query.eq('user_id', currentUserId);
-    } else if (user_id) {
-      query = query.eq('user_id', user_id);
-    }
+      let query = supabase
+        .from('time_entries')
+        .select(`
+          *,
+          users (id, name, standard_daily_hours, weekly_goal)
+        `)
+        .gte('start_time', `${start_date} 00:00:00`)
+        .lte('start_time', `${end_date} 23:59:59`)
+        .not('end_time', 'is', null);
+
+      // Filtrar por permisos RBAC
+      if (!canViewAll && !canViewTeam) {
+        // Solo puede ver sus propios reportes
+        query = query.eq('user_id', currentUserId);
+      } else if (canViewTeam && !canViewAll) {
+        // Puede ver reportes de su equipo
+        const { data: currentUser } = await supabase
+          .from('users')
+          .select('organizational_unit_id')
+          .eq('id', currentUserId)
+          .single();
+        
+        if (currentUser?.organizational_unit_id) {
+          query = query.eq('organizational_unit_id', currentUser.organizational_unit_id);
+        }
+      } else if (user_id) {
+        // Puede ver todos, aplicar filtro si se especifica
+        query = query.eq('user_id', user_id);
+      }
 
     const { data: entries, error } = await query;
     if (error) throw error;

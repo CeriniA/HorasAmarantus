@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, Filter, BarChart2, TrendingUp, AlertTriangle, LineChart, Target, Clock, FileText, Users } from 'lucide-react';
+import { Download, Filter, BarChart2, Target, FileText, Users } from 'lucide-react';
 import { timeEntriesService, usersService, orgUnitsService } from '../services/api';
 import { useAuthContext } from '../context/AuthContext';
 import Card from '../components/common/Card';
@@ -7,22 +7,24 @@ import Button from '../components/common/Button';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subYears } from 'date-fns';
 import { TIME_ENTRY_STATUS } from '../constants';
 import { isAdminOrSuperadmin, isOperario } from '../utils/roleHelpers';
-import { isDateInRange } from '../utils/dateHelpers';
+import { isDateInRange, safeDate } from '../utils/dateHelpers';
+import logger from '../utils/logger';
 
 // Componentes modularizados
 import { ReportFilters } from '../components/reports/ReportFilters';
 import { ReportMetrics } from '../components/reports/ReportMetrics';
 import { ReportCharts } from '../components/reports/ReportCharts';
 import { ReportTable } from '../components/reports/ReportTable';
-import { ComparativeAnalysis } from '../components/reports/ComparativeAnalysis';
-import { ProductivityAnalysis } from '../components/reports/ProductivityAnalysis';
-import { AreaEfficiencyReport } from '../components/reports/AreaEfficiencyReport';
-import { OvertimeReport } from '../components/reports/OvertimeReport';
-import { MonthlyTrendsReport } from '../components/reports/MonthlyTrendsReport';
-import { GoalComplianceReport } from '../components/reports/GoalComplianceReport';
-import { TimeDistributionReport } from '../components/reports/TimeDistributionReport';
+import { ObjectivesReport } from '../components/reports/ObjectivesReport';
 import { DetailedEntriesReport } from '../components/reports/DetailedEntriesReport';
-import { UserComparisonReport } from '../components/reports/UserComparisonReport';
+import { MultiEntityComparisonReport } from '../components/reports/MultiEntityComparisonReport';
+import { UserHoursTable } from '../components/reports/UserHoursTable';
+// Componentes eliminados (inútiles):
+// - ProductivityAnalysis (métricas subjetivas)
+// - AreaVolumeReport (redundante con ReportTable)
+// - OvertimeReport (sin jornada estándar definida)
+// - MonthlyTrendsReport (redundante con ReportCharts)
+// - TimeDistributionReport (mapa de calor sin sentido)
 
 // Utilidades
 import { getUnitAndChildren, calculateReportMetrics } from '../utils/reportCalculations';
@@ -52,6 +54,7 @@ export const Reports = () => {
     totalHours: 0,
     totalEntries: 0,
     byUser: [],
+    byUserAll: [],
     byUnit: [],
     byDay: []
   });
@@ -104,14 +107,18 @@ export const Reports = () => {
   const handleStartDateChange = (newStartDate) => {
     setStartDate(newStartDate);
     // Si la fecha de inicio es mayor que la de fin, ajustar la de fin
-    if (new Date(newStartDate) > new Date(endDate)) {
+    const start = safeDate(newStartDate);
+    const end = safeDate(endDate);
+    if (start && end && start > end) {
       setEndDate(newStartDate);
     }
   };
 
   const handleEndDateChange = (newEndDate) => {
     // Si la fecha de fin es menor que la de inicio, ajustar la de inicio
-    if (new Date(newEndDate) < new Date(startDate)) {
+    const start = safeDate(startDate);
+    const end = safeDate(newEndDate);
+    if (start && end && end < start) {
       setStartDate(newEndDate);
     }
     setEndDate(newEndDate);
@@ -132,7 +139,7 @@ export const Reports = () => {
       const { organizationalUnits: unitsData } = await orgUnitsService.getAll();
       setUnits(unitsData || []);
     } catch (error) {
-      console.error('Error loading filters:', error);
+      logger.error('Error loading filters:', error);
     }
   };
 
@@ -155,11 +162,19 @@ export const Reports = () => {
                entry.status === TIME_ENTRY_STATUS.COMPLETED;
       });
 
-      // Filtrar por usuario
+      // Filtrar por usuario(s)
       if (isOperario(user)) {
+        // Operario solo ve sus propios registros
         filtered = filtered.filter(e => e.user_id === user.id);
       } else if (selectedUser !== 'all') {
-        filtered = filtered.filter(e => e.user_id === selectedUser);
+        // Admin/Superadmin con selección personalizada
+        if (selectedUsers.length > 0) {
+          // Filtrar por usuarios seleccionados
+          filtered = filtered.filter(e => selectedUsers.includes(e.user_id));
+        } else {
+          // Si no hay usuarios seleccionados, mostrar todos (fallback a 'all')
+          // No aplicar filtro
+        }
       }
 
       // Filtrar por unidad (jerárquico)
@@ -175,7 +190,7 @@ export const Reports = () => {
       setReportData(metrics);
 
     } catch (error) {
-      console.error('Error loading report data:', error);
+      logger.error('Error loading report data:', error);
     } finally {
       setLoading(false);
     }
@@ -207,6 +222,42 @@ export const Reports = () => {
       daysWorked: reportData.byDay?.length || 0
     };
     exportToPDF(exportData, 'reporte_horas');
+  };
+
+  const handleExportPayroll = () => {
+    // Validar que haya datos
+    if (!reportData.byUserAll || reportData.byUserAll.length === 0) {
+      logger.warn('No hay datos de usuarios para exportar');
+      window.alert('No hay datos de usuarios en el período seleccionado');
+      return;
+    }
+
+    logger.info('Exportando nómina:', {
+      usuarios: reportData.byUserAll.length,
+      totalHoras: reportData.totalHours,
+      periodo: `${startDate} - ${endDate}`
+    });
+
+    // Exportar datos de nómina (usuarios + horas)
+    const payrollData = {
+      byUser: reportData.byUserAll || [],
+      byUserAll: reportData.byUserAll || [],
+      totalHours: reportData.totalHours || 0,
+      totalEntries: reportData.totalEntries || 0,
+      startDate,
+      endDate,
+      avgPerDay: reportData.totalHours / (reportData.byDay?.length || 1),
+      daysWorked: reportData.byDay?.length || 0,
+      generatedAt: new Date().toISOString()
+    };
+
+    try {
+      exportToExcel(payrollData, `nomina_${startDate}_${endDate}`);
+      logger.info('✅ Nómina exportada exitosamente');
+    } catch (error) {
+      logger.error('❌ Error al exportar nómina:', error);
+      window.alert('Error al generar el archivo de nómina. Revisa la consola para más detalles.');
+    }
   };
 
   return (
@@ -266,35 +317,74 @@ export const Reports = () => {
           units={units}
           onStartDateChange={handleStartDateChange}
           onEndDateChange={handleEndDateChange}
-          showMultiUserSelect={false}
           showComparisonTypeSelector={activeTab === 'comparison'}
         />
       </Card>
 
-      {/* Indicador de filtro activo */}
-      {selectedUnit !== 'all' && (
-        <Card>
-          <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <Filter className="h-5 w-5 text-blue-400" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">
-                  Filtro Activo: Vista Jerárquica
-                </h3>
-                <div className="mt-2 text-sm text-blue-700">
-                  <p>
-                    Mostrando <strong>{units.find(u => u.id === selectedUnit)?.name}</strong> y todos sus procesos internos (sub-unidades).
-                  </p>
-                  <p className="mt-1 text-xs">
-                    {reportData.byUnit.length} unidad(es) incluida(s) en el reporte
-                  </p>
+      {/* Indicadores de filtros activos */}
+      {(selectedUnit !== 'all' || (selectedUsers.length > 0 && selectedUser !== 'all')) && (
+        <div className="space-y-3">
+          {/* Filtro de Unidad */}
+          {selectedUnit !== 'all' && (
+            <Card>
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <Filter className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Filtro Activo: Vista Jerárquica
+                    </h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <p>
+                        Mostrando <strong>{units.find(u => u.id === selectedUnit)?.name}</strong> y todos sus procesos internos (sub-unidades).
+                      </p>
+                      <p className="mt-1 text-xs">
+                        {reportData.byUnit.length} unidad(es) incluida(s) en el reporte
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </Card>
+            </Card>
+          )}
+          
+          {/* Filtro de Usuarios Personalizados */}
+          {selectedUsers.length > 0 && selectedUser !== 'all' && (
+            <Card>
+              <div className="bg-green-50 border-l-4 border-green-400 p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <Users className="h-5 w-5 text-green-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-green-800">
+                      Usuarios Seleccionados ({selectedUsers.length})
+                    </h3>
+                    <div className="mt-2 text-sm text-green-700">
+                      <div className="flex flex-wrap gap-2">
+                        {selectedUsers.slice(0, 5).map(userId => {
+                          const foundUser = users.find(u => u.id === userId);
+                          return foundUser ? (
+                            <span key={userId} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                              {foundUser.name}
+                            </span>
+                          ) : null;
+                        })}
+                        {selectedUsers.length > 5 && (
+                          <span className="text-xs text-green-600">
+                            +{selectedUsers.length - 5} más
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Tabs de Reportes */}
@@ -310,40 +400,7 @@ export const Reports = () => {
               }`}
             >
               <BarChart2 className="h-4 w-4 mr-2" />
-              General
-            </button>
-            <button
-              onClick={() => setActiveTab('efficiency')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                activeTab === 'efficiency'
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Eficiencia por Área
-            </button>
-            <button
-              onClick={() => setActiveTab('overtime')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                activeTab === 'overtime'
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              Horas Extras
-            </button>
-            <button
-              onClick={() => setActiveTab('trends')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                activeTab === 'trends'
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <LineChart className="h-4 w-4 mr-2" />
-              Tendencias
+              Resumen
             </button>
             <button
               onClick={() => setActiveTab('goals')}
@@ -355,17 +412,6 @@ export const Reports = () => {
             >
               <Target className="h-4 w-4 mr-2" />
               Objetivos
-            </button>
-            <button
-              onClick={() => setActiveTab('distribution')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                activeTab === 'distribution'
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              Distribución Horaria
             </button>
             <button
               onClick={() => setActiveTab('detail')}
@@ -387,7 +433,7 @@ export const Reports = () => {
               }`}
             >
               <Users className="h-4 w-4 mr-2" />
-              Comparativa
+              Comparativas
             </button>
           </nav>
         </div>
@@ -402,58 +448,29 @@ export const Reports = () => {
           {/* Gráficos */}
           <ReportCharts reportData={reportData} topUsers={topUsers} user={user} />
 
-          {/* Tabla */}
+          {/* Tabla por Unidad */}
           <ReportTable 
             reportData={reportData} 
             units={units}
             selectedUnit={selectedUnit}
           />
 
-          {/* Análisis Avanzados */}
-          {filteredEntries.length > 0 && (
-            <>
-              {/* Análisis Comparativo */}
-              <ComparativeAnalysis timeEntries={filteredEntries} />
-
-              {/* Análisis de Trabajo - Visible para operarios siempre, y para admins cuando filtran por usuario */}
-              {(isOperario(user) || (isAdminOrSuperadmin(user) && selectedUser !== 'all')) && (
-                <ProductivityAnalysis timeEntries={filteredEntries} />
-              )}
-            </>
+          {/* Tabla de Horas por Usuario (para nómina) */}
+          {isAdminOrSuperadmin(user) && (
+            <UserHoursTable
+              usersData={reportData.byUserAll || []}
+              totalHours={reportData.totalHours}
+              startDate={startDate}
+              endDate={endDate}
+              onExport={handleExportPayroll}
+            />
           )}
         </>
       )}
 
-      {/* Reporte de Eficiencia por Área */}
-      {activeTab === 'efficiency' && (
-        <AreaEfficiencyReport 
-          timeEntries={filteredEntries} 
-          units={units}
-        />
-      )}
-
-      {/* Reporte de Horas Extras */}
-      {activeTab === 'overtime' && (
-        <OvertimeReport timeEntries={filteredEntries} />
-      )}
-
-      {/* Reporte de Tendencias Mensuales */}
-      {activeTab === 'trends' && (
-        <MonthlyTrendsReport 
-          timeEntries={filteredEntries}
-          users={users}
-          selectedUser={selectedUser}
-        />
-      )}
-
-      {/* Reporte de Cumplimiento de Objetivos */}
+      {/* Reporte de Objetivos */}
       {activeTab === 'goals' && (
-        <GoalComplianceReport timeEntries={filteredEntries} />
-      )}
-
-      {/* Reporte de Distribución Horaria */}
-      {activeTab === 'distribution' && (
-        <TimeDistributionReport timeEntries={filteredEntries} />
+        <ObjectivesReport user={user} />
       )}
 
       {/* Reporte Detallado de Registros */}
@@ -464,9 +481,9 @@ export const Reports = () => {
         />
       )}
 
-      {/* Reporte de Comparativa de Usuarios */}
+      {/* Reporte de Comparativa Multi-Entidad */}
       {activeTab === 'comparison' && (
-        <UserComparisonReport 
+        <MultiEntityComparisonReport 
           timeEntries={filteredEntries}
           users={users}
           selectedUsers={selectedUsers}

@@ -16,6 +16,9 @@ import timeEntriesRoutes from './routes/timeEntries.js';
 import usersRoutes from './routes/users.js';
 import orgUnitsRoutes from './routes/organizationalUnits.js';
 import reportsRoutes from './routes/reports.js';
+import objectivesRoutes from './routes/objectives.routes.js';
+import rolesRoutes from './routes/roles.js';
+import permissionsRoutes from './routes/permissions.js';
 
 // Validar configuración al inicio
 validateConfig();
@@ -81,6 +84,9 @@ app.use('/api/time-entries', timeEntriesRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/organizational-units', orgUnitsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/objectives', objectivesRoutes);
+app.use('/api/roles', rolesRoutes);
+app.use('/api/permissions', permissionsRoutes);
 
 // Rutas alternativas sin /api (para compatibilidad)
 app.use('/auth', authRoutes);

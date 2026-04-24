@@ -216,7 +216,7 @@ export const timeEntriesService = {
 };
 
 export const usersService = {
-  getAll: () => api.get('/users'),
+  getAll: (includeInactive = false) => api.get(`/users?includeInactive=${includeInactive}`),
   getById: (id) => api.get(`/users/${id}`),
   create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
@@ -235,6 +235,28 @@ export const orgUnitsService = {
 export const reportsService = {
   getSummary: (params) => api.get('/reports/summary', { params }),
   getOvertime: (params) => api.get('/reports/overtime', { params }),
+};
+
+export const rolesService = {
+  getAll: () => api.get('/roles'),
+  getById: (id) => api.get(`/roles/${id}`),
+  getPermissions: (id) => api.get(`/roles/${id}/permissions`),
+  create: (data) => api.post('/roles', data),
+  update: (id, data) => api.put(`/roles/${id}`, data),
+  delete: (id) => api.delete(`/roles/${id}`),
+  assignPermission: (id, permissionId) => api.post(`/roles/${id}/permissions`, { permissionId }),
+  removePermission: (id, permissionId) => api.delete(`/roles/${id}/permissions/${permissionId}`),
+  setPermissions: (id, permissionIds) => api.put(`/roles/${id}/permissions`, { permissionIds }),
+};
+
+export const permissionsService = {
+  getAll: () => api.get('/permissions'),
+  getMyPermissions: () => api.get('/permissions/me'),
+  getUserPermissions: (userId) => api.get(`/permissions/user/${userId}`),
+  assignUserPermission: (userId, permissionId, granted = true) => 
+    api.post(`/permissions/user/${userId}`, { permissionId, granted }),
+  removeUserPermission: (userId, permissionId) => 
+    api.delete(`/permissions/user/${userId}/${permissionId}`),
 };
 
 export default api;

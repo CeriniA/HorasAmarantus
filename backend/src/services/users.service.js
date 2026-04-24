@@ -11,33 +11,78 @@
 import bcrypt from 'bcryptjs';
 import { supabase } from '../config/database.js';
 import { USER_ROLES } from '../models/constants.js';
-import { hasPermission } from '../models/types.js';
+import permissionsService from './permissions.service.js';
 import logger from '../utils/logger.js';
 import { ConflictError, ValidationError, NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
 
 /**
  * Obtener todos los usuarios según el rol
+ * @param {Object} user - Usuario que hace la petición
+ * @param {Object} options - Opciones de filtrado
+ * @param {boolean} options.includeInactive - Si true, incluye usuarios inactivos
  */
-const getAll = async (user) => {
-  let query = supabase
-    .from('users')
-    .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
-    .eq('is_active', true);
+const getAll = async (user, options = {}) => {
+  const { includeInactive = false } = options;
+  
+  try {
+    logger.info('getAll users - user.id:', user?.id);
+    
+    let query = supabase
+      .from('users')
+      .select(`
+        id,
+        username,
+        email,
+        name,
+        role_id,
+        organizational_unit_id,
+        is_active,
+        created_at,
+        roles (
+          id,
+          slug,
+          name
+        )
+      `);
 
-  // Filtrar según rol
-  if (!hasPermission(user.role, 'VIEW_ALL_USERS')) {
-    // Operarios solo ven su propio perfil
-    query = query.eq('id', user.id);
+    // Filtrar por is_active solo si no se solicitan inactivos
+    if (!includeInactive) {
+      query = query.eq('is_active', true);
+    }
+
+    // Filtrar según permisos RBAC
+    if (user && user.id) {
+      const canViewAll = await permissionsService.userCan(user.id, 'users', 'view', 'all');
+      logger.info('canViewAll:', canViewAll);
+      
+      if (!canViewAll) {
+        // Operarios solo ven su propio perfil
+        query = query.eq('id', user.id);
+      }
+    } else {
+      logger.warn('Usuario sin ID, filtrando a ninguno');
+      // Si no hay user.id, no retornar nada
+      return [];
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      logger.error('Error obteniendo usuarios:', error);
+      throw new Error('Error obteniendo usuarios');
+    }
+
+    logger.info(`Usuarios obtenidos: ${data?.length || 0}`);
+
+    // Agregar slug del rol para compatibilidad
+    return data.map(u => ({
+      ...u,
+      role: u.roles?.slug || 'operario'
+    }));
+  } catch (error) {
+    logger.error('Error en getAll users:', error);
+    throw error;
   }
-
-  const { data, error } = await query;
-
-  if (error) {
-    logger.error('Error obteniendo usuarios:', error);
-    throw new Error('Error obteniendo usuarios');
-  }
-
-  return data;
 };
 
 /**
@@ -46,7 +91,21 @@ const getAll = async (user) => {
 const getById = async (userId, requestingUser) => {
   const { data, error } = await supabase
     .from('users')
-    .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
+    .select(`
+      id,
+      username,
+      email,
+      name,
+      role_id,
+      organizational_unit_id,
+      is_active,
+      created_at,
+      roles (
+        id,
+        slug,
+        name
+      )
+    `)
     .eq('id', userId)
     .single();
 
@@ -54,19 +113,24 @@ const getById = async (userId, requestingUser) => {
     throw new Error('Usuario no encontrado');
   }
 
-  // Verificar permisos
-  if (!hasPermission(requestingUser.role, 'VIEW_ALL_USERS') && userId !== requestingUser.id) {
+  // Verificar permisos RBAC
+  const canViewAll = await permissionsService.userCan(requestingUser.id, 'users', 'view', 'all');
+  if (!canViewAll && userId !== requestingUser.id) {
     throw new Error('No tienes permisos');
   }
 
-  return data;
+  // Agregar slug del rol para compatibilidad
+  return {
+    ...data,
+    role: data.roles?.slug || 'operario'
+  };
 };
 
 /**
  * Crear un usuario
  */
 const create = async (userData) => {
-  const { username, email, password, name, role, organizational_unit_id } = userData;
+  const { username, email, password, name, role_id, organizational_unit_id } = userData;
 
   // Hash password
   const password_hash = await bcrypt.hash(password, 10);
@@ -78,10 +142,24 @@ const create = async (userData) => {
       email: email || null,
       password_hash,
       name,
-      role,
+      role_id,  // Ahora usa role_id
       organizational_unit_id
     })
-    .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
+    .select(`
+      id,
+      username,
+      email,
+      name,
+      role_id,
+      organizational_unit_id,
+      is_active,
+      created_at,
+      roles (
+        id,
+        slug,
+        name
+      )
+    `)
     .single();
 
   if (error) {
@@ -107,31 +185,45 @@ const create = async (userData) => {
   }
 
   logger.info('Usuario creado:', username);
-  return data;
+  
+  // Agregar slug del rol para compatibilidad
+  return {
+    ...data,
+    role: data.roles?.slug || 'operario'
+  };
 };
 
 /**
  * Actualizar un usuario
  */
 const update = async (userId, updates, requestingUser) => {
-  // Verificar permisos básicos
-  if (userId !== requestingUser.id && 
-      !hasPermission(requestingUser.role, 'UPDATE_ANY_USER')) {
+  // Verificar permisos básicos RBAC
+  const canUpdateAny = await permissionsService.userCan(requestingUser.id, 'users', 'update', 'all');
+  if (userId !== requestingUser.id && !canUpdateAny) {
     throw new Error('No tienes permisos');
   }
 
   const updateData = { ...updates };
 
-  // Verificar si intenta cambiar rol
-  if (updateData.role) {
+  // Verificar si intenta cambiar role_id
+  if (updateData.role_id) {
     // Solo superadmin puede cambiar roles
-    if (requestingUser.role !== USER_ROLES.SUPERADMIN) {
-      delete updateData.role;
-    }
-    // Admin no puede crear/editar otros admins o superadmins
-    else if (requestingUser.role === USER_ROLES.ADMIN && 
-             (updateData.role === USER_ROLES.ADMIN || updateData.role === USER_ROLES.SUPERADMIN)) {
-      throw new Error('No puedes gestionar usuarios con rol admin o superadmin');
+    const isSuperadmin = requestingUser.role === USER_ROLES.SUPERADMIN;
+    if (!isSuperadmin) {
+      delete updateData.role_id;
+    } else {
+      // Admin no puede crear/editar otros admins o superadmins
+      // Obtener el rol objetivo
+      const { data: targetRole } = await supabase
+        .from('roles')
+        .select('slug')
+        .eq('id', updateData.role_id)
+        .single();
+      
+      if (requestingUser.role === USER_ROLES.ADMIN && 
+          (targetRole?.slug === USER_ROLES.ADMIN || targetRole?.slug === USER_ROLES.SUPERADMIN)) {
+        throw new Error('No puedes gestionar usuarios con rol admin o superadmin');
+      }
     }
   }
 
@@ -145,7 +237,21 @@ const update = async (userId, updates, requestingUser) => {
     .from('users')
     .update(updateData)
     .eq('id', userId)
-    .select('id, username, email, name, role, organizational_unit_id, is_active, created_at')
+    .select(`
+      id,
+      username,
+      email,
+      name,
+      role_id,
+      organizational_unit_id,
+      is_active,
+      created_at,
+      roles (
+        id,
+        slug,
+        name
+      )
+    `)
     .single();
 
   if (error) {
@@ -154,7 +260,12 @@ const update = async (userId, updates, requestingUser) => {
   }
 
   logger.info('Usuario actualizado:', userId);
-  return data;
+  
+  // Agregar slug del rol para compatibilidad
+  return {
+    ...data,
+    role: data.roles?.slug || 'operario'
+  };
 };
 
 /**

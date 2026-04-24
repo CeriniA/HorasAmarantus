@@ -12,6 +12,7 @@ import { timeEntriesService } from '../services/api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { safeDate, extractDate, calculateHours } from '../utils/dateHelpers';
+import logger from '../utils/logger';
 
 export const TimeEntries = () => {
   const { user } = useAuthContext();
@@ -88,9 +89,9 @@ export const TimeEntries = () => {
       const errors = [];
 
       for (const entryData of entries) {
-        console.log('📤 Enviando entry:', entryData); // Debug
+        logger.debug('📤 Enviando entry:', entryData);
         const result = await createEntry(entryData);
-        console.log('📥 Resultado:', result); // Debug
+        logger.debug('📥 Resultado:', result);
         
         if (result.success) {
           successCount++;
@@ -104,11 +105,11 @@ export const TimeEntries = () => {
         setAlert({ type: 'success', message: `✅ ${successCount} ${successCount === 1 ? 'registro creado' : 'registros creados'} correctamente${!isOnline ? ' (se sincronizará cuando haya conexión)' : ''}` });
         setShowBulkEntry(false);
       } else {
-        console.error('❌ Errores:', errors);
-        setAlert({ type: 'warning', message: `⚠️ ${successCount} creados, ${errorCount} con error. Ver consola.` });
+        logger.error('❌ Errores:', errors);
+        setAlert({ type: 'warning', message: `⚠️ ${successCount} creados, ${errorCount} con error.` });
       }
     } catch (error) {
-      console.error('Error creating entries:', error);
+      logger.error('Error creating entries:', error);
       setAlert({ type: 'error', message: `Error: ${error.message}` });
     } finally {
       setOperationLoading(false);
@@ -168,7 +169,7 @@ export const TimeEntries = () => {
         setAlert({ type: 'warning', message: `⚠️ ${successCount} actualizados, ${errorCount} con error` });
       }
     } catch (error) {
-      console.error('Error editing entries:', error);
+      logger.error('Error editing entries:', error);
       setAlert({ type: 'error', message: `Error: ${error.message}` });
     } finally {
       setOperationLoading(false);

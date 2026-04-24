@@ -13,9 +13,12 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 
 /**
  * GET /api/users
+ * Query params:
+ * - includeInactive: boolean - Si true, incluye usuarios inactivos
  */
 const getAll = asyncHandler(async (req, res) => {
-  const users = await usersService.getAll(req.user);
+  const includeInactive = req.query.includeInactive === 'true';
+  const users = await usersService.getAll(req.user, { includeInactive });
   res.json({ users });
 });
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { timeEntriesService } from '../services/api';
 import { timeEntryRepository, syncQueue, syncManager } from '../offline/index.js';
+import logger from '../utils/logger';
 
 export const useTimeEntries = (userId) => {
   const [timeEntries, setTimeEntries] = useState([]);
@@ -76,15 +77,15 @@ export const useTimeEntries = (userId) => {
         // NO guardar en IndexedDB - solo mantener pendientes
         // IndexedDB es solo para offline, no para cache
       } else {
-        if (import.meta.env.DEV) console.log('📴 LOAD: Modo offline, cargando desde IndexedDB');
+        logger.info('📴 LOAD: Modo offline, cargando desde IndexedDB');
         // Modo offline: cargar SOLO entries pendientes del usuario actual
         const pendingEntries = await timeEntryRepository.findPending();
         const userPendingEntries = pendingEntries.filter(e => e.user_id === userId);
-        if (import.meta.env.DEV) console.log('💾 LOAD: Offline tiene', userPendingEntries.length, 'entries pendientes del usuario');
+        logger.info('💾 LOAD: Offline tiene', userPendingEntries.length, 'entries pendientes del usuario');
         setTimeEntries(userPendingEntries);
       }
     } catch (err) {
-      console.error('Error loading time entries:', err);
+      logger.error('Error loading time entries:', err);
       setError(err.message);
 
       // Fallback a datos locales

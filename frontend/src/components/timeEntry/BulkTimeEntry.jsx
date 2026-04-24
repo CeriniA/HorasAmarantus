@@ -11,6 +11,8 @@ import { isAdminOrSuperadmin, filterUsersByPermission } from '../../utils/roleHe
 import { CONFIG } from '../../constants/config';
 import { getStorageKey } from '../../constants/config';
 import { calculateHours, createTimestampWithTimezone } from '../../utils/dateHelpers';
+import logger from '../../utils/logger';
+import { VALIDATION } from '../../constants/validation';
 
 /**
  * Componente de carga/edición múltiple de tiempo
@@ -70,7 +72,8 @@ export const BulkTimeEntry = ({
         const { start, end } = JSON.parse(savedWorkday);
         setWorkdayStart(start);
         setWorkdayEnd(end);
-      } catch (e) {
+      } catch (error) {
+        logger.warn('Error al cargar preferencias de horario:', error);
         // Usar valores por defecto de CONFIG
       }
     }
@@ -235,7 +238,7 @@ export const BulkTimeEntry = ({
   // Validar que coincidan
   const isValid = useMemo(() => {
     const diff = Math.abs(workdayHours - totalHours);
-    return diff < 0.08; // Tolerancia de ~5 minutos
+    return diff < VALIDATION.TIME_TOLERANCE_HOURS;
   }, [workdayHours, totalHours]);
 
   const handleSave = async () => {
@@ -286,11 +289,11 @@ export const BulkTimeEntry = ({
       return entry;
     });
 
-    console.log('📤 Enviando entries:', entries);
-    console.log('📅 Fecha seleccionada:', date);
-    console.log('⏰ Rango horario:', workdayStart, '-', workdayEnd);
-    console.log('👤 Usuario seleccionado:', selectedUserId);
-    console.log('🔍 Primer entry completo:', JSON.stringify(entries[0], null, 2));
+    logger.debug('📤 Enviando entries:', entries);
+    logger.debug('📅 Fecha seleccionada:', date);
+    logger.debug('⏰ Rango horario:', workdayStart, '-', workdayEnd);
+    logger.debug('👤 Usuario seleccionado:', selectedUserId);
+    logger.debug('🔍 Primer entry completo:', JSON.stringify(entries[0], null, 2));
     await onSave(entries);
     handleClose();
   };

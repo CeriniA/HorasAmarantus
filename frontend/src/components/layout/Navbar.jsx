@@ -9,7 +9,7 @@ import { useOffline } from '../../hooks/useOffline';
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuthContext();
-  const { isAdmin } = usePermissions();
+  const { isAdmin, isSuperadmin } = usePermissions();
   const { isOnline, isSyncing, pendingChanges, manualSync } = useOffline();
   const navigate = useNavigate();
 
@@ -61,11 +61,25 @@ export const Navbar = () => {
                     Estructura
                   </Link>
                   <Link
+                    to="/objectives"
+                    className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  >
+                    Objetivos
+                  </Link>
+                  <Link
                     to="/admin/users"
                     className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
                   >
                     Usuarios
                   </Link>
+                  {isSuperadmin() && (
+                    <Link
+                      to="/admin/roles"
+                      className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                    >
+                      Roles
+                    </Link>
+                  )}
                 </>
               )}
             </div>
@@ -188,12 +202,28 @@ export const Navbar = () => {
                   Estructura
                 </Link>
                 <Link
+                  to="/objectives"
+                  className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Objetivos
+                </Link>
+                <Link
                   to="/admin/users"
                   className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Usuarios
                 </Link>
+                {isSuperadmin() && (
+                  <Link
+                    to="/admin/roles"
+                    className="block pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Roles
+                  </Link>
+                )}
               </>
             )}
           </div>

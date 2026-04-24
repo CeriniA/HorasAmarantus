@@ -9,7 +9,9 @@ import TimeEntries from './pages/TimeEntries';
 import OrganizationalUnits from './pages/OrganizationalUnits';
 import Reports from './pages/Reports';
 import UserManagement from './pages/UserManagement';
+import RoleManagement from './pages/RoleManagement';
 import Settings from './pages/Settings';
+import Objectives from './pages/Objectives';
 import { syncManager } from './offline/index.js';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
@@ -103,6 +105,28 @@ function App() {
               <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
                 <Layout>
                   <UserManagement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/roles"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin']}>
+                <Layout>
+                  <RoleManagement />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/objectives"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
+                <Layout>
+                  <Objectives />
                 </Layout>
               </ProtectedRoute>
             }

@@ -2,12 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * VARIABLES CSS GLOBALES
+ * Definir aquí valores reutilizables
+ */
 @layer base {
+  :root {
+    /* Colores principales */
+    --color-primary: theme('colors.primary.600');
+    --color-primary-hover: theme('colors.primary.700');
+    --color-primary-light: theme('colors.primary.50');
+    
+    /* Spacing común */
+    --spacing-card: theme('spacing.6');
+    --spacing-section: theme('spacing.8');
+    
+    /* Bordes */
+    --border-radius-default: theme('borderRadius.lg');
+    --border-radius-card: theme('borderRadius.xl');
+    
+    /* Sombras */
+    --shadow-card: theme('boxShadow.sm');
+    --shadow-modal: theme('boxShadow.xl');
+    
+    /* Z-index layers */
+    --z-dropdown: 40;
+    --z-modal: 50;
+    --z-toast: 60;
+  }
+
   body {
     @apply bg-gray-50 text-gray-900;
   }
 }
 
+/**
+ * COMPONENTES REUTILIZABLES
+ * Clases para patrones comunes que se repiten 3+ veces
+ */
+@layer components {
+  /* Inputs base */
+  .input-base {
+    @apply w-full px-3 py-2.5 sm:px-4 sm:py-2 text-base border border-gray-300 rounded-lg;
+    @apply focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply transition-colors duration-200;
+  }
+
+  /* Botones base */
+  .btn-base {
+    @apply px-4 py-2 font-medium rounded-lg transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn-base bg-primary-600 text-white;
+    @apply hover:bg-primary-700 focus:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply btn-base bg-white text-gray-700 border border-gray-300;
+    @apply hover:bg-gray-50 focus:ring-primary-500;
+  }
+
+  /* Cards */
+  .card-base {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200;
+  }
+
+  .card-interactive {
+    @apply card-base transition-shadow duration-200;
+    @apply hover:shadow-md cursor-pointer;
+  }
+
+  /* Badges de estado */
+  .badge-base {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-success {
+    @apply badge-base bg-green-100 text-green-800;
+  }
+
+  .badge-warning {
+    @apply badge-base bg-yellow-100 text-yellow-800;
+  }
+
+  .badge-error {
+    @apply badge-base bg-red-100 text-red-800;
+  }
+
+  .badge-info {
+    @apply badge-base bg-blue-100 text-blue-800;
+  }
+}
+
+/**
+ * UTILIDADES CUSTOM
+ * Helpers que no están en Tailwind
+ */
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -16,6 +109,17 @@
   
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Touch-friendly: mínimo 44px */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Truncate con tooltip */
+  .truncate-tooltip {
+    @apply truncate;
+    @apply hover:overflow-visible hover:whitespace-normal;
   }
 }
 

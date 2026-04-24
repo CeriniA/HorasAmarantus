@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api, { authService } from '../services/api';
+import api, { authService, permissionsService } from '../services/api';
 import { USER_ROLES } from '../constants';
 import { db } from '../offline/core/db.js';
 
@@ -24,6 +24,17 @@ export const useAuth = () => {
       if (navigator.onLine) {
         // Online: cargar desde backend
         const { user: userData } = await authService.getMe();
+        
+        // Cargar permisos del usuario
+        try {
+          const permissionsInfo = await permissionsService.getMyPermissions();
+          userData.permissions = permissionsInfo.permissions || [];
+          userData.roleInfo = permissionsInfo.role || null;
+        } catch (permError) {
+          console.warn('Error cargando permisos, usando permisos vacíos:', permError);
+          userData.permissions = [];
+        }
+        
         setUser(userData);
         setSession({ user: userData });
         
@@ -96,6 +107,16 @@ export const useAuth = () => {
       
       // Guardar token
       api.setToken(token);
+      
+      // Cargar permisos del usuario
+      try {
+        const permissionsInfo = await permissionsService.getMyPermissions();
+        userData.permissions = permissionsInfo.permissions || [];
+        userData.roleInfo = permissionsInfo.role || null;
+      } catch (permError) {
+        console.warn('Error cargando permisos, usando permisos vacíos:', permError);
+        userData.permissions = [];
+      }
       
       // Actualizar estado
       setUser(userData);
