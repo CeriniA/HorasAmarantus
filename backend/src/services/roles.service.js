@@ -124,11 +124,44 @@ const update = async (roleId, roleData) => {
   // Verificar que el rol exista
   const role = await getById(roleId);
 
-  // No permitir editar roles del sistema
-  if (role.is_system) {
-    throw new Error('No se pueden editar roles del sistema');
+  // Superadmin NO se puede editar en absoluto
+  if (role.slug === 'superadmin') {
+    logger.warn(`Intento de editar rol Superadmin: ${role.name}`);
+    throw new Error('El rol de Superadministrador no puede ser modificado');
   }
 
+  // Roles del sistema: solo se puede editar la descripción
+  if (role.is_system) {
+    // No permitir cambiar nombre
+    if (roleData.name && roleData.name !== role.name) {
+      throw new Error('No se puede cambiar el nombre de roles del sistema');
+    }
+    
+    // No permitir cambiar slug
+    if (roleData.slug && roleData.slug !== role.slug) {
+      throw new Error('No se puede cambiar el identificador de roles del sistema');
+    }
+    
+    // Solo actualizar descripción
+    const { data, error } = await supabase
+      .from('roles')
+      .update({
+        description: roleData.description
+      })
+      .eq('id', roleId)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Error actualizando descripción del rol:', error);
+      throw new Error('Error actualizando rol');
+    }
+
+    logger.info(`Descripción del rol del sistema actualizada: ${role.name}`);
+    return data;
+  }
+
+  // Roles personalizados: se puede editar todo
   // Si se cambia el slug, verificar que no exista
   if (roleData.slug && roleData.slug !== role.slug) {
     const { data: existing } = await supabase
@@ -160,7 +193,7 @@ const update = async (roleId, roleData) => {
     throw new Error('Error actualizando rol');
   }
 
-  logger.info('Rol actualizado:', roleId);
+  logger.info('Rol personalizado actualizado:', roleId);
   return data;
 };
 

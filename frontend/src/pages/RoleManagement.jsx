@@ -45,13 +45,13 @@ const RoleManagement = () => {
   };
 
   const handleEditRole = (role) => {
+    // Solo permitir editar roles personalizados
     if (role.is_system) {
-      const confirmed = window.confirm(
-        `ADVERTENCIA: "${role.name}" es un rol del sistema.\n\n` +
-        'Editarlo puede afectar el funcionamiento del sistema.\n' +
-        '¿Estás seguro de continuar?'
-      );
-      if (!confirmed) return;
+      setAlert({
+        type: 'error',
+        message: 'Los roles del sistema no se pueden editar. Puedes gestionar sus permisos desde el botón "Permisos".'
+      });
+      return;
     }
     setEditingRole(role);
     setShowRoleModal(true);
@@ -233,23 +233,25 @@ const RoleManagement = () => {
                     <Settings className="h-4 w-4" />
                     Permisos
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleEditRole(role)}
-                    className="flex items-center justify-center gap-2 flex-1"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Editar
-                  </Button>
                   {!role.is_system && (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleDeleteRole(role)}
-                      className="flex items-center justify-center gap-2 flex-1 text-red-600 hover:text-red-700 hover:border-red-300"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Eliminar
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleEditRole(role)}
+                        className="flex items-center justify-center gap-2 flex-1"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleDeleteRole(role)}
+                        className="flex items-center justify-center gap-2 flex-1 text-red-600 hover:text-red-700 hover:border-red-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Eliminar
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -330,21 +332,23 @@ const RoleManagement = () => {
                       >
                         Permisos
                       </button>
-                      <button
-                        onClick={() => handleEditRole(role)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-4 transition-colors"
-                        title="Editar rol"
-                      >
-                        Editar
-                      </button>
                       {!role.is_system && (
-                        <button
-                          onClick={() => handleDeleteRole(role)}
-                          className="text-red-600 hover:text-red-900 transition-colors"
-                          title="Eliminar rol"
-                        >
-                          Eliminar
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleEditRole(role)}
+                            className="text-indigo-600 hover:text-indigo-900 mr-4 transition-colors"
+                            title="Editar rol"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRole(role)}
+                            className="text-red-600 hover:text-red-900 transition-colors"
+                            title="Eliminar rol"
+                          >
+                            Eliminar
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
