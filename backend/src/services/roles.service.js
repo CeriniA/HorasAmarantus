@@ -9,6 +9,7 @@
 
 import { supabase } from '../config/database.js';
 import logger from '../utils/logger.js';
+import { USER_ROLES } from '../models/constants.js';
 
 /**
  * Obtener todos los roles
@@ -125,7 +126,7 @@ const update = async (roleId, roleData) => {
   const role = await getById(roleId);
 
   // Superadmin NO se puede editar en absoluto
-  if (role.slug === 'superadmin') {
+  if (role.slug === USER_ROLES.SUPERADMIN) {
     logger.warn(`Intento de editar rol Superadmin: ${role.name}`);
     throw new Error('El rol de Superadministrador no puede ser modificado');
   }
@@ -255,7 +256,13 @@ const deleteRole = async (roleId) => {
  */
 const assignPermission = async (roleId, permissionId) => {
   // Verificar que el rol exista
-  await getById(roleId);
+  const role = await getById(roleId);
+
+  // Superadmin tiene todos los permisos hardcodeados, no se pueden modificar
+  if (role.slug === USER_ROLES.SUPERADMIN) {
+    logger.warn(`Intento de modificar permisos de Superadmin`);
+    throw new Error('Los permisos del Superadministrador no se pueden modificar');
+  }
 
   // Verificar que el permiso exista
   const { data: permission } = await supabase
@@ -303,7 +310,13 @@ const assignPermission = async (roleId, permissionId) => {
  */
 const removePermission = async (roleId, permissionId) => {
   // Verificar que el rol exista
-  await getById(roleId);
+  const role = await getById(roleId);
+
+  // Superadmin tiene todos los permisos hardcodeados, no se pueden modificar
+  if (role.slug === USER_ROLES.SUPERADMIN) {
+    logger.warn(`Intento de modificar permisos de Superadmin`);
+    throw new Error('Los permisos del Superadministrador no se pueden modificar');
+  }
 
   const { error } = await supabase
     .from('role_permissions')
@@ -325,7 +338,13 @@ const removePermission = async (roleId, permissionId) => {
  */
 const setPermissions = async (roleId, permissionIds) => {
   // Verificar que el rol exista
-  await getById(roleId);
+  const role = await getById(roleId);
+
+  // Superadmin tiene todos los permisos hardcodeados, no se pueden modificar
+  if (role.slug === USER_ROLES.SUPERADMIN) {
+    logger.warn(`Intento de modificar permisos de Superadmin`);
+    throw new Error('Los permisos del Superadministrador no se pueden modificar');
+  }
 
   // Eliminar permisos actuales
   await supabase

@@ -7,15 +7,25 @@
  * - Gestionar permisos de roles
  */
 
+// React/hooks
 import { useState } from 'react';
+
+// Librerías externas
 import { Shield, Edit, Trash2, Settings, Plus } from 'lucide-react';
-import { usePermissions } from '../hooks/usePermissions';
-import { useRoles } from '../hooks/useRoles';
+
+// Componentes
 import RoleFormModal from '../components/roles/RoleFormModal';
 import PermissionMatrix from '../components/roles/PermissionMatrix';
 import Alert from '../components/common/Alert';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
+
+// Hooks
+import { usePermissions } from '../hooks/usePermissions';
+import { useRoles } from '../hooks/useRoles';
+
+// Constantes
+import { USER_ROLES } from '../constants';
 
 const RoleManagement = () => {
   const { isSuperadmin } = usePermissions();
@@ -84,6 +94,14 @@ const RoleManagement = () => {
   };
 
   const handleManagePermissions = (role) => {
+    // Superadmin no se puede modificar
+    if (role.slug === USER_ROLES.SUPERADMIN) {
+      setAlert({
+        type: 'error',
+        message: 'Los permisos del Superadministrador no se pueden modificar. Tiene acceso total al sistema.'
+      });
+      return;
+    }
     setSelectedRole(role);
     setShowPermissionModal(true);
   };
@@ -225,32 +243,52 @@ const RoleManagement = () => {
 
                 {/* Actions */}
                 <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-200">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleManagePermissions(role)}
-                    className="flex items-center justify-center gap-2 flex-1"
-                  >
-                    <Settings className="h-4 w-4" />
-                    Permisos
-                  </Button>
-                  {!role.is_system && (
+                  {/* Superadmin: solo lectura */}
+                  {role.slug === USER_ROLES.SUPERADMIN ? (
+                    <div className="text-center py-2 text-sm text-gray-500">
+                      🔒 Rol protegido del sistema (solo lectura)
+                    </div>
+                  ) : (
                     <>
-                      <Button
-                        variant="outline"
-                        onClick={() => handleEditRole(role)}
-                        className="flex items-center justify-center gap-2 flex-1"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => handleDeleteRole(role)}
-                        className="flex items-center justify-center gap-2 flex-1 text-red-600 hover:text-red-700 hover:border-red-300"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Eliminar
-                      </Button>
+                      {/* Otros roles del sistema: solo permisos */}
+                      {role.is_system ? (
+                        <Button
+                          variant="outline"
+                          onClick={() => handleManagePermissions(role)}
+                          className="flex items-center justify-center gap-2 flex-1"
+                        >
+                          <Settings className="h-4 w-4" />
+                          Permisos
+                        </Button>
+                      ) : (
+                        /* Roles personalizados: todo */
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleManagePermissions(role)}
+                            className="flex items-center justify-center gap-2 flex-1"
+                          >
+                            <Settings className="h-4 w-4" />
+                            Permisos
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleEditRole(role)}
+                            className="flex items-center justify-center gap-2 flex-1"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => handleDeleteRole(role)}
+                            className="flex items-center justify-center gap-2 flex-1 text-red-600 hover:text-red-700 hover:border-red-300"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Eliminar
+                          </Button>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
@@ -325,29 +363,48 @@ const RoleManagement = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleManagePermissions(role)}
-                        className="text-primary-600 hover:text-primary-900 mr-4 transition-colors"
-                        title="Gestionar permisos"
-                      >
-                        Permisos
-                      </button>
-                      {!role.is_system && (
+                      {/* Superadmin: solo lectura */}
+                      {role.slug === USER_ROLES.SUPERADMIN ? (
+                        <span className="text-gray-500 text-xs">
+                          🔒 Protegido
+                        </span>
+                      ) : (
                         <>
-                          <button
-                            onClick={() => handleEditRole(role)}
-                            className="text-indigo-600 hover:text-indigo-900 mr-4 transition-colors"
-                            title="Editar rol"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleDeleteRole(role)}
-                            className="text-red-600 hover:text-red-900 transition-colors"
-                            title="Eliminar rol"
-                          >
-                            Eliminar
-                          </button>
+                          {/* Otros roles del sistema: solo permisos */}
+                          {role.is_system ? (
+                            <button
+                              onClick={() => handleManagePermissions(role)}
+                              className="text-primary-600 hover:text-primary-900 transition-colors"
+                              title="Gestionar permisos"
+                            >
+                              Permisos
+                            </button>
+                          ) : (
+                            /* Roles personalizados: todo */
+                            <>
+                              <button
+                                onClick={() => handleManagePermissions(role)}
+                                className="text-primary-600 hover:text-primary-900 mr-4 transition-colors"
+                                title="Gestionar permisos"
+                              >
+                                Permisos
+                              </button>
+                              <button
+                                onClick={() => handleEditRole(role)}
+                                className="text-indigo-600 hover:text-indigo-900 mr-4 transition-colors"
+                                title="Editar rol"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRole(role)}
+                                className="text-red-600 hover:text-red-900 transition-colors"
+                                title="Eliminar rol"
+                              >
+                                Eliminar
+                              </button>
+                            </>
+                          )}
                         </>
                       )}
                     </td>
