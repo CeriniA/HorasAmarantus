@@ -175,16 +175,8 @@ export const DAYS_OF_WEEK = {
   SATURDAY: 6
 };
 
-// Helper para construir clave de permiso
-export const buildPermissionKey = (resource, action, scope = SCOPES.ALL) => {
-  return `${resource}.${action}.${scope}`;
-};
-
-// Helper para parsear clave de permiso
-export const parsePermissionKey = (key) => {
-  const [resource, action, scope = SCOPES.ALL] = key.split('.');
-  return { resource, action, scope };
-};
+// NOTA: Los helpers buildPermissionKey y parsePermissionKey
+// fueron movidos a utils/permissionHelpers.js
 
 // ============================================================================
 // LABELS AMIGABLES (para UI)
@@ -288,8 +280,7 @@ export default {
   DAYS_OF_WEEK,
   DAY_LABELS,
   DAY_LABELS_SHORT,
-  buildPermissionKey,
-  parsePermissionKey,
+  // buildPermissionKey y parsePermissionKey movidos a utils/permissionHelpers.js
   isValidRole,
   isValidOrgUnitType,
   isValidTimeEntryStatus,

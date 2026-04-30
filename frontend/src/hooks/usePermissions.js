@@ -8,7 +8,8 @@
  */
 
 import { useAuthContext } from '../context/AuthContext';
-import { USER_ROLES, RESOURCES, ACTIONS, SCOPES, buildPermissionKey } from '../constants';
+import { USER_ROLES, RESOURCES, ACTIONS, SCOPES } from '../constants';
+import { buildPermissionKey } from '../utils/permissionHelpers';
 
 /**
  * Hook para verificar permisos del usuario usando sistema RBAC

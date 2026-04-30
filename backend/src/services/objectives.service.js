@@ -144,6 +144,31 @@ const getById = async (id) => {
  */
 const create = async (objectiveData, userId) => {
   try {
+    // Si es objetivo ASIGNADO, cancelar objetivos personales activos del usuario
+    if (objectiveData.objective_type === OBJECTIVE_TYPES.ASSIGNED && 
+        objectiveData.assigned_to_user_id) {
+      
+      logger.info('Cancelando objetivos personales activos del usuario:', objectiveData.assigned_to_user_id);
+      
+      const { error: cancelError } = await supabase
+        .from('objectives')
+        .update({ 
+          status: OBJECTIVE_STATUS.CANCELLED,
+          completion_notes: 'Cancelado automáticamente: objetivo asignado por supervisor'
+        })
+        .eq('assigned_to_user_id', objectiveData.assigned_to_user_id)
+        .eq('objective_type', OBJECTIVE_TYPES.PERSONAL)
+        .in('status', [OBJECTIVE_STATUS.PLANNED, OBJECTIVE_STATUS.IN_PROGRESS]);
+      
+      if (cancelError) {
+        logger.warn('Error al cancelar objetivos personales:', cancelError);
+        // No lanzamos error, solo advertencia - el objetivo asignado se debe crear igual
+      } else {
+        logger.info('Objetivos personales cancelados exitosamente');
+      }
+    }
+
+    // Crear el nuevo objetivo
     const { data, error } = await supabase
       .from('objectives')
       .insert([{

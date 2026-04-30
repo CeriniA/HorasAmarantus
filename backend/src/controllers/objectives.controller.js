@@ -6,6 +6,7 @@
 import * as objectivesService from '../services/objectives.service.js';
 import logger from '../utils/logger.js';
 import { asyncHandler, ValidationError } from '../middleware/errorHandler.js';
+import { isAfter, isSameDay } from '../utils/dateHelpers.js';
 
 /**
  * GET /api/objectives
@@ -59,9 +60,18 @@ const createObjective = asyncHandler(async (req, res) => {
     throw new ValidationError('Las horas objetivo deben ser mayores a 0');
   }
 
-  // Validar que end_date >= start_date
-  if (new Date(objectiveData.end_date) < new Date(objectiveData.start_date)) {
+  // Validar que end_date >= start_date usando helper para comparación correcta
+  if (!isAfter(objectiveData.end_date, objectiveData.start_date) && 
+      !isSameDay(objectiveData.end_date, objectiveData.start_date)) {
     throw new ValidationError('La fecha de fin debe ser posterior a la fecha de inicio');
+  }
+
+  // VALIDACIÓN DE SEGURIDAD: Si es objetivo PERSONAL, verificar que no tenga asignado activo
+  if (objectiveData.objective_type === 'personal') {
+    const canCreate = await objectivesService.canCreatePersonalObjective(objectiveData.assigned_to_user_id);
+    if (!canCreate) {
+      throw new ValidationError('No puedes crear un objetivo personal mientras tengas un objetivo asignado activo');
+    }
   }
 
   const objective = await objectivesService.create(objectiveData, userId);
@@ -88,7 +98,9 @@ const updateObjective = asyncHandler(async (req, res) => {
 
   // Si se están actualizando fechas, validar rango
   if (objectiveData.start_date && objectiveData.end_date) {
-    if (new Date(objectiveData.end_date) < new Date(objectiveData.start_date)) {
+    // Usar helper para comparación correcta de fechas
+    if (!isAfter(objectiveData.end_date, objectiveData.start_date) && 
+        !isSameDay(objectiveData.end_date, objectiveData.start_date)) {
       throw new ValidationError('La fecha de fin debe ser posterior a la fecha de inicio');
     }
   }

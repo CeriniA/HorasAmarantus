@@ -328,20 +328,8 @@ export const OBJECTIVE_STATUS_COLORS = {
   [OBJECTIVE_STATUS.CANCELLED]: 'bg-gray-200 text-gray-600'
 };
 
-/**
- * Helper para construir clave de permiso
- */
-export const buildPermissionKey = (resource, action, scope = SCOPES.ALL) => {
-  return `${resource}.${action}.${scope}`;
-};
-
-/**
- * Helper para parsear clave de permiso
- */
-export const parsePermissionKey = (key) => {
-  const [resource, action, scope = SCOPES.ALL] = key.split('.');
-  return { resource, action, scope };
-};
+// NOTA: Los helpers buildPermissionKey y parsePermissionKey
+// fueron movidos a utils/permissionHelpers.js
 
 // ============================================================================
 // CONSTANTES DE REPORTES
@@ -395,8 +383,7 @@ export default {
   OBJECTIVE_STATUS,
   OBJECTIVE_STATUS_LABELS,
   REPORT_CONSTANTS,
-  buildPermissionKey,
-  parsePermissionKey,
+  // buildPermissionKey y parsePermissionKey movidos a utils/permissionHelpers.js
   isValidRole,
   isValidOrgUnitType,
   isValidTimeEntryStatus,

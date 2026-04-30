@@ -10,6 +10,7 @@ import Button from '../common/Button';
 import Input from '../common/Input';
 import WeeklyScheduleSelector from './WeeklyScheduleSelector';
 import { OBJECTIVE_STATUS } from '../../constants';
+import { safeDate } from '../../utils/dateHelpers';
 import logger from '../../utils/logger';
 import { useOrganizationalUnits } from '../../hooks/useOrganizationalUnits';
 import { useUsers } from '../../hooks/useUsers';
@@ -82,8 +83,14 @@ const AssignObjectiveModal = ({ isOpen, onClose, onSubmit, loading }) => {
       newErrors.end_date = 'La fecha de fin es requerida';
     }
 
-    if (formData.start_date && formData.end_date && formData.end_date < formData.start_date) {
-      newErrors.end_date = 'La fecha de fin debe ser posterior a la de inicio';
+    // Validar que end_date > start_date usando safeDate para comparación correcta
+    if (formData.start_date && formData.end_date) {
+      const startDate = safeDate(formData.start_date);
+      const endDate = safeDate(formData.end_date);
+      
+      if (endDate <= startDate) {
+        newErrors.end_date = 'La fecha de fin debe ser posterior a la de inicio';
+      }
     }
 
     if (!formData.success_criteria?.trim()) {

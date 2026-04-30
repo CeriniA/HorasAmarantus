@@ -8,6 +8,8 @@ import Modal from '../common/Modal';
 import Button from '../common/Button';
 import { HierarchicalSelect } from '../common/HierarchicalSelect';
 import { OBJECTIVE_STATUS } from '../../constants';
+import { safeDate } from '../../utils/dateHelpers';
+import logger from '../../utils/logger';
 
 export const ObjectiveFormModal = ({ objective, units, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -49,6 +51,18 @@ export const ObjectiveFormModal = ({ objective, units, onClose, onSubmit }) => {
         !formData.target_hours || parseFloat(formData.target_hours) <= 0 || 
         !formData.organizational_unit_id || !formData.success_criteria.trim()) {
       return; // El formulario HTML5 mostrará los errores
+    }
+
+    // Validar que end_date > start_date
+    if (formData.start_date && formData.end_date) {
+      const startDate = safeDate(formData.start_date);
+      const endDate = safeDate(formData.end_date);
+      
+      if (endDate <= startDate) {
+        logger.warn('Validación de fechas: end_date debe ser > start_date');
+        // El formulario HTML5 debería prevenir esto, pero validamos por seguridad
+        return;
+      }
     }
 
     onSubmit({
