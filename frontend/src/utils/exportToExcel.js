@@ -9,7 +9,27 @@
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { safeDate, calculateHours } from './dateHelpers';
+import { safeDate, calculateHours, parseLocalTime } from './dateHelpers';
+
+/**
+ * Sanitiza valor para prevenir CSV/Excel Injection
+ * Previene ejecución de fórmulas maliciosas en Excel/Sheets
+ * @param {string} value - Valor a sanitizar
+ * @returns {string} - Valor sanitizado
+ */
+const sanitizeCSV = (value) => {
+  if (!value) return '';
+  
+  const str = String(value);
+  
+  // Si empieza con caracteres peligrosos (=, +, -, @, tab, return), agregar comilla simple
+  // Esto previene que Excel/Sheets interpreten el valor como fórmula
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `'${str}`;
+  }
+  
+  return str;
+};
 
 /**
  * Exporta datos a Excel con múltiples hojas
@@ -113,19 +133,19 @@ export const exportToExcel = (data, filename = 'reporte_horas') => {
   if (data.entries && data.entries.length > 0) {
     const detailData = data.entries.map(e => {
       const startDate = safeDate(e.start_time);
-      const start = new Date(e.start_time);
-      const end = new Date(e.end_time);
+      const start = parseLocalTime(e.start_time);
+      const end = parseLocalTime(e.end_time);
       const hours = calculateHours(e.start_time, e.end_time);
       
       return {
         'Fecha': format(startDate, 'yyyy-MM-dd'),
         'Día': format(start, 'EEEE', { locale: es }),
-        'Empleado': e.user_name || e.users?.name || 'N/A',
-        'Unidad': e.unit_name || e.organizational_units?.name || 'N/A',
+        'Empleado': sanitizeCSV(e.user_name || e.users?.name || 'N/A'),
+        'Unidad': sanitizeCSV(e.unit_name || e.organizational_units?.name || 'N/A'),
         'Hora Inicio': format(start, 'HH:mm'),
         'Hora Fin': format(end, 'HH:mm'),
         'Horas': parseFloat(hours.toFixed(2)),
-        'Descripción': e.description || ''
+        'Descripción': sanitizeCSV(e.description || '')
       };
     });
 
@@ -155,18 +175,18 @@ export const exportToExcel = (data, filename = 'reporte_horas') => {
 export const exportToExcelBasic = (entries, filename = 'horas') => {
   const data = entries.map(e => {
     const startDate = safeDate(e.start_time);
-    const start = new Date(e.start_time);
-    const end = new Date(e.end_time);
+    const start = parseLocalTime(e.start_time);
+    const end = parseLocalTime(e.end_time);
     const hours = calculateHours(e.start_time, e.end_time);
     
     return {
       'Fecha': format(startDate, 'yyyy-MM-dd'),
-      'Usuario': e.users?.name || 'Desconocido',
-      'Unidad': e.organizational_units?.name || 'Sin unidad',
+      'Usuario': sanitizeCSV(e.users?.name || 'Desconocido'),
+      'Unidad': sanitizeCSV(e.organizational_units?.name || 'Sin unidad'),
       'Hora Inicio': format(start, 'HH:mm'),
       'Hora Fin': format(end, 'HH:mm'),
       'Horas': parseFloat(hours.toFixed(2)),
-      'Descripción': e.description || ''
+      'Descripción': sanitizeCSV(e.description || '')
     };
   });
 

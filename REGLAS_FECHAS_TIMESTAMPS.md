@@ -131,10 +131,13 @@ Antes de aprobar un PR, verificar:
 - ✅ `components/reports/TimeDistributionReport.jsx`
 - ✅ `components/reports/ProductivityAnalysis.jsx`
 - ✅ `components/reports/AreaEfficiencyReport.jsx`
-- ✅ `pages/Dashboard.jsx`
-- ✅ `utils/reportExport.js` (CSV)
-- ✅ `utils/exportToExcel.js`
-- ✅ `utils/exportToPDF.js`
+- ✅ `pages/Dashboard.jsx` (30 Abril 2026)
+- ✅ `utils/reportExport.js` (30 Abril 2026)
+- ✅ `utils/exportToExcel.js` (30 Abril 2026)
+- ✅ `utils/exportToPDF.js` (30 Abril 2026)
+- ✅ `hooks/useTimeEntries.js` (30 Abril 2026)
+- ✅ `components/timeEntry/BulkTimeEntry.jsx` (30 Abril 2026)
+- ✅ `components/reports/DetailedEntriesReport.jsx` (30 Abril 2026)
 
 ### ⚠️ Archivos que usan `safeDate()` correctamente (no tocar):
 - ✅ `utils/periodComparison.js` (comparaciones de fechas)
@@ -194,6 +197,34 @@ Ver `TEMPLATE/BUENAS_PRACTICAS_DEFINITIVAS.md` sección **"Manejo de Fechas y Ti
 
 ---
 
-**Última actualización:** 1 de abril de 2026  
-**Estado:** Agregado `parseLocalTime()` y corregidos todos los reportes  
-**Cambios:** Solucionado bug de horas mostrando 12:00 en distribución horaria
+## 🛡️ Validación Automática
+
+### Script de Validación
+
+Se ha creado un script que valida automáticamente el uso correcto de fechas:
+
+```bash
+node scripts/validate-date-usage.js
+```
+
+Este script:
+- ✅ Detecta uso de `new Date()` con timestamps de DB
+- ✅ Detecta uso de `getHours(safeDate())` (bug común)
+- ✅ Detecta uso de `.toDateString()`
+- ✅ Genera reporte detallado con líneas específicas
+- ✅ Se ejecuta automáticamente en pre-commit (Husky)
+
+### Pre-commit Hook
+
+El hook de pre-commit (`.husky/pre-commit`) ejecuta automáticamente la validación antes de cada commit. Si se detectan violaciones, el commit es bloqueado.
+
+**Esto garantiza que NUNCA se vuelvan a introducir bugs de fechas.**
+
+---
+
+**Última actualización:** 30 de abril de 2026  
+**Estado:** Corregidas TODAS las violaciones + validación automática implementada  
+**Cambios:** 
+- Corregidos 7 archivos con violaciones de reglas
+- Implementado script de validación automático
+- Agregado pre-commit hook para prevenir futuras violaciones

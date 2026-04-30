@@ -4,7 +4,27 @@
  */
 
 import { format } from 'date-fns';
-import { safeDate, calculateHours } from './dateHelpers';
+import { safeDate, calculateHours, parseLocalTime } from './dateHelpers';
+
+/**
+ * Sanitiza valor para prevenir CSV Injection
+ * Previene ejecución de fórmulas maliciosas en Excel/Sheets
+ * @param {string} value - Valor a sanitizar
+ * @returns {string} - Valor sanitizado
+ */
+const sanitizeCSV = (value) => {
+  if (!value) return '';
+  
+  const str = String(value);
+  
+  // Si empieza con caracteres peligrosos (=, +, -, @, tab, return), agregar comilla simple
+  // Esto previene que Excel/Sheets interpreten el valor como fórmula
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `'${str}`;
+  }
+  
+  return str;
+};
 
 /**
  * Exporta registros a CSV
@@ -21,15 +41,15 @@ export const exportToCSV = (entries, startDate, endDate) => {
   
   const rows = entries.map(entry => {
     const startDate = safeDate(entry.start_time);
-    const startTime = new Date(entry.start_time);
-    const endTime = entry.end_time ? new Date(entry.end_time) : null;
+    const startTime = parseLocalTime(entry.start_time);
+    const endTime = entry.end_time ? parseLocalTime(entry.end_time) : null;
     
     return [
       format(startDate, 'yyyy-MM-dd'),
-      entry.users?.name || 'Desconocido',
-      entry.organizational_units?.name || 'Sin unidad',
-      entry.organizational_units?.type || '',
-      (entry.description || '').replace(/,/g, ';'), // Reemplazar comas para no romper el CSV
+      sanitizeCSV(entry.users?.name || 'Desconocido'),
+      sanitizeCSV(entry.organizational_units?.name || 'Sin unidad'),
+      sanitizeCSV(entry.organizational_units?.type || ''),
+      sanitizeCSV(entry.description || ''), // CRÍTICO: Previene CSV Injection
       format(startTime, 'HH:mm:ss'),
       endTime ? format(endTime, 'HH:mm:ss') : '',
       entry.total_hours?.toFixed(2) || '0.00'

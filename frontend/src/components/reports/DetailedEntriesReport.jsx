@@ -9,6 +9,7 @@ import { FileText, Search, Calendar, List } from 'lucide-react';
 import Card from '../common/Card';
 import { groupByDay } from '../../utils/entryGrouping';
 import { isAdminOrSuperadmin } from '../../utils/roleHelpers';
+import { safeDate } from '../../utils/dateHelpers';
 import { GroupedDayView } from './GroupedDayView';
 import { DetailedTableView } from './DetailedTableView';
 
@@ -35,8 +36,8 @@ export const DetailedEntriesReport = ({ timeEntries, user, onEdit, onDelete }) =
       let aVal, bVal;
       switch (sortField) {
         case 'start_time':
-          aVal = new Date(a.start_time);
-          bVal = new Date(b.start_time);
+          aVal = safeDate(a.start_time);
+          bVal = safeDate(b.start_time);
           break;
         case 'user':
           aVal = a.users?.name || '';

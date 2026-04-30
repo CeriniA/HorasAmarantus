@@ -10,7 +10,26 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { safeDate, calculateHours } from './dateHelpers';
+import { safeDate, calculateHours, parseLocalTime } from './dateHelpers';
+
+/**
+ * Sanitiza valor para prevenir inyección de código
+ * Aunque PDF es menos vulnerable que CSV, es buena práctica sanitizar
+ * @param {string} value - Valor a sanitizar
+ * @returns {string} - Valor sanitizado
+ */
+const sanitizeText = (value) => {
+  if (!value) return '';
+  
+  const str = String(value);
+  
+  // Prevenir caracteres peligrosos en PDFs
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `'${str}`;
+  }
+  
+  return str;
+};
 
 /**
  * Exporta reporte a PDF con diseño profesional
@@ -230,14 +249,14 @@ export const exportToPDFSimple = (entries, filename = 'registros') => {
 
   const tableData = entries.map(e => {
     const startDate = safeDate(e.start_time);
-    const start = new Date(e.start_time);
-    const end = new Date(e.end_time);
+    const start = parseLocalTime(e.start_time);
+    const end = parseLocalTime(e.end_time);
     const hours = calculateHours(e.start_time, e.end_time);
     
     return [
       format(startDate, 'dd/MM/yyyy'),
-      e.user_name || 'N/A',
-      e.unit_name || e.organizational_units?.name || 'N/A',
+      sanitizeText(e.user_name || 'N/A'),
+      sanitizeText(e.unit_name || e.organizational_units?.name || 'N/A'),
       format(start, 'HH:mm'),
       format(end, 'HH:mm'),
       `${hours.toFixed(2)}h`

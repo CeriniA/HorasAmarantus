@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { timeEntriesService } from '../services/api';
 import { timeEntryRepository, syncQueue, syncManager } from '../offline/index.js';
 import logger from '../utils/logger';
+import { safeDate } from '../utils/dateHelpers';
 
 export const useTimeEntries = (userId) => {
   const [timeEntries, setTimeEntries] = useState([]);
@@ -263,7 +264,8 @@ export const useTimeEntries = (userId) => {
   // Helper: Filtrar entries por rango de fechas
   const getEntriesByDateRange = (startDate, endDate) => {
     return timeEntries.filter(entry => {
-      const entryDate = new Date(entry.start_time);
+      const entryDate = safeDate(entry.start_time);
+      if (!entryDate) return false;
       return entryDate >= startDate && entryDate <= endDate;
     });
   };

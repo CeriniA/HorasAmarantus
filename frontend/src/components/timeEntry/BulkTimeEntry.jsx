@@ -10,7 +10,7 @@ import { TemplateManager } from './TemplateManager';
 import { isAdminOrSuperadmin, filterUsersByPermission } from '../../utils/roleHelpers';
 import { CONFIG } from '../../constants/config';
 import { getStorageKey } from '../../constants/config';
-import { calculateHours, createTimestampWithTimezone } from '../../utils/dateHelpers';
+import { calculateHours, createTimestampWithTimezone, parseLocalTime } from '../../utils/dateHelpers';
 import logger from '../../utils/logger';
 import { VALIDATION } from '../../constants/validation';
 
@@ -117,8 +117,8 @@ export const BulkTimeEntry = ({
           }
           
           // Calcular rango horario desde los registros
-          const startTime = format(new Date(entry.start_time), 'HH:mm');
-          const endTime = format(new Date(entry.end_time), 'HH:mm');
+          const startTime = format(parseLocalTime(entry.start_time), 'HH:mm');
+          const endTime = format(parseLocalTime(entry.end_time), 'HH:mm');
           
           if (!minStart || startTime < minStart) minStart = startTime;
           if (!maxEnd || endTime > maxEnd) maxEnd = endTime;

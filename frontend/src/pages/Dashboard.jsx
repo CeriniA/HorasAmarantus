@@ -1,11 +1,11 @@
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAuthContext } from '../context/AuthContext';
-import { safeDate, safeNumber } from '../utils/dateHelpers';
+import { safeDate, safeNumber, parseLocalTime } from '../utils/dateHelpers';
 import { useTimeEntries } from '../hooks/useTimeEntries';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import { format, startOfWeek, startOfMonth, endOfWeek, endOfMonth } from 'date-fns';
+import { format, startOfWeek, startOfMonth, endOfWeek, endOfMonth, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { isAdminOrSuperadmin, isAdmin, isOperario } from '../utils/roleHelpers';
 import { Clock, TrendingUp, Briefcase, Users } from 'lucide-react';
@@ -49,8 +49,8 @@ export const Dashboard = () => {
   const monthEnd = endOfMonth(today);
 
   const todayEntries = timeEntries.filter(e => {
-    const entryDate = new Date(e.start_time);
-    return entryDate.toDateString() === today.toDateString();
+    const entryDate = safeDate(e.start_time);
+    return entryDate && isSameDay(entryDate, today);
   });
 
   const weekEntries = getEntriesByDateRange(weekStart, weekEnd).filter(e => e.user_id === user?.id);
@@ -300,8 +300,8 @@ export const Dashboard = () => {
                       </p>
                     )}
                     <p className="text-xs text-gray-400 mt-1">
-                      {format(safeDate(entry.start_time), "d MMM", { locale: es })}, {format(new Date(entry.start_time), "HH:mm")}
-                      {entry.end_time && ` - ${format(new Date(entry.end_time), "HH:mm")}`}
+                      {format(safeDate(entry.start_time), "d MMM", { locale: es })}, {format(parseLocalTime(entry.start_time), "HH:mm")}
+                      {entry.end_time && ` - ${format(parseLocalTime(entry.end_time), "HH:mm")}`}
                     </p>
                   </div>
                   <div className="ml-4 text-right">

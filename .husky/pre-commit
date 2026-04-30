@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Validar uso correcto de fechas antes de cada commit
+echo "🔍 Validando uso de fechas..."
+node scripts/validate-date-usage.js
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ COMMIT BLOQUEADO: Se encontraron violaciones de las reglas de fechas"
+  echo "📖 Consulta REGLAS_FECHAS_TIMESTAMPS.md para más información"
+  echo ""
+  exit 1
+fi
+
+echo "✅ Validación de fechas exitosa"
