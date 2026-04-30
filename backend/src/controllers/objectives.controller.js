@@ -68,7 +68,9 @@ const createObjective = asyncHandler(async (req, res) => {
 
   // VALIDACIÓN DE SEGURIDAD: Si es objetivo PERSONAL, verificar que no tenga asignado activo
   if (objectiveData.objective_type === 'personal') {
-    const canCreate = await objectivesService.canCreatePersonalObjective(objectiveData.assigned_to_user_id);
+    // Usar assigned_to_user_id si existe, sino user_id
+    const targetUserId = objectiveData.assigned_to_user_id || objectiveData.user_id;
+    const canCreate = await objectivesService.canCreatePersonalObjective(targetUserId);
     if (!canCreate) {
       throw new ValidationError('No puedes crear un objetivo personal mientras tengas un objetivo asignado activo');
     }

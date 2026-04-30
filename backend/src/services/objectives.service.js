@@ -12,7 +12,7 @@ import supabase from '../config/database.js';
 import logger from '../utils/logger.js';
 import permissionsService from './permissions.service.js';
 import { ValidationError } from '../middleware/errorHandler.js';
-import { OBJECTIVE_STATUS, OBJECTIVE_DIAGNOSIS } from '../models/constants.js';
+import { OBJECTIVE_STATUS, OBJECTIVE_DIAGNOSIS, OBJECTIVE_TYPES } from '../models/constants.js';
 import { enrichObjectivesWithHours, calculateCompletedHours } from '../utils/objectiveCalculations.js';
 import { updateMultipleObjectivesStatus } from '../utils/objectiveStatus.js';
 
