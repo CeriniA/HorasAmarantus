@@ -6,6 +6,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { Target, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { format } from 'date-fns';
+import { safeDate } from '../../utils/dateHelpers';
 import { DAY_LABELS_SHORT, OBJECTIVE_STATUS } from '../../constants';
 import Card from '../common/Card';
 import Button from '../common/Button';
@@ -79,7 +81,7 @@ const AssignedObjectiveWidget = ({ objective, onComplete }) => {
       <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
         <Calendar className="h-4 w-4" />
         <span>
-          {new Date(objective.start_date).toLocaleDateString('es-AR')} - {new Date(objective.end_date).toLocaleDateString('es-AR')}
+          {format(safeDate(objective.start_date), 'dd/MM/yyyy')} - {format(safeDate(objective.end_date), 'dd/MM/yyyy')}
         </span>
       </div>
 

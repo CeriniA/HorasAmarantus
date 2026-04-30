@@ -138,6 +138,7 @@ Antes de aprobar un PR, verificar:
 - ✅ `hooks/useTimeEntries.js` (30 Abril 2026)
 - ✅ `components/timeEntry/BulkTimeEntry.jsx` (30 Abril 2026)
 - ✅ `components/reports/DetailedEntriesReport.jsx` (30 Abril 2026)
+- ✅ `components/reports/GroupedDayView.jsx` (30 Abril 2026) - Bug crítico: corrimiento de día
 
 ### ⚠️ Archivos que usan `safeDate()` correctamente (no tocar):
 - ✅ `utils/periodComparison.js` (comparaciones de fechas)

@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import { format, startOfWeek, endOfWeek, subWeeks, differenceInDays } from 'date-fns';
+import { startOfWeek, endOfWeek, format, subWeeks, differenceInDays, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { safeDate, calculateHours, safeDivide, safeNumber } from '../../utils/dateHelpers';
@@ -18,9 +18,9 @@ export const WeeklyComparison = ({ timeEntries, user }) => {
     // Calcular cuántas semanas mostrar (máximo 4, o menos si el usuario es nuevo)
     let maxWeeks = 4;
     if (user?.created_at) {
-      const userCreatedDate = new Date(user.created_at); // OK: created_at es timestamp
+      const userCreatedDate = safeDate(user.created_at);
       // Validar que la fecha sea válida
-      if (!isNaN(userCreatedDate.getTime())) {
+      if (userCreatedDate && !isNaN(userCreatedDate.getTime())) {
         const weeksSinceCreation = Math.floor(differenceInDays(today, userCreatedDate) / 7);
         // Mostrar como máximo las semanas que el usuario ha existido + 1 (semana actual)
         maxWeeks = Math.min(4, Math.max(1, weeksSinceCreation + 1));
@@ -44,10 +44,15 @@ export const WeeklyComparison = ({ timeEntries, user }) => {
         return sum + calculateHours(entry.start_time, entry.end_time);
       }, 0);
 
-      // Calcular días trabajados
-      const daysWorked = new Set(
-        weekEntries.map(e => safeDate(e.start_time).toDateString())
-      ).size;
+      // Calcular días trabajados (contar días únicos)
+      const uniqueDays = [];
+      weekEntries.forEach(e => {
+        const entryDate = safeDate(e.start_time);
+        if (!uniqueDays.some(d => isSameDay(d, entryDate))) {
+          uniqueDays.push(entryDate);
+        }
+      });
+      const daysWorked = uniqueDays.length;
 
       weeks.push({
         weekNumber: i,

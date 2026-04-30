@@ -4,6 +4,7 @@
  */
 
 import { differenceInDays } from 'date-fns';
+import { safeDate } from './dateHelpers';
 import { OBJECTIVE_VALIDATION } from '../constants/validation';
 
 /**
@@ -50,8 +51,8 @@ export const applyObjectiveFilters = (objectives, filters) => {
 
     // Filtro por urgencia (días restantes)
     if (filters.urgency && filters.urgency !== 'all' && objective.end_date) {
-      const today = new Date();
-      const endDate = new Date(objective.end_date);
+      const today = new Date(); // OK: fecha actual
+      const endDate = safeDate(objective.end_date);
       const daysRemaining = differenceInDays(endDate, today);
 
       switch (filters.urgency) {
@@ -96,8 +97,8 @@ export const applyObjectiveFilters = (objectives, filters) => {
 
     // Filtro por fecha de inicio desde
     if (filters.dateFrom) {
-      const startDate = new Date(objective.start_date);
-      const filterDate = new Date(filters.dateFrom);
+      const startDate = safeDate(objective.start_date);
+      const filterDate = safeDate(filters.dateFrom);
       
       if (startDate < filterDate) {
         return false;
@@ -106,8 +107,8 @@ export const applyObjectiveFilters = (objectives, filters) => {
 
     // Filtro por fecha de fin hasta
     if (filters.dateTo) {
-      const endDate = new Date(objective.end_date);
-      const filterDate = new Date(filters.dateTo);
+      const endDate = safeDate(objective.end_date);
+      const filterDate = safeDate(filters.dateTo);
       
       if (endDate > filterDate) {
         return false;
@@ -137,11 +138,11 @@ export const sortObjectives = (objectives, sortBy = 'created_at', sortOrder = 'd
         break;
       
       case 'start_date':
-        comparison = new Date(a.start_date) - new Date(b.start_date);
+        comparison = safeDate(a.start_date) - safeDate(b.start_date);
         break;
       
       case 'end_date':
-        comparison = new Date(a.end_date) - new Date(b.end_date);
+        comparison = safeDate(a.end_date) - safeDate(b.end_date);
         break;
       
       case 'progress': {
@@ -152,15 +153,16 @@ export const sortObjectives = (objectives, sortBy = 'created_at', sortOrder = 'd
       }
       
       case 'urgency': {
-        const daysA = differenceInDays(new Date(a.end_date), new Date());
-        const daysB = differenceInDays(new Date(b.end_date), new Date());
+        const today = new Date(); // OK: fecha actual
+        const daysA = differenceInDays(safeDate(a.end_date), today);
+        const daysB = differenceInDays(safeDate(b.end_date), today);
         comparison = daysA - daysB;
         break;
       }
       
       case 'created_at':
       default:
-        comparison = new Date(a.created_at || 0) - new Date(b.created_at || 0);
+        comparison = safeDate(a.created_at || '1970-01-01') - safeDate(b.created_at || '1970-01-01');
         break;
     }
 

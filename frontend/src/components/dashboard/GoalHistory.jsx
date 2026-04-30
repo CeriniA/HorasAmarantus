@@ -5,9 +5,10 @@
 
 import { useMemo } from 'react';
 import { format, subWeeks, startOfWeek, endOfWeek, differenceInWeeks } from 'date-fns';
+import { safeDate } from '../../utils/dateHelpers';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
-import { safeDate, calculateHours } from '../../utils/dateHelpers';
+import { calculateHours } from '../../utils/dateHelpers';
 import { Award, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
 
 export const GoalHistory = ({ timeEntries, weeklyGoal = 40, user }) => {
@@ -18,9 +19,9 @@ export const GoalHistory = ({ timeEntries, weeklyGoal = 40, user }) => {
     // Calcular cuántas semanas mostrar (máximo 8, o menos si el usuario es nuevo)
     let maxWeeks = 8;
     if (user?.created_at) {
-      const userCreatedDate = new Date(user.created_at);
+      const userCreatedDate = safeDate(user.created_at);
       // Validar que la fecha sea válida
-      if (!isNaN(userCreatedDate.getTime())) {
+      if (userCreatedDate && !isNaN(userCreatedDate.getTime())) {
         const weeksSinceCreation = differenceInWeeks(today, userCreatedDate);
         // Mostrar como máximo las semanas que el usuario ha existido (excluyendo la actual)
         maxWeeks = Math.min(8, Math.max(0, weeksSinceCreation));
@@ -42,7 +43,7 @@ export const GoalHistory = ({ timeEntries, weeklyGoal = 40, user }) => {
     }
 
     // Fecha de creación del usuario
-    const userCreatedDate = user?.created_at ? new Date(user.created_at) : null;
+    const userCreatedDate = user?.created_at ? safeDate(user.created_at) : null;
 
     // Obtener últimas N semanas (excluyendo la actual)
     for (let i = 1; i <= maxWeeks; i++) {

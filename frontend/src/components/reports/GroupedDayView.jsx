@@ -9,6 +9,7 @@ import { Clock } from 'lucide-react';
 import Card from '../common/Card';
 import { getUnitStyle } from '../../constants';
 import { VALIDATION } from '../../constants/validation';
+import { safeDate } from '../../utils/dateHelpers';
 
 export const GroupedDayView = ({ groupedByDay }) => {
   if (!groupedByDay || groupedByDay.length === 0) {
@@ -22,7 +23,8 @@ export const GroupedDayView = ({ groupedByDay }) => {
   return (
     <div className="space-y-4">
       {groupedByDay.map((dayGroup) => {
-        const dayDate = new Date(dayGroup.date);
+        // CRÍTICO: Usar safeDate() para evitar corrimiento de día por zona horaria
+        const dayDate = safeDate(dayGroup.date);
         
         return (
           <Card key={dayGroup.date}>

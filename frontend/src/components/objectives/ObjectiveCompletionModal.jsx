@@ -9,6 +9,7 @@ import Button from '../common/Button';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { safeDate } from '../../utils/dateHelpers';
 
 export const ObjectiveCompletionModal = ({ objective, onClose, onSubmit }) => {
   const [isCompleted, setIsCompleted] = useState(true);
@@ -37,8 +38,8 @@ export const ObjectiveCompletionModal = ({ objective, onClose, onSubmit }) => {
             <p><span className="font-medium">Horas Objetivo:</span> {objective?.target_hours}h</p>
             <p>
               <span className="font-medium">Período:</span>{' '}
-              {objective?.start_date && format(new Date(objective.start_date), 'dd/MM/yyyy', { locale: es })} -{' '}
-              {objective?.end_date && format(new Date(objective.end_date), 'dd/MM/yyyy', { locale: es })}
+              {objective?.start_date && format(safeDate(objective.start_date), 'dd/MM/yyyy', { locale: es })} -{' '}
+              {objective?.end_date && format(safeDate(objective.end_date), 'dd/MM/yyyy', { locale: es })}
             </p>
           </div>
         </div>

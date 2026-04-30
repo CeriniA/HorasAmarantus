@@ -65,7 +65,7 @@ export const TemplateSelector = ({ units, onSelect, currentTasks }) => {
         minutes: task.minutes
       })),
       totalHours: currentTasks.reduce((sum, t) => sum + t.hours + (t.minutes / 60), 0),
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(), // OK: fecha actual de creación
       favorite: false
     };
 
@@ -105,6 +105,7 @@ export const TemplateSelector = ({ units, onSelect, currentTasks }) => {
   const sortedTemplates = [...templates].sort((a, b) => {
     if (a.favorite && !b.favorite) return -1;
     if (!a.favorite && b.favorite) return 1;
+    // OK: Ordenar por fecha de creación (más reciente primero)
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
 

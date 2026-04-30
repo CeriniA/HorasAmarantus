@@ -5,6 +5,7 @@
 
 import { OBJECTIVE_TYPES } from '../constants';
 import { OBJECTIVE_VALIDATION } from '../constants/validation';
+import { safeDate } from './dateHelpers';
 
 /**
  * Valida los datos de un objetivo antes de enviar al servidor
@@ -35,8 +36,8 @@ export const validateObjectiveData = (data, objectiveType) => {
 
   // Validar que end_date >= start_date
   if (data.start_date && data.end_date) {
-    const startDate = new Date(data.start_date);
-    const endDate = new Date(data.end_date);
+    const startDate = safeDate(data.start_date);
+    const endDate = safeDate(data.end_date);
     
     if (endDate < startDate) {
       errors.end_date = 'La fecha de fin debe ser posterior a la fecha de inicio';
@@ -117,8 +118,8 @@ export const validateHoursForPeriod = (targetHours, startDate, endDate) => {
     return { isValid: true, warning: null };
   }
 
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = safeDate(startDate);
+  const end = safeDate(endDate);
   const diffDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
   
   // Calcular horas por día

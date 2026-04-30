@@ -5,6 +5,7 @@
 
 import { Clock, Calendar, TrendingUp } from 'lucide-react';
 import { differenceInDays } from 'date-fns';
+import { safeDate } from '../../utils/dateHelpers';
 
 export const ObjectiveProgress = ({ objective }) => {
   const completedHours = objective.completed_hours || 0;
@@ -13,8 +14,8 @@ export const ObjectiveProgress = ({ objective }) => {
   const remainingHours = Math.max(0, targetHours - completedHours);
   
   // Calcular días restantes
-  const today = new Date();
-  const endDate = new Date(objective.end_date);
+  const today = new Date(); // OK: fecha actual
+  const endDate = safeDate(objective.end_date);
   const daysRemaining = differenceInDays(endDate, today);
   
   // Determinar color según progreso

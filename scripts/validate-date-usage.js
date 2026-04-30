@@ -37,6 +37,11 @@ const FORBIDDEN_PATTERNS = [
     severity: 'error'
   },
   {
+    pattern: /new Date\(.*?\.date\)/g,
+    message: 'Uso de new Date() con .date (dayGroup, etc) - usar safeDate()',
+    severity: 'error'
+  },
+  {
     pattern: /new Date\(entry\./g,
     message: 'Uso de new Date() con entry - usar helpers de dateHelpers.js',
     severity: 'error'
@@ -50,6 +55,11 @@ const FORBIDDEN_PATTERNS = [
     pattern: /getHours\(safeDate\(/g,
     message: 'Uso de getHours(safeDate()) - safeDate() siempre devuelve 12:00, usar parseLocalTime()',
     severity: 'error'
+  },
+  {
+    pattern: /new Date\([a-zA-Z_$][a-zA-Z0-9_$]*\.[a-zA-Z_$][a-zA-Z0-9_$]*\)/g,
+    message: 'Uso de new Date() con propiedad de objeto - verificar si debe usar safeDate() o parseLocalTime()',
+    severity: 'warning'
   }
 ];
 
@@ -98,22 +108,39 @@ function scanFile(filePath) {
 
   // Buscar patrones prohibidos
   FORBIDDEN_PATTERNS.forEach(({ pattern, message, severity }) => {
-    const matches = content.match(pattern);
-    if (matches) {
-      // Encontrar líneas específicas
-      const lines = content.split('\n');
-      lines.forEach((line, index) => {
-        if (pattern.test(line)) {
-          issues.push({
-            line: index + 1,
-            content: line.trim(),
-            message,
-            severity
-          });
-          totalIssues++;
+    const lines = content.split('\n');
+    lines.forEach((line, index) => {
+      // Resetear el índice de la regex para cada línea
+      pattern.lastIndex = 0;
+      
+      if (pattern.test(line)) {
+        // Filtrar falsos positivos
+        const trimmedLine = line.trim();
+        
+        // Permitir new Date() sin argumentos (fecha actual)
+        if (trimmedLine.includes('new Date()')) {
+          return;
         }
-      });
-    }
+        
+        // Permitir comentarios que mencionen el patrón
+        if (trimmedLine.startsWith('//') || trimmedLine.startsWith('*')) {
+          return;
+        }
+        
+        // Permitir líneas con comentario "OK:" que indican uso legítimo
+        if (trimmedLine.includes('// OK:')) {
+          return;
+        }
+        
+        issues.push({
+          line: index + 1,
+          content: trimmedLine,
+          message,
+          severity
+        });
+        totalIssues++;
+      }
+    });
   });
 
   if (issues.length > 0) {
