@@ -9,7 +9,8 @@
  */
 
 import { supabase } from '../config/database.js';
-import { RESOURCES, ACTIONS, SCOPES, buildPermissionKey } from '../models/constants.js';
+import { RESOURCES, ACTIONS, SCOPES } from '../models/constants.js';
+import { buildPermissionKey } from '../utils/permissionHelpers.js';
 import logger from '../utils/logger.js';
 import { NotFoundError, ForbiddenError, ValidationError } from '../middleware/errorHandler.js';
 

@@ -169,6 +169,12 @@ const create = async (objectiveData, userId) => {
     }
 
     // Crear el nuevo objetivo
+    logger.info('🔍 Insertando en Supabase:', {
+      ...objectiveData,
+      created_by: userId,
+      status: objectiveData.status || OBJECTIVE_STATUS.PLANNED
+    });
+    
     const { data, error } = await supabase
       .from('objectives')
       .insert([{
@@ -180,7 +186,12 @@ const create = async (objectiveData, userId) => {
       .single();
 
     if (error) {
-      logger.error('Error al crear objetivo:', error);
+      logger.error('❌ Error de Supabase al crear objetivo:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       throw new ValidationError('Error al crear objetivo');
     }
 

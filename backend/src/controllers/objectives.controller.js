@@ -46,37 +46,70 @@ const createObjective = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const objectiveData = req.body;
 
+  // 🔍 LOG: Datos recibidos
+  logger.info('📥 Creando objetivo - Datos recibidos:', {
+    name: objectiveData.name,
+    start_date: objectiveData.start_date,
+    end_date: objectiveData.end_date,
+    target_hours: objectiveData.target_hours,
+    objective_type: objectiveData.objective_type,
+    user_id: objectiveData.user_id,
+    assigned_to_user_id: objectiveData.assigned_to_user_id
+  });
+
   // Validaciones básicas
   if (!objectiveData.name || !objectiveData.start_date || !objectiveData.end_date || 
       !objectiveData.target_hours) {
+    logger.error('❌ Validación fallida: Faltan campos requeridos');
     throw new ValidationError('Faltan campos requeridos: name, start_date, end_date, target_hours');
   }
+  logger.info('✅ Validación 1: Campos requeridos OK');
 
   // organizational_unit_id es requerido solo para objetivos de empresa
   // success_criteria es opcional
 
   // Validar que target_hours sea positivo
   if (objectiveData.target_hours <= 0) {
+    logger.error('❌ Validación fallida: target_hours <= 0:', objectiveData.target_hours);
     throw new ValidationError('Las horas objetivo deben ser mayores a 0');
   }
+  logger.info('✅ Validación 2: target_hours OK:', objectiveData.target_hours);
 
   // Validar que end_date >= start_date usando helper para comparación correcta
+  logger.info('🔍 Validando fechas:', {
+    start_date: objectiveData.start_date,
+    end_date: objectiveData.end_date,
+    isAfter: isAfter(objectiveData.end_date, objectiveData.start_date),
+    isSameDay: isSameDay(objectiveData.end_date, objectiveData.start_date)
+  });
+  
   if (!isAfter(objectiveData.end_date, objectiveData.start_date) && 
       !isSameDay(objectiveData.end_date, objectiveData.start_date)) {
+    logger.error('❌ Validación fallida: Fechas incorrectas');
     throw new ValidationError('La fecha de fin debe ser posterior a la fecha de inicio');
   }
+  logger.info('✅ Validación 3: Fechas OK');
 
   // VALIDACIÓN DE SEGURIDAD: Si es objetivo PERSONAL, verificar que no tenga asignado activo
   if (objectiveData.objective_type === 'personal') {
+    logger.info('🔍 Validando objetivo PERSONAL');
     // Usar assigned_to_user_id si existe, sino user_id
     const targetUserId = objectiveData.assigned_to_user_id || objectiveData.user_id;
+    logger.info('🔍 Target user ID:', targetUserId);
     const canCreate = await objectivesService.canCreatePersonalObjective(targetUserId);
+    logger.info('🔍 Puede crear personal:', canCreate);
     if (!canCreate) {
+      logger.error('❌ Validación fallida: Ya tiene objetivo asignado activo');
       throw new ValidationError('No puedes crear un objetivo personal mientras tengas un objetivo asignado activo');
     }
+    logger.info('✅ Validación 4: Puede crear objetivo personal');
+  } else {
+    logger.info('ℹ️ Objetivo tipo:', objectiveData.objective_type, '- Saltando validación personal');
   }
 
+  logger.info('✅ Todas las validaciones pasaron - Creando objetivo...');
   const objective = await objectivesService.create(objectiveData, userId);
+  logger.info('✅ Objetivo creado exitosamente:', objective.id);
   res.status(201).json(objective);
 });
 
