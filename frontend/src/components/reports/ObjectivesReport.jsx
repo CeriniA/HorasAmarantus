@@ -8,21 +8,29 @@ import { useState, useEffect } from 'react';
 import { Target, Building2, UserCheck, User, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
 import Card from '../common/Card';
 import { OBJECTIVE_TYPES, OBJECTIVE_STATUS, OBJECTIVE_STATUS_LABELS, OBJECTIVE_STATUS_COLORS } from '../../constants';
-import { isAdminOrSuperadmin } from '../../utils/roleHelpers';
+import { usePermissions } from '../../hooks/usePermissions.v2';
 import * as objectivesService from '../../services/objectives.service';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { safeDate } from '../../utils/dateHelpers';
 import logger from '../../utils/logger';
 
-export const ObjectivesReport = ({ user }) => {
+export const ObjectivesReport = () => {
   const [activeSubTab, setActiveSubTab] = useState('company');
   const [objectives, setObjectives] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { canViewAllObjectives } = usePermissions();
+
+  // Validar permisos antes de cargar
+  const hasPermission = canViewAllObjectives();
 
   useEffect(() => {
-    loadObjectives();
-  }, []);
+    if (hasPermission) {
+      loadObjectives();
+    } else {
+      setLoading(false);
+    }
+  }, [hasPermission]);
 
   const loadObjectives = async () => {
     try {
@@ -66,6 +74,24 @@ export const ObjectivesReport = ({ user }) => {
       }, 0) / objectivesWithProgress.length
     : 0;
 
+  // Validar permisos
+  if (!hasPermission) {
+    return (
+      <Card title="Objetivos">
+        <div className="text-center py-12">
+          <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Acceso Restringido</h3>
+          <p className="text-gray-600">
+            No tienes permisos para ver objetivos de empresa.
+          </p>
+          <p className="text-sm text-gray-500 mt-2">
+            Los objetivos personales se gestionan desde "Mis Objetivos".
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
   if (loading) {
     return (
       <Card title="Objetivos">
@@ -104,7 +130,7 @@ export const ObjectivesReport = ({ user }) => {
               <UserCheck className="h-4 w-4 mr-2" />
               Objetivos Asignados
             </button>
-            {isAdminOrSuperadmin(user) && (
+            {canViewAllObjectives() && (
               <button
                 onClick={() => setActiveSubTab('personal')}
                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${

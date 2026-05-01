@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Download, Filter, BarChart2, Target, FileText, Users } from 'lucide-react';
 import { timeEntriesService, usersService, orgUnitsService } from '../services/api';
 import { useAuthContext } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions.v2';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subYears } from 'date-fns';
@@ -34,6 +35,7 @@ import { exportToPDF } from '../utils/exportToPDF';
 
 export const Reports = () => {
   const { user } = useAuthContext();
+  const { canViewAllObjectives } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [dateRange, setDateRange] = useState('month');
@@ -402,17 +404,19 @@ export const Reports = () => {
               <BarChart2 className="h-4 w-4 mr-2" />
               Resumen
             </button>
-            <button
-              onClick={() => setActiveTab('goals')}
-              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                activeTab === 'goals'
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Target className="h-4 w-4 mr-2" />
-              Objetivos
-            </button>
+            {canViewAllObjectives() && (
+              <button
+                onClick={() => setActiveTab('goals')}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                  activeTab === 'goals'
+                    ? 'border-green-500 text-green-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Target className="h-4 w-4 mr-2" />
+                Objetivos
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('detail')}
               className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
@@ -470,7 +474,7 @@ export const Reports = () => {
 
       {/* Reporte de Objetivos */}
       {activeTab === 'goals' && (
-        <ObjectivesReport user={user} />
+        <ObjectivesReport />
       )}
 
       {/* Reporte Detallado de Registros */}

@@ -12,6 +12,7 @@ import UserManagement from './pages/UserManagement';
 import RoleManagement from './pages/RoleManagement';
 import Settings from './pages/Settings';
 import Objectives from './pages/Objectives';
+import MyObjectives from './pages/MyObjectives';
 import { syncManager } from './offline/index.js';
 import { OfflineIndicator } from './components/OfflineIndicator';
 
@@ -127,6 +128,17 @@ function App() {
               <ProtectedRoute allowedRoles={['superadmin', 'admin']}>
                 <Layout>
                   <Objectives />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/my-objectives"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <MyObjectives />
                 </Layout>
               </ProtectedRoute>
             }

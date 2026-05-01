@@ -72,7 +72,13 @@ const getAll = async (user, filters = {}) => {
 
     // Filtros opcionales
     if (filters.status) {
-      query = query.eq('status', filters.status);
+      // Soportar múltiples estados separados por coma
+      const statuses = filters.status.split(',').map(s => s.trim());
+      if (statuses.length === 1) {
+        query = query.eq('status', statuses[0]);
+      } else {
+        query = query.in('status', statuses);
+      }
     }
 
     if (filters.objective_type) {
@@ -108,7 +114,18 @@ const getAll = async (user, filters = {}) => {
     // Actualizar estados automáticamente según fechas
     const objectivesWithStatus = updateMultipleObjectivesStatus(enrichedObjectives);
 
-    logger.info(`Objetivos obtenidos: ${objectivesWithStatus?.length || 0} registros`);
+    logger.info(`Objetivos obtenidos para usuario ${user.id}:`, {
+      total: objectivesWithStatus?.length || 0,
+      canViewAll,
+      canViewTeam,
+      objetivos: objectivesWithStatus?.map(o => ({
+        id: o.id,
+        name: o.name,
+        type: o.objective_type,
+        assigned_to: o.assigned_to_user_id,
+        status: o.status
+      }))
+    });
     return objectivesWithStatus;
   } catch (error) {
     logger.error('Error en getAll objectives:', error);

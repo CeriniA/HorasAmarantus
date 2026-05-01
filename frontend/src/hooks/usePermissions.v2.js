@@ -210,6 +210,42 @@ export const usePermissions = () => {
     return userCan(RESOURCES.OBJECTIVES, ACTIONS.CREATE, 'personal');
   };
 
+  /**
+   * Verificar si puede ver todos los objetivos
+   */
+  const canViewAllObjectives = () => {
+    return userCan(RESOURCES.OBJECTIVES, ACTIONS.VIEW, SCOPES.ALL);
+  };
+
+  /**
+   * Verificar si puede ver objetivos de su equipo
+   */
+  const canViewTeamObjectives = () => {
+    return userCan(RESOURCES.OBJECTIVES, ACTIONS.VIEW, SCOPES.ALL) ||
+           userCan(RESOURCES.OBJECTIVES, ACTIONS.VIEW, SCOPES.TEAM);
+  };
+
+  /**
+   * Verificar si puede ver sus propios objetivos
+   */
+  const canViewOwnObjectives = () => {
+    return userCan(RESOURCES.OBJECTIVES, ACTIONS.VIEW, SCOPES.OWN);
+  };
+
+  /**
+   * Verificar si puede actualizar sus propios objetivos
+   */
+  const canUpdateOwnObjectives = () => {
+    return userCan(RESOURCES.OBJECTIVES, ACTIONS.UPDATE, SCOPES.OWN);
+  };
+
+  /**
+   * Verificar si puede eliminar sus propios objetivos
+   */
+  const canDeleteOwnObjectives = () => {
+    return userCan(RESOURCES.OBJECTIVES, ACTIONS.DELETE, SCOPES.OWN);
+  };
+
   return {
     // Métodos principales
     userCan,
@@ -232,9 +268,16 @@ export const usePermissions = () => {
     canViewReports,
     canExportReports,
     canManageRoles,
+    
+    // Permisos de objetivos
     canManageCompanyObjectives,
     canAssignObjectives,
     canCreatePersonalObjectives,
+    canViewAllObjectives,
+    canViewTeamObjectives,
+    canViewOwnObjectives,
+    canUpdateOwnObjectives,
+    canDeleteOwnObjectives,
     
     // Usuario actual
     user

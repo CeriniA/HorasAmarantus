@@ -17,9 +17,14 @@ router.use(authenticate);
  * GET /api/objectives
  * Obtener todos los objetivos (con filtros opcionales)
  * Query params: status, organizational_unit_id, start_date, end_date
+ * Permite ver todos (admin) o solo propios (operario)
  */
 router.get('/', 
-  checkPermission('objectives', 'view', 'all'),
+  checkAnyPermission([
+    { resource: 'objectives', action: 'view', scope: 'all' },
+    { resource: 'objectives', action: 'view', scope: 'team' },
+    { resource: 'objectives', action: 'view', scope: 'own' }
+  ]),
   objectivesController.getAllObjectives
 );
 
@@ -58,9 +63,13 @@ router.post('/',
 /**
  * PUT /api/objectives/:id
  * Actualizar un objetivo
+ * Permite actualizar todos (admin) o solo propios (operario)
  */
 router.put('/:id',
-  checkPermission('objectives', 'update', 'all'),
+  checkAnyPermission([
+    { resource: 'objectives', action: 'update', scope: 'all' },
+    { resource: 'objectives', action: 'update', scope: 'own' }
+  ]),
   objectivesController.updateObjective
 );
 
@@ -76,9 +85,13 @@ router.post('/:id/complete',
 /**
  * DELETE /api/objectives/:id
  * Eliminar un objetivo
+ * Permite eliminar todos (admin) o solo propios (operario)
  */
 router.delete('/:id',
-  checkPermission('objectives', 'delete', 'all'),
+  checkAnyPermission([
+    { resource: 'objectives', action: 'delete', scope: 'all' },
+    { resource: 'objectives', action: 'delete', scope: 'own' }
+  ]),
   objectivesController.deleteObjective
 );
 

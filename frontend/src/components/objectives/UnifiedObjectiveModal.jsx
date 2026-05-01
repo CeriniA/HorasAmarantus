@@ -19,9 +19,17 @@ export const UnifiedObjectiveModal = ({
   users,
   onClose, 
   onSubmit,
-  defaultType = OBJECTIVE_TYPES.COMPANY 
+  defaultType = OBJECTIVE_TYPES.COMPANY,
+  allowedTypes = [OBJECTIVE_TYPES.COMPANY, OBJECTIVE_TYPES.ASSIGNED, OBJECTIVE_TYPES.PERSONAL]
 }) => {
   const [activeTab, setActiveTab] = useState(defaultType);
+
+  // Validar que activeTab esté en allowedTypes
+  useEffect(() => {
+    if (!allowedTypes.includes(activeTab)) {
+      setActiveTab(allowedTypes[0]);
+    }
+  }, [allowedTypes, activeTab]);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -149,6 +157,10 @@ export const UnifiedObjectiveModal = ({
     }
   ];
 
+  // Filtrar tabs según tipos permitidos
+  const availableTabs = tabs.filter(tab => allowedTypes.includes(tab.id));
+  const canChangeTab = availableTabs.length > 1;
+
   return (
     <Modal
       isOpen={true}
@@ -159,29 +171,31 @@ export const UnifiedObjectiveModal = ({
       {/* Tabs - Responsive: Vertical en mobile, horizontal en desktop */}
       {!objective && (
         <div className="mb-6">
-          {/* Mobile: Dropdown selector */}
-          <div className="sm:hidden">
-            <label htmlFor="objective-type" className="sr-only">
-              Tipo de objetivo
-            </label>
-            <select
-              id="objective-type"
-              value={activeTab}
-              onChange={(e) => setActiveTab(e.target.value)}
-              className="block w-full rounded-lg border-gray-300 focus:border-primary-500 focus:ring-primary-500"
-            >
-              {tabs.map((tab) => (
-                <option key={tab.id} value={tab.id}>
-                  {tab.label} - {tab.description}
-                </option>
-              ))}
-            </select>
-          </div>
+          {canChangeTab ? (
+            <>
+              {/* Mobile: Dropdown selector */}
+              <div className="sm:hidden">
+                <label htmlFor="objective-type" className="sr-only">
+                  Tipo de objetivo
+                </label>
+                <select
+                  id="objective-type"
+                  value={activeTab}
+                  onChange={(e) => setActiveTab(e.target.value)}
+                  className="block w-full rounded-lg border-gray-300 focus:border-primary-500 focus:ring-primary-500"
+                >
+                  {availableTabs.map((tab) => (
+                    <option key={tab.id} value={tab.id}>
+                      {tab.label} - {tab.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          {/* Desktop: Tabs horizontales */}
-          <div className="hidden sm:block border-b border-gray-200">
-            <nav className="flex -mb-px">
-              {tabs.map((tab) => {
+              {/* Desktop: Tabs horizontales */}
+              <div className="hidden sm:block border-b border-gray-200">
+                <nav className="flex -mb-px">
+                  {availableTabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button
@@ -204,6 +218,26 @@ export const UnifiedObjectiveModal = ({
               })}
             </nav>
           </div>
+            </>
+          ) : (
+            // Solo un tipo permitido - Mostrar info sin pestañas
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+              <div className="flex items-center">
+                {(() => {
+                  const Icon = availableTabs[0].icon;
+                  return <Icon className="h-5 w-5 text-blue-600 mr-2" />;
+                })()}
+                <div>
+                  <p className="text-sm font-medium text-blue-800">
+                    Tipo de objetivo: {availableTabs[0].label}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-0.5">
+                    {availableTabs[0].description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
