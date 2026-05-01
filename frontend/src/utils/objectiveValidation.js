@@ -95,9 +95,11 @@ export const validateObjectiveData = (data, objectiveType) => {
     errors.description = `La descripción no puede exceder ${OBJECTIVE_VALIDATION.DESCRIPTION_MAX_LENGTH} caracteres`;
   }
 
-  // Validar criterios de éxito (opcional pero con límite)
-  if (data.success_criteria && data.success_criteria.length > OBJECTIVE_VALIDATION.SUCCESS_CRITERIA_MAX_LENGTH) {
-    errors.success_criteria = `Los criterios de cumplimiento no pueden exceder ${OBJECTIVE_VALIDATION.SUCCESS_CRITERIA_MAX_LENGTH} caracteres`;
+  // Validar criterios de éxito (opcional pero con límite si se proporciona)
+  if (data.success_criteria && data.success_criteria.trim().length > 0) {
+    if (data.success_criteria.length > OBJECTIVE_VALIDATION.SUCCESS_CRITERIA_MAX_LENGTH) {
+      errors.success_criteria = `Los criterios de cumplimiento no pueden exceder ${OBJECTIVE_VALIDATION.SUCCESS_CRITERIA_MAX_LENGTH} caracteres`;
+    }
   }
 
   return {

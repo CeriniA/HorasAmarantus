@@ -174,6 +174,7 @@ const create = async (objectiveData, userId) => {
     
     const dataToInsert = {
       ...cleanObjectiveData,
+      success_criteria: cleanObjectiveData.success_criteria || '', // Default vacío si no se proporciona
       created_by: userId,
       status: objectiveData.status || OBJECTIVE_STATUS.PLANNED
     };
