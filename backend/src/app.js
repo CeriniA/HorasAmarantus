@@ -79,7 +79,8 @@ if (config.rateLimit.enabled) {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rutas principales con prefijo /api
+// Rutas principales - Registradas con y sin prefijo /api para compatibilidad
+// Con prefijo /api
 app.use('/api/auth', authRoutes);
 app.use('/api/time-entries', timeEntriesRoutes);
 app.use('/api/users', usersRoutes);
@@ -88,6 +89,16 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/objectives', objectivesRoutes);
 app.use('/api/roles', rolesRoutes);
 app.use('/api/permissions', permissionsRoutes);
+
+// Sin prefijo /api (para compatibilidad con frontend que llame directo)
+app.use('/auth', authRoutes);
+app.use('/time-entries', timeEntriesRoutes);
+app.use('/users', usersRoutes);
+app.use('/organizational-units', orgUnitsRoutes);
+app.use('/reports', reportsRoutes);
+app.use('/objectives', objectivesRoutes);
+app.use('/roles', rolesRoutes);
+app.use('/permissions', permissionsRoutes);
 
 // Ruta de health check
 app.get('/api/health', (req, res) => {
