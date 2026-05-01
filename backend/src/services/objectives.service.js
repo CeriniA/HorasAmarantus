@@ -169,19 +169,20 @@ const create = async (objectiveData, userId) => {
     }
 
     // Crear el nuevo objetivo
-    logger.info('🔍 Insertando en Supabase:', {
-      ...objectiveData,
+    // Filtrar user_id si viene en el payload (no existe en la tabla)
+    const { user_id, ...cleanObjectiveData } = objectiveData;
+    
+    const dataToInsert = {
+      ...cleanObjectiveData,
       created_by: userId,
       status: objectiveData.status || OBJECTIVE_STATUS.PLANNED
-    });
+    };
+    
+    logger.info('🔍 Insertando en Supabase:', dataToInsert);
     
     const { data, error } = await supabase
       .from('objectives')
-      .insert([{
-        ...objectiveData,
-        created_by: userId,
-        status: objectiveData.status || OBJECTIVE_STATUS.PLANNED
-      }])
+      .insert([dataToInsert])
       .select(OBJECTIVE_SELECT_QUERY)
       .single();
 

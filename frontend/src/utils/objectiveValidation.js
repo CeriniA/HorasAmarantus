@@ -85,8 +85,8 @@ export const validateObjectiveData = (data, objectiveType) => {
   }
 
   if (objectiveType === OBJECTIVE_TYPES.ASSIGNED) {
-    if (!data.user_id) {
-      errors.user_id = 'Debes seleccionar un usuario para objetivos asignados';
+    if (!data.assigned_to_user_id) {
+      errors.assigned_to_user_id = 'Debes seleccionar un usuario para objetivos asignados';
     }
   }
 

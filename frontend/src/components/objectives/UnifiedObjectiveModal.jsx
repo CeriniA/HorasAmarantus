@@ -29,7 +29,7 @@ export const UnifiedObjectiveModal = ({
     end_date: '',
     target_hours: '',
     organizational_unit_id: '',
-    user_id: '',
+    assigned_to_user_id: '',
     success_criteria: ''
   });
   const [errors, setErrors] = useState({});
@@ -44,7 +44,7 @@ export const UnifiedObjectiveModal = ({
         end_date: objective.end_date || '',
         target_hours: objective.target_hours || '',
         organizational_unit_id: objective.organizational_unit_id || '',
-        user_id: objective.user_id || '',
+        assigned_to_user_id: objective.assigned_to_user_id || '',
         success_criteria: objective.success_criteria || ''
       });
       setActiveTab(objective.objective_type || defaultType);
@@ -109,7 +109,7 @@ export const UnifiedObjectiveModal = ({
       target_hours: parseFloat(formData.target_hours),
       objective_type: activeTab,
       organizational_unit_id: formData.organizational_unit_id,
-      user_id: formData.user_id,
+      assigned_to_user_id: formData.assigned_to_user_id,
       success_criteria: formData.success_criteria
     };
 
@@ -399,11 +399,11 @@ export const UnifiedObjectiveModal = ({
                 Usuario Asignado *
               </label>
               <select
-                name="user_id"
-                value={formData.user_id}
+                name="assigned_to_user_id"
+                value={formData.assigned_to_user_id}
                 onChange={handleChange}
                 className={`w-full px-3 py-2.5 sm:px-4 sm:py-2 border rounded-lg focus:ring-2 focus:border-transparent text-base ${
-                  errors.user_id 
+                  errors.assigned_to_user_id 
                     ? 'border-red-300 focus:ring-red-500' 
                     : 'border-gray-300 focus:ring-primary-500'
                 }`}
@@ -416,10 +416,10 @@ export const UnifiedObjectiveModal = ({
                   </option>
                 ))}
               </select>
-              {errors.user_id ? (
+              {errors.assigned_to_user_id ? (
                 <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
                   <AlertCircle className="h-4 w-4" />
-                  {errors.user_id}
+                  {errors.assigned_to_user_id}
                 </p>
               ) : (
                 <p className="text-xs text-gray-500 mt-1">
