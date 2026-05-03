@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import api, { authService, permissionsService } from '../services/api';
+import api, { authService } from '../services/api';
+import logger from '../utils/logger';
 import { USER_ROLES } from '../constants';
 import { db } from '../offline/core/db.js';
 
@@ -25,19 +26,11 @@ export const useAuth = () => {
         // Online: cargar desde backend
         const { user: userData } = await authService.getMe();
         
-        // Cargar permisos del usuario
-        try {
-          const permissionsInfo = await permissionsService.getMyPermissions();
-          userData.permissions = permissionsInfo.permissions || [];
-          userData.roleInfo = permissionsInfo.role || null;
-        } catch (permError) {
-          console.warn('Error cargando permisos, usando permisos vacíos:', permError);
-          userData.permissions = [];
-        }
-        
-        setUser(userData);
-        setSession({ user: userData });
-        
+        setUser({
+          ...userData,
+          permissions: Array.isArray(userData.permissions) ? userData.permissions : []
+        });
+        setSession({ user: { ...userData, permissions: Array.isArray(userData.permissions) ? userData.permissions : [] } });
         // Guardar en cache local
         await db.users.put(userData);
       } else {
@@ -50,26 +43,29 @@ export const useAuth = () => {
             const userId = payload.id; // El token usa 'id', no 'userId'
             
             if (import.meta.env.DEV) {
-              console.log('Loading user from cache (offline):', userId);
+              logger.info('Loading user from cache (offline):', userId);
             }
             
             const cachedUser = await db.users.get(userId);
             
             if (cachedUser) {
-              setUser(cachedUser);
-              setSession({ user: cachedUser });
+              setUser({
+                ...cachedUser,
+                permissions: Array.isArray(cachedUser.permissions) ? cachedUser.permissions : []
+              });
+              setSession({ user: { ...cachedUser, permissions: Array.isArray(cachedUser.permissions) ? cachedUser.permissions : [] } });
               if (import.meta.env.DEV) {
-                console.log('User loaded from cache:', cachedUser.email);
+                logger.info('User loaded from cache:', cachedUser.email);
               }
             } else {
               if (import.meta.env.DEV) {
-                console.warn('Usuario no encontrado en cache, ID:', userId);
+                logger.warn('Usuario no encontrado en cache, ID:', userId);
               }
               throw new Error('Usuario no encontrado en cache');
             }
           } catch (decodeError) {
             if (import.meta.env.DEV) {
-              console.error('Error decodificando token:', decodeError);
+              logger.error('Error decodificando token:', decodeError);
             }
             // No limpiar token si estamos offline, puede ser error temporal
             if (navigator.onLine) {
@@ -79,7 +75,7 @@ export const useAuth = () => {
         }
       }
     } catch (err) {
-      console.error('Error loading user profile:', err);
+      logger.error('Error loading user profile:', err);
       setError(err.message);
       
       // Solo limpiar token si estamos online (error real del servidor)
@@ -108,20 +104,12 @@ export const useAuth = () => {
       // Guardar token
       api.setToken(token);
       
-      // Cargar permisos del usuario
-      try {
-        const permissionsInfo = await permissionsService.getMyPermissions();
-        userData.permissions = permissionsInfo.permissions || [];
-        userData.roleInfo = permissionsInfo.role || null;
-      } catch (permError) {
-        console.warn('Error cargando permisos, usando permisos vacíos:', permError);
-        userData.permissions = [];
-      }
-      
       // Actualizar estado
-      setUser(userData);
-      setSession({ user: userData });
-      
+      setUser({
+        ...userData,
+        permissions: Array.isArray(userData.permissions) ? userData.permissions : []
+      });
+      setSession({ user: { ...userData, permissions: Array.isArray(userData.permissions) ? userData.permissions : [] } });
       // Guardar en cache local
       await db.users.put(userData);
 

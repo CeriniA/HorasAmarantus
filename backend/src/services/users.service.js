@@ -135,6 +135,20 @@ const create = async (userData) => {
   // Hash password
   const password_hash = await bcrypt.hash(password, 10);
 
+  // Obtener el slug del rol basado en role_id
+  let roleSlug = 'operario'; // default
+  if (role_id) {
+    const { data: roleData } = await supabase
+      .from('roles')
+      .select('slug')
+      .eq('id', role_id)
+      .single();
+    
+    if (roleData?.slug) {
+      roleSlug = roleData.slug;
+    }
+  }
+
   const { data, error } = await supabase
     .from('users')
     .insert({
@@ -142,7 +156,8 @@ const create = async (userData) => {
       email: email || null,
       password_hash,
       name,
-      role_id,  // Ahora usa role_id
+      role: roleSlug,  // Asignar el slug del rol
+      role_id,
       organizational_unit_id
     })
     .select(`

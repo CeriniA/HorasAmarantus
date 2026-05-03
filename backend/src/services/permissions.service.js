@@ -24,7 +24,22 @@ import { NotFoundError, ForbiddenError, ValidationError } from '../middleware/er
  */
 const userCan = async (userId, resource, action, scope = SCOPES.ALL) => {
   try {
-    // Usar la función de PostgreSQL
+    // Verificar si el usuario es superadmin (tiene todos los permisos)
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select(`
+        roles:role_id (
+          slug
+        )
+      `)
+      .eq('id', userId)
+      .single();
+
+    if (!userError && userData?.roles?.slug === 'superadmin') {
+      return true; // Superadmin tiene todos los permisos
+    }
+
+    // Usar la función de PostgreSQL para otros roles
     const { data, error } = await supabase
       .rpc('user_has_permission', {
         p_user_id: userId,
@@ -381,6 +396,21 @@ const removeUserPermission = async (userId, permissionId) => {
  */
 const canAccessResource = async (userId, resource, action, targetResource = null) => {
   try {
+    // Verificar si es superadmin (acceso total)
+    const { data: userData } = await supabase
+      .from('users')
+      .select(`
+        roles:role_id (
+          slug
+        )
+      `)
+      .eq('id', userId)
+      .single();
+
+    if (userData?.roles?.slug === 'superadmin') {
+      return true; // Superadmin tiene acceso total
+    }
+
     // Verificar permiso 'all'
     if (await userCan(userId, resource, action, SCOPES.ALL)) {
       return true;
@@ -417,6 +447,25 @@ const canAccessResource = async (userId, resource, action, targetResource = null
   }
 };
 
+/**
+ * Obtener array plano de permisos efectivos del usuario (usando función SQL get_user_permissions)
+ * @param {string} userId
+ * @returns {Promise<Array<string>>}
+ */
+const getUserWithPermissions = async (userId) => {
+  try {
+    const { data, error } = await supabase.rpc('get_user_permissions', { p_user_id: userId });
+    if (error) {
+      logger.error('Error obteniendo permisos efectivos:', error);
+      return [];
+    }
+    return data || [];
+  } catch (error) {
+    logger.error('Error en getUserWithPermissions:', error);
+    return [];
+  }
+};
+
 export default {
   userCan,
   userHasPermission,
@@ -427,5 +476,6 @@ export default {
   getAllPermissions,
   assignUserPermission,
   removeUserPermission,
-  canAccessResource
+  canAccessResource,
+  getUserWithPermissions // NUEVO EXPORT
 };

@@ -26,12 +26,6 @@ const Settings = () => {
     email: user?.email || ''
   });
 
-  // Estado para objetivo de horas
-  const [goalData, setGoalData] = useState({
-    weekly_goal: user?.weekly_goal || 40
-  });
-  const [loadingGoal, setLoadingGoal] = useState(false);
-  const [goalMessage, setGoalMessage] = useState({ type: '', text: '' });
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -222,67 +216,6 @@ const Settings = () => {
             <Button type="submit" loading={loadingPassword}>
               <Save className="h-4 w-4 mr-2" />
               Cambiar Contraseña
-            </Button>
-          </div>
-        </form>
-      </Card>
-
-      {/* Objetivos de Horas */}
-      <Card title="Objetivos de Horas" icon={Target}>
-        <form onSubmit={async (e) => {
-          e.preventDefault();
-          setLoadingGoal(true);
-          setGoalMessage({ type: '', text: '' });
-          
-          try {
-            // Llamar al backend para actualizar el objetivo
-            await authService.updateWeeklyGoal(goalData.weekly_goal);
-            
-            // Actualizar el contexto del usuario
-            setUser({ ...user, weekly_goal: goalData.weekly_goal });
-            
-            setGoalMessage({ 
-              type: 'success', 
-              text: 'Objetivo actualizado correctamente. Se aplicará en tu próximo inicio de sesión.' 
-            });
-          } catch (error) {
-            setGoalMessage({ 
-              type: 'error', 
-              text: error.response?.data?.error || 'Error al actualizar el objetivo' 
-            });
-          } finally {
-            setLoadingGoal(false);
-          }
-        }} className="space-y-4">
-          {goalMessage.text && (
-            <div className={`p-4 rounded-md ${
-              goalMessage.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-            }`}>
-              {goalMessage.text}
-            </div>
-          )}
-
-          <div>
-            <Input
-              label="Objetivo Semanal (horas)"
-              type="number"
-              min="1"
-              max="168"
-              step="0.5"
-              value={goalData.weekly_goal}
-              onChange={(e) => setGoalData({ weekly_goal: parseFloat(e.target.value) })}
-              required
-              helperText="Cantidad de horas que deseas trabajar por semana (lunes a sábado)"
-            />
-            <p className="mt-2 text-sm text-gray-500">
-              💡 Objetivo actual: <strong>{user?.weekly_goal || 40} horas/semana</strong>
-            </p>
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="submit" loading={loadingGoal}>
-              <Save className="h-4 w-4 mr-2" />
-              Guardar Objetivo
             </Button>
           </div>
         </form>

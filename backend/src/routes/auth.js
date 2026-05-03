@@ -29,7 +29,4 @@ router.post('/change-password', authenticate, authController.changePassword);
 // PUT /api/auth/me/email
 router.put('/me/email', authenticate, authController.updateEmail);
 
-// PUT /api/auth/me/goal
-router.put('/me/goal', authenticate, authController.updateWeeklyGoal);
-
 export default router;

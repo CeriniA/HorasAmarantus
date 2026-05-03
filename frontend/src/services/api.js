@@ -198,7 +198,6 @@ export const authService = {
   changePassword: (currentPassword, newPassword) => 
     api.post('/auth/change-password', { currentPassword, newPassword }),
   updateEmail: (email) => api.put('/auth/me/email', { email }),
-  updateWeeklyGoal: (weekly_goal) => api.put('/auth/me/goal', { weekly_goal }),
   logout: () => {
     api.removeToken();
     return Promise.resolve();

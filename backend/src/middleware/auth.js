@@ -3,7 +3,9 @@ import { config } from '../config/env.js';
 import { verifyToken } from '../config/auth.js';
 import logger from '../utils/logger.js';
 
-export const authenticate = (req, res, next) => {
+import permissionsService from '../services/permissions.service.js';
+
+export const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     
@@ -20,6 +22,8 @@ export const authenticate = (req, res, next) => {
 
     // Agregar datos del usuario al request
     req.user = decoded;
+    // Cargar permisos efectivos
+    req.user.permissions = await permissionsService.getUserWithPermissions(decoded.id);
     next();
   } catch (error) {
     logger.error('Error en autenticación:', error);

@@ -111,35 +111,10 @@ const updateEmail = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/auth/me/goal
- */
-const updateWeeklyGoal = async (req, res) => {
-  try {
-    const { weekly_goal } = req.body;
-    const user = await authService.updateWeeklyGoal(req.user.id, weekly_goal);
-    res.json({ 
-      message: 'Objetivo actualizado correctamente',
-      user
-    });
-  } catch (error) {
-    logger.error('Error en updateWeeklyGoal controller:', error);
-    
-    if (error.message.includes('requerido') || 
-        error.message.includes('número') || 
-        error.message.includes('entre')) {
-      return res.status(400).json({ error: error.message });
-    }
-    
-    res.status(500).json({ error: 'Error en el servidor' });
-  }
-};
-
 export default {
   login,
   register,
   getCurrentUser,
   changePassword,
-  updateEmail,
-  updateWeeklyGoal
+  updateEmail
 };

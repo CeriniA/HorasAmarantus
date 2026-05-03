@@ -32,7 +32,7 @@ export const UserManagement = () => {
     email: '',
     password: '',
     name: '',
-    role: USER_ROLES.OPERARIO,
+    role_id: '',  // Cambiar role por role_id
     organizational_unit_id: ''
   });
   const [formError, setFormError] = useState('');
@@ -43,7 +43,7 @@ export const UserManagement = () => {
       email: '',
       password: '',
       name: '',
-      role: USER_ROLES.OPERARIO,
+      role_id: availableRoles.find(r => r.slug === USER_ROLES.OPERARIO)?.id || '',
       organizational_unit_id: ''
     });
     setFormError('');
@@ -57,12 +57,14 @@ export const UserManagement = () => {
     }
 
     setEditingUser(user);
+    // Buscar el role_id basado en el slug del rol del usuario
+    const userRoleId = availableRoles.find(r => r.slug === user.role)?.id || user.role_id || '';
+    
     setFormData({
       username: user.username,
       email: user.email || '',
       password: '',
-      name: user.name,
-      role: user.role,
+      role_id: userRoleId,
       organizational_unit_id: user.organizational_unit_id || ''
     });
     setFormError('');
@@ -118,7 +120,7 @@ export const UserManagement = () => {
       username: formData.username,
       email: formData.email || null, // Email opcional
       name: formData.name,
-      role: formData.role,
+      role_id: formData.role_id,
       organizational_unit_id: formData.organizational_unit_id || null
     };
 
@@ -430,8 +432,8 @@ export const UserManagement = () => {
                   Rol *
                 </label>
                 <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  value={formData.role_id}
+                  onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                   disabled={rolesLoading}
@@ -440,8 +442,8 @@ export const UserManagement = () => {
                     <option value="">{MESSAGES.SELECT_LOADING_ROLES}</option>
                   ) : (
                     getSelectableRoles(availableRoles, currentUser).map((role) => (
-                      <option key={role.id} value={role.name}>
-                        {getRoleLabel(role.name)}
+                      <option key={role.id} value={role.id}>
+                        {getRoleLabel(role.slug || role.name)}
                       </option>
                     ))
                   )}

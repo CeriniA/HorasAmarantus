@@ -1,5 +1,19 @@
 {
+  "name": "sistema-horas-app",
+  "version": "1.0.0",
+  "description": "Sistema de Horas Hortícola - Monorepo",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run preview"
+  },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "husky": "^9.1.7"
   }
 }

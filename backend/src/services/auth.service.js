@@ -12,6 +12,7 @@ import bcrypt from 'bcryptjs';
 import { supabase } from '../config/database.js';
 import { generateToken } from '../config/auth.js';
 import logger from '../utils/logger.js';
+import permissionsService from './permissions.service.js';
 
 /**
  * Login de usuario
@@ -54,6 +55,8 @@ const login = async (username, password) => {
 
   logger.info('Usuario logueado:', username);
 
+  // Obtener permisos efectivos
+  const permissions = await permissionsService.getUserWithPermissions(user.id);
   return {
     token,
     user: {
@@ -65,7 +68,8 @@ const login = async (username, password) => {
       role: user.roles?.slug || 'operario',  // Slug del rol
       role_name: user.roles?.name || 'Operario',
       organizational_unit_id: user.organizational_unit_id,
-      weekly_goal: user.weekly_goal || 40
+      weekly_goal: user.weekly_goal || 40,
+      permissions // array plano de permisos
     }
   };
 };
@@ -147,9 +151,12 @@ const getCurrentUser = async (userId) => {
   }
 
   // Agregar slug del rol para compatibilidad
+  // Obtener permisos efectivos
+  const permissions = await permissionsService.getUserWithPermissions(user.id);
   return {
     ...user,
-    role: user.roles?.slug || 'operario'
+    role: user.roles?.slug || 'operario',
+    permissions // array plano de permisos
   };
 };
 
@@ -242,47 +249,10 @@ const updateEmail = async (userId, email) => {
   return data;
 };
 
-/**
- * Actualizar objetivo semanal
- */
-const updateWeeklyGoal = async (userId, weekly_goal) => {
-  // Validaciones
-  if (weekly_goal === undefined || weekly_goal === null) {
-    throw new Error('El objetivo semanal es requerido');
-  }
-
-  const goalNumber = parseFloat(weekly_goal);
-
-  if (isNaN(goalNumber)) {
-    throw new Error('El objetivo debe ser un número');
-  }
-
-  if (goalNumber < 1 || goalNumber > 168) {
-    throw new Error('El objetivo debe estar entre 1 y 168 horas (hay 168 horas en una semana)');
-  }
-
-  // Actualizar objetivo
-  const { data, error } = await supabase
-    .from('users')
-    .update({ weekly_goal: goalNumber })
-    .eq('id', userId)
-    .select('id, username, email, name, role, organizational_unit_id, weekly_goal')
-    .single();
-
-  if (error) {
-    logger.error('Error actualizando objetivo:', error);
-    throw new Error('Error actualizando objetivo');
-  }
-
-  logger.info('Objetivo actualizado para usuario:', userId);
-  return data;
-};
-
 export default {
   login,
   register,
   getCurrentUser,
   changePassword,
-  updateEmail,
-  updateWeeklyGoal
+  updateEmail
 };
