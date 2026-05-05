@@ -249,6 +249,23 @@ export const BulkTimeEntry = ({
       return;
     }
     
+    // ✅ NUEVO: Validar que no exista registro para el mismo día (Opción A)
+    if (mode === 'create') {
+      const dateStr = date.split('T')[0]; // Extraer YYYY-MM-DD
+      const targetUser = selectedUserId || currentUser?.id;
+      
+      const existingForDay = allTimeEntries.filter(entry => {
+        const entryDateStr = entry.start_time.split('T')[0];
+        return entryDateStr === dateStr && entry.user_id === targetUser;
+      });
+      
+      if (existingForDay.length > 0) {
+        // eslint-disable-next-line no-alert
+        window.alert(`Ya existe un registro para el ${dateStr}. Edita el registro existente o elimínalo.`);
+        return;
+      }
+    }
+    
     // Distribuir las horas proporcionalmente dentro del rango horario
     let currentTime = workdayStart;
     

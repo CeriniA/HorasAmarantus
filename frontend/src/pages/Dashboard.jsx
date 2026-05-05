@@ -14,7 +14,6 @@ import { Clock, TrendingUp, Briefcase, Users } from 'lucide-react';
 import { WeeklyTrendChart } from '../components/dashboard/WeeklyTrendChart';
 import { SmartAlerts } from '../components/dashboard/SmartAlerts';
 import { ActivityHeatmap } from '../components/dashboard/ActivityHeatmap';
-import { GoalTracker } from '../components/dashboard/GoalTracker';
 import { WeeklyComparison } from '../components/dashboard/WeeklyComparison';
 import { GoalHistory } from '../components/dashboard/GoalHistory';
 import AssignedObjectiveWidget from '../components/objectives/AssignedObjectiveWidget';
@@ -255,13 +254,6 @@ export const Dashboard = () => {
         <div className="lg:col-span-2">
           <WeeklyTrendChart timeEntries={timeEntries} />
         </div>
-        <div>
-          <GoalTracker 
-            timeEntries={timeEntries} 
-            goalType="weekly"
-            customGoal={user?.weekly_goal || 40}
-          />
-        </div>
       </div>
 
       {/* Mapa de Calor */}
@@ -270,7 +262,7 @@ export const Dashboard = () => {
       {/* Comparación Semanal e Historial */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <WeeklyComparison timeEntries={timeEntries} user={user} />
-        <GoalHistory timeEntries={timeEntries} weeklyGoal={user?.weekly_goal || 40} user={user} />
+        <GoalHistory timeEntries={timeEntries} user={user} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

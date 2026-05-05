@@ -100,7 +100,7 @@ router.delete('/:id',
  * Obtener distribución semanal de un objetivo
  */
 router.get('/:id/schedule',
-  checkPermission('objectives', 'view', 'all'),
+  // ✅ MEJORADO: Validación de permisos en el service (permite view:own)
   objectivesController.getObjectiveSchedule
 );
 

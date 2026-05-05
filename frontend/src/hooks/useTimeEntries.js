@@ -185,7 +185,19 @@ export const useTimeEntries = (userId) => {
 
       if (navigator.onLine) {
         // Online: actualizar en backend
-        const { timeEntry } = await timeEntriesService.update(entryId, updates);
+        // ✅ MEJORADO: Obtener entry completo y mergear updates para no perder campos
+        const entry = timeEntries.find(e => e.id === entryId);
+        if (!entry) throw new Error('Entrada no encontrada');
+        
+        const fullData = {
+          organizational_unit_id: entry.organizational_unit_id,
+          description: entry.description,
+          start_time: entry.start_time,
+          end_time: entry.end_time,
+          ...updates // Sobrescribir solo lo que cambió
+        };
+        
+        const { timeEntry } = await timeEntriesService.update(entryId, fullData);
 
         setTimeEntries(prev => 
           prev.map(e => e.id === entryId ? timeEntry : e)
@@ -214,13 +226,13 @@ export const useTimeEntries = (userId) => {
 
         // Intentar sincronizar en background
         syncManager.sync().catch(err => {
-          console.error('Error en sincronización automática:', err);
+          logger.error('Error en sincronización automática:', err);
         });
 
         return { success: true, data: updatedEntry };
       }
     } catch (err) {
-      console.error('Error updating entry:', err);
+      logger.error('Error updating entry:', err);
       setError(err.message);
       return { success: false, error: err.message };
     }
@@ -250,7 +262,7 @@ export const useTimeEntries = (userId) => {
         return { success: true };
       }
     } catch (err) {
-      console.error('Error deleting entry:', err);
+      logger.error('Error deleting entry:', err);
       setError(err.message);
       return { success: false, error: err.message };
     }

@@ -4,22 +4,36 @@
  */
 
 import { useMemo } from 'react';
-import { format, subDays, isSameDay, startOfWeek, addDays } from 'date-fns';
+import { format, subDays, isSameDay, endOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Card from '../common/Card';
 import { safeDate, calculateHours } from '../../utils/dateHelpers';
 
 export const ActivityHeatmap = ({ timeEntries }) => {
-  // Generar datos de los últimos 30 días
+  // Generar datos de las últimas 4 semanas completas (lunes a domingo)
   const heatmapData = useMemo(() => {
-    const days = 30;
     const data = [];
     
-    for (let i = days - 1; i >= 0; i--) {
-      const date = subDays(new Date(), i); // OK: fecha actual
-      const dayEntries = timeEntries.filter(entry => 
-        isSameDay(safeDate(entry.start_time), date)
-      );
+    // Fecha actual con mediodía
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    
+    // Encontrar el domingo de esta semana
+    const thisSunday = endOfWeek(today, { weekStartsOn: 1 });
+    thisSunday.setHours(12, 0, 0, 0);
+    
+    // Ir 4 semanas atrás desde el domingo (28 días)
+    const startDate = subDays(thisSunday, 27); // 27 días atrás = 4 semanas (incluyendo el domingo)
+    
+    // Generar 28 días desde startDate hasta thisSunday
+    for (let i = 0; i < 28; i++) {
+      const date = addDays(startDate, i);
+      const dateStr = format(date, 'yyyy-MM-dd');
+      
+      const dayEntries = timeEntries.filter(entry => {
+        const entryDate = safeDate(entry.start_time);
+        return entryDate && isSameDay(entryDate, date);
+      });
       
       const hours = dayEntries.reduce((sum, entry) => {
         return sum + calculateHours(entry.start_time, entry.end_time);
@@ -27,7 +41,7 @@ export const ActivityHeatmap = ({ timeEntries }) => {
       
       data.push({
         date,
-        dateStr: format(date, 'yyyy-MM-dd'),
+        dateStr,
         dayName: format(date, 'EEE', { locale: es }),
         fullDate: format(date, "d 'de' MMM", { locale: es }),
         hours: parseFloat(hours.toFixed(2)),
@@ -39,54 +53,22 @@ export const ActivityHeatmap = ({ timeEntries }) => {
     return data;
   }, [timeEntries]);
 
-  // Agrupar por semanas
+  // Agrupar por semanas (4 semanas de 7 días cada una)
   const weeklyData = useMemo(() => {
+    if (heatmapData.length === 0) return [];
+    
     const weeks = [];
-    let currentWeek = [];
     
-    // Encontrar el primer lunes
-    let firstDate = heatmapData[0]?.date;
-    if (!firstDate) return [];
-    
-    const firstMonday = startOfWeek(firstDate, { weekStartsOn: 1 });
-    
-    // Agregar días vacíos al inicio si es necesario
-    let currentDate = firstMonday;
-    while (currentDate < heatmapData[0].date) {
-      currentWeek.push({
-        date: currentDate,
-        dateStr: format(currentDate, 'yyyy-MM-dd'),
-        hours: 0,
-        entries: 0,
-        intensity: 'none',
-        isEmpty: true
-      });
-      currentDate = addDays(currentDate, 1);
-    }
-    
-    // Agregar datos reales
-    heatmapData.forEach((day, index) => {
-      currentWeek.push(day);
+    // Dividir los 28 días en 4 semanas de 7 días
+    for (let weekIndex = 0; weekIndex < 4; weekIndex++) {
+      const weekStart = weekIndex * 7;
+      const weekEnd = weekStart + 7;
+      const week = heatmapData.slice(weekStart, weekEnd);
       
-      // Si es domingo o último día, cerrar semana
-      if (currentWeek.length === 7 || index === heatmapData.length - 1) {
-        // Completar semana si es necesario
-        while (currentWeek.length < 7) {
-          const lastDate = currentWeek[currentWeek.length - 1].date;
-          const nextDate = addDays(lastDate, 1);
-          currentWeek.push({
-            date: nextDate,
-            dateStr: format(nextDate, 'yyyy-MM-dd'),
-            hours: 0,
-            entries: 0,
-            intensity: 'none',
-            isEmpty: true
-          });
-        }
-        weeks.push([...currentWeek]);
-        currentWeek = [];
+      if (week.length > 0) {
+        weeks.push(week);
       }
-    });
+    }
     
     return weeks;
   }, [heatmapData]);
@@ -109,7 +91,7 @@ export const ActivityHeatmap = ({ timeEntries }) => {
 
   return (
     <Card 
-      title="Actividad Últimos 30 Días"
+      title="Actividad Últimas 4 Semanas"
       subtitle={`${stats.daysWorked} días trabajados (${stats.workRate}%)`}
     >
       {/* Estadísticas */}

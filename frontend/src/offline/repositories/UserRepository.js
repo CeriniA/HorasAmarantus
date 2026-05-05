@@ -4,7 +4,7 @@
  */
 
 import { BaseRepository } from './BaseRepository.js';
-
+import logger from '../../utils/logger.js';
 export class UserRepository extends BaseRepository {
   constructor() {
     super('users');
@@ -49,7 +49,7 @@ export class UserRepository extends BaseRepository {
       const payload = JSON.parse(window.atob(token.split('.')[1]));
       return await this.findById(payload.id);
     } catch (error) {
-      console.error('Error getting current user:', error);
+      logger.error('Error getting current user:', error);
       return null;
     }
   }

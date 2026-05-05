@@ -21,6 +21,7 @@ export const TimeEntries = () => {
     setTimeEntries,
     loading,
     createEntry,
+    updateEntry,
     deleteEntry 
   } = useTimeEntries(user?.id);
   
@@ -54,6 +55,20 @@ export const TimeEntries = () => {
   const [filterMode, setFilterMode] = useState('month'); // 'month' | 'year' | 'all'
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [selectedYear, setSelectedYear] = useState(format(new Date(), 'yyyy'));
+
+  // Helper: Obtener nombre de unidad organizacional (funciona online y offline)
+  const getUnitName = (entry) => {
+    // Online: usar objeto relacionado
+    if (entry.organizational_units?.name) {
+      return entry.organizational_units.name;
+    }
+    // Offline: buscar en units por ID
+    if (entry.organizational_unit_id && units) {
+      const unit = units.find(u => u.id === entry.organizational_unit_id);
+      return unit?.name || 'Sin asignar';
+    }
+    return 'Sin asignar';
+  };
 
   // Filtrar registros según modo seleccionado
   // TODOS los usuarios (incluyendo admins) solo ven SUS PROPIOS registros
@@ -141,32 +156,87 @@ export const TimeEntries = () => {
     setOperationLoading(true);
     
     try {
-      // Eliminar todos los registros del día
-      for (const entry of editingEntries) {
-        await deleteEntry(entry.id || entry.client_id);
-      }
+      const operations = [];
+      let updatedCount = 0;
+      let createdCount = 0;
+      let deletedCount = 0;
       
-      // Crear los nuevos registros
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (const entryData of newEntries) {
-        const result = await createEntry(entryData);
-        if (result.success) {
-          successCount++;
+      // 1. Identificar qué hacer con cada registro existente
+      for (const existing of editingEntries) {
+        const match = newEntries.find(ne => 
+          ne.organizational_unit_id === existing.organizational_unit_id
+        );
+        
+        if (match) {
+          // Existe en ambos → UPDATE si cambió algo
+          const hasChanges = 
+            match.start_time !== existing.start_time ||
+            match.end_time !== existing.end_time ||
+            match.description !== existing.description;
+          
+          if (hasChanges) {
+            operations.push(
+              updateEntry(existing.id, {
+                organizational_unit_id: match.organizational_unit_id,
+                start_time: match.start_time,
+                end_time: match.end_time,
+                description: match.description
+              }).then(result => {
+                if (result.success) updatedCount++;
+                return result;
+              })
+            );
+          }
         } else {
-          errorCount++;
+          // Ya no existe en nuevos → DELETE
+          operations.push(
+            deleteEntry(existing.id).then(result => {
+              if (result.success) deletedCount++;
+              return result;
+            })
+          );
         }
       }
       
-      if (errorCount === 0) {
-        setAlert({ type: 'success', message: `✅ Día actualizado: ${successCount} ${successCount === 1 ? 'registro' : 'registros'}` });
+      // 2. Identificar registros nuevos → CREATE
+      for (const newEntry of newEntries) {
+        const exists = editingEntries.find(e => 
+          e.organizational_unit_id === newEntry.organizational_unit_id
+        );
+        
+        if (!exists) {
+          operations.push(
+            createEntry(newEntry).then(result => {
+              if (result.success) createdCount++;
+              return result;
+            })
+          );
+        }
+      }
+      
+      // 3. Ejecutar todas las operaciones en paralelo
+      const results = await Promise.all(operations);
+      const errors = results.filter(r => !r.success);
+      
+      if (errors.length === 0) {
+        const messages = [];
+        if (updatedCount > 0) messages.push(`${updatedCount} actualizado${updatedCount > 1 ? 's' : ''}`);
+        if (createdCount > 0) messages.push(`${createdCount} creado${createdCount > 1 ? 's' : ''}`);
+        if (deletedCount > 0) messages.push(`${deletedCount} eliminado${deletedCount > 1 ? 's' : ''}`);
+        
+        setAlert({ 
+          type: 'success', 
+          message: `✅ Día actualizado: ${messages.join(', ')}` 
+        });
         setShowBulkEntry(false);
         setBulkMode('create');
         setEditingDate(null);
         setEditingEntries([]);
       } else {
-        setAlert({ type: 'warning', message: `⚠️ ${successCount} actualizados, ${errorCount} con error` });
+        setAlert({ 
+          type: 'warning', 
+          message: `⚠️ ${operations.length - errors.length} exitosos, ${errors.length} con error` 
+        });
       }
     } catch (error) {
       logger.error('Error editing entries:', error);
@@ -431,7 +501,7 @@ export const TimeEntries = () => {
                       return (
                         <tr key={entry.id} className="hover:bg-gray-50">
                           <td className="px-3 py-2 text-sm text-gray-900">
-                            <div className="font-medium">{entry.organizational_units?.name || 'Sin asignar'}</div>
+                            <div className="font-medium">{getUnitName(entry)}</div>
                             {entry.description && (
                               <div className="text-xs text-gray-500 mt-1">{entry.description}</div>
                             )}

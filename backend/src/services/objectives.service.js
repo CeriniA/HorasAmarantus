@@ -373,8 +373,33 @@ const getAnalysis = async (id) => {
 /**
  * Obtener distribución semanal de un objetivo
  */
-const getWeeklySchedule = async (objectiveId) => {
+const getWeeklySchedule = async (objectiveId, requestingUser) => {
   try {
+    // ✅ MEJORADO: Validar que el usuario tenga acceso al objetivo
+    const { data: objective, error: objError } = await supabase
+      .from('objectives')
+      .select('assigned_to_user_id')
+      .eq('id', objectiveId)
+      .single();
+
+    if (objError || !objective) {
+      throw new NotFoundError('Objetivo no encontrado');
+    }
+
+    // Verificar permisos: puede ver si es suyo o tiene permiso view:all
+    const canViewAll = await permissionsService.userCan(
+      requestingUser.id,
+      'objectives',
+      'view',
+      'all'
+    );
+
+    const isOwn = objective.assigned_to_user_id === requestingUser.id;
+
+    if (!canViewAll && !isOwn) {
+      throw new ForbiddenError('No tienes permisos para ver este objetivo');
+    }
+
     const { data, error } = await supabase
       .from('objective_weekly_schedule')
       .select('*')

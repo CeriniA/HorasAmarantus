@@ -192,7 +192,7 @@ const getObjectiveAnalysis = asyncHandler(async (req, res) => {
  */
 const getObjectiveSchedule = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const schedule = await objectivesService.getWeeklySchedule(id);
+  const schedule = await objectivesService.getWeeklySchedule(id, req.user);
   logger.info(`Distribución semanal obtenida para objetivo ${id}`);
   res.json(schedule);
 });

@@ -43,6 +43,56 @@ const getAll = async (user) => {
 };
 
 /**
+ * Obtener un time entry por ID
+ */
+const getById = async (entryId) => {
+  const { data, error } = await supabase
+    .from('time_entries')
+    .select(`
+      *,
+      organizational_units (id, name, type),
+      users (id, name, email)
+    `)
+    .eq('id', entryId)
+    .single();
+
+  if (error || !data) {
+    logger.error('Error obteniendo registro:', error);
+    throw new Error('Registro no encontrado');
+  }
+
+  return data;
+};
+
+/**
+ * Validar que no exista registro duplicado para el mismo día, usuario Y tarea
+ * Permite múltiples registros por día (diferentes tareas)
+ */
+const validateNoDuplicateDay = async (userId, startTime, organizationalUnitId) => {
+  // Extraer fecha (YYYY-MM-DD) del timestamp
+  const entryDate = startTime.split('T')[0];
+  
+  const { data: existing, error } = await supabase
+    .from('time_entries')
+    .select('id, start_time, organizational_unit_id')
+    .eq('user_id', userId)
+    .eq('organizational_unit_id', organizationalUnitId)
+    .gte('start_time', `${entryDate}T00:00:00`)
+    .lte('start_time', `${entryDate}T23:59:59`)
+    .limit(1);
+
+  if (error) {
+    logger.error('Error validando duplicados:', error);
+    throw new Error('Error validando registro duplicado');
+  }
+
+  if (existing && existing.length > 0) {
+    logger.warn(`Intento de crear registro duplicado para ${userId} en ${entryDate} con tarea ${organizationalUnitId}`);
+    throw new Error(`Ya existe un registro para esta tarea en el ${entryDate}. Edita el registro existente.`);
+  }
+};
+
+/**
  * Validar permisos para crear registros para otro usuario
  */
 const validateCreatePermissions = async (requestingUser, targetUserId) => {
@@ -97,6 +147,9 @@ const create = async (entryData, requestingUser) => {
   
   // Validar permisos
   await validateCreatePermissions(requestingUser, targetUserId);
+  
+  // ✅ MEJORADO: Validar que no exista registro duplicado (mismo día + misma tarea)
+  await validateNoDuplicateDay(targetUserId, start_time, organizational_unit_id);
 
   // Crear registro
   const { data, error } = await supabase
@@ -386,6 +439,7 @@ const deleteOne = async (entryId, requestingUser) => {
 
 export default {
   getAll,
+  getById,
   create,
   update,
   createBulk,
