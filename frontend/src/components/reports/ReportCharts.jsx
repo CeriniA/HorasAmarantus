@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { safeDate } from '../../utils/dateHelpers';
+import { isOperario } from '../../utils/roleHelpers';
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -73,7 +74,7 @@ export const ReportCharts = ({ reportData, topUsers = [], user }) => {
         )}
 
         {/* Distribución por unidad */}
-        <Card title="Distribución por Unidad" className={user?.role === 'operario' ? 'lg:col-span-2' : ''}>
+        <Card title="Distribución por Unidad" className={isOperario(user) ? 'lg:col-span-2' : ''}>
           {reportData.byUnit.length === 0 ? (
             <p className="text-center text-gray-500 py-12">
               No hay datos

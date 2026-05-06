@@ -1,6 +1,8 @@
 /**
  * Hook de Permisos RBAC (Versión 2)
  * 
+ * @deprecated Usar useRoleValidation para validación de roles
+ * 
  * Responsabilidades:
  * - Verificar permisos granulares del usuario
  * - Usar sistema RBAC del backend

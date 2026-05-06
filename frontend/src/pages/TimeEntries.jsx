@@ -12,6 +12,7 @@ import { timeEntriesService } from '../services/api';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { safeDate, extractDate, calculateHours } from '../utils/dateHelpers';
+import { isAdmin, isSuperadmin } from '../utils/roleHelpers';
 import logger from '../utils/logger';
 
 export const TimeEntries = () => {
@@ -268,7 +269,7 @@ export const TimeEntries = () => {
         <p className="mt-1 text-sm text-gray-500">
           Gestiona y visualiza tus registros de tiempo personales
         </p>
-        {(user?.role === 'admin' || user?.role === 'superadmin') && (
+        {(isAdmin(user) || isSuperadmin(user)) && (
           <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
               💡 <strong>Nota:</strong> Esta sección muestra solo tus registros personales. 

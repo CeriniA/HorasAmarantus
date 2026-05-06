@@ -35,7 +35,7 @@ import { exportToPDF } from '../utils/exportToPDF';
 
 export const Reports = () => {
   const { user } = useAuthContext();
-  const { canViewAllObjectives } = usePermissions();
+  const { canViewAllObjectives, canExportReports } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
   const [dateRange, setDateRange] = useState('month');
@@ -199,10 +199,18 @@ export const Reports = () => {
   };
 
   const handleExportCSV = () => {
+    if (!canExportReports()) {
+      logger.warn('Usuario sin permisos para exportar');
+      return;
+    }
     exportToCSV(filteredEntries, startDate, endDate);
   };
 
   const handleExportExcel = () => {
+    if (!canExportReports()) {
+      logger.warn('Usuario sin permisos para exportar');
+      return;
+    }
     const exportData = {
       ...reportData,
       entries: filteredEntries,
@@ -215,6 +223,10 @@ export const Reports = () => {
   };
 
   const handleExportPDF = () => {
+    if (!canExportReports()) {
+      logger.warn('Usuario sin permisos para exportar');
+      return;
+    }
     const exportData = {
       ...reportData,
       entries: filteredEntries,
@@ -227,6 +239,11 @@ export const Reports = () => {
   };
 
   const handleExportPayroll = () => {
+    if (!canExportReports()) {
+      logger.warn('Usuario sin permisos para exportar');
+      return;
+    }
+    
     // Validar que haya datos
     if (!reportData.byUserAll || reportData.byUserAll.length === 0) {
       logger.warn('No hay datos de usuarios para exportar');
@@ -272,20 +289,22 @@ export const Reports = () => {
             {isOperario(user) ? 'Tus horas trabajadas' : 'Análisis de horas trabajadas'}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={handleExportCSV} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            CSV
-          </Button>
-          <Button onClick={handleExportExcel} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Excel
-          </Button>
-          <Button onClick={handleExportPDF} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            PDF
-          </Button>
-        </div>
+        {canExportReports() && (
+          <div className="flex gap-2">
+            <Button onClick={handleExportCSV} variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              CSV
+            </Button>
+            <Button onClick={handleExportExcel} variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Excel
+            </Button>
+            <Button onClick={handleExportPDF} variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              PDF
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Filtros */}

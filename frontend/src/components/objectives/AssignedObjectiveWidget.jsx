@@ -5,16 +5,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { Target, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { Target, Calendar, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { safeDate } from '../../utils/dateHelpers';
 import { DAY_LABELS_SHORT, OBJECTIVE_STATUS } from '../../constants';
 import Card from '../common/Card';
-import Button from '../common/Button';
 import { getObjectiveSchedule } from '../../services/objectives.service';
+import { ProgressIndicator } from './ProgressIndicator';
 import logger from '../../utils/logger';
 
-const AssignedObjectiveWidget = ({ objective, onComplete }) => {
+const AssignedObjectiveWidget = ({ objective }) => {
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -40,9 +40,9 @@ const AssignedObjectiveWidget = ({ objective, onComplete }) => {
     return null;
   }
 
-  // Calcular progreso (si hay horas reales registradas)
-  const progress = objective.real_hours && objective.target_hours
-    ? Math.min((objective.real_hours / objective.target_hours) * 100, 100)
+  // Calcular progreso (si hay horas completadas registradas)
+  const progress = objective.completed_hours && objective.target_hours
+    ? Math.min((objective.completed_hours / objective.target_hours) * 100, 100)
     : 0;
 
   // Días activos en la distribución
@@ -90,7 +90,7 @@ const AssignedObjectiveWidget = ({ objective, onComplete }) => {
         <div className="flex items-center justify-between text-sm mb-2">
           <span className="text-gray-600">Progreso de Horas</span>
           <span className="font-medium text-gray-900">
-            {objective.real_hours || 0}h / {objective.target_hours}h
+            {objective.completed_hours || 0}h / {objective.target_hours}h
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -105,6 +105,32 @@ const AssignedObjectiveWidget = ({ objective, onComplete }) => {
           {progress.toFixed(1)}% completado
         </p>
       </div>
+
+      {/* Indicador de Progreso */}
+      {objective.status === OBJECTIVE_STATUS.IN_PROGRESS && objective.progress_status && (
+        <div className="mb-4">
+          <ProgressIndicator progressStatus={objective.progress_status} />
+        </div>
+      )}
+
+      {/* Alerta de Pendiente de Evaluación */}
+      {objective.status === OBJECTIVE_STATUS.PENDING_REVIEW && (
+        <div className="mb-4 p-3 bg-orange-50 border-l-4 border-orange-400 rounded">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-orange-800">
+                Pendiente de Evaluación
+              </p>
+              <p className="text-xs text-orange-700 mt-1">
+                Este objetivo ha finalizado. Trabajaste {objective.completed_hours || 0}h de {objective.target_hours}h 
+                ({((objective.completed_hours / objective.target_hours) * 100).toFixed(0)}%).
+                Está pendiente de evaluación por tu supervisor.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Distribución Semanal */}
       {!loading && activeDays.length > 0 && (
@@ -150,17 +176,6 @@ const AssignedObjectiveWidget = ({ objective, onComplete }) => {
         </div>
       </div>
 
-      {/* Botón de Marcar Completado */}
-      {objective.status !== OBJECTIVE_STATUS.COMPLETED && onComplete && (
-        <Button
-          onClick={() => onComplete(objective)}
-          variant="primary"
-          className="w-full"
-        >
-          Marcar como Completado
-        </Button>
-      )}
-
       {/* Notas de Cumplimiento */}
       {objective.status === OBJECTIVE_STATUS.COMPLETED && objective.completion_notes && (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -184,13 +199,12 @@ AssignedObjectiveWidget.propTypes = {
     start_date: PropTypes.string.isRequired,
     end_date: PropTypes.string.isRequired,
     target_hours: PropTypes.number.isRequired,
-    real_hours: PropTypes.number,
+    completed_hours: PropTypes.number,
     success_criteria: PropTypes.string,
     status: PropTypes.string.isRequired,
     is_completed: PropTypes.bool,
     completion_notes: PropTypes.string
-  }),
-  onComplete: PropTypes.func
+  })
 };
 
 export default AssignedObjectiveWidget;

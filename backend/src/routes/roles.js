@@ -22,6 +22,11 @@ router.get('/',
   rolesController.getAll
 );
 
+// GET /api/roles/valid - Obtener roles válidos (público para validación)
+router.get('/valid', 
+  rolesController.getValidRolesEndpoint
+);
+
 // GET /api/roles/:id - Ver rol específico
 router.get('/:id', 
   checkPermission('roles', 'view', 'all'),

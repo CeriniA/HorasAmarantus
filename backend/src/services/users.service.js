@@ -11,6 +11,7 @@
 import bcrypt from 'bcryptjs';
 import { supabase } from '../config/database.js';
 import { USER_ROLES } from '../models/constants.js';
+import { isValidRole, isSystemRole } from './roleCache.service.js';
 import permissionsService from './permissions.service.js';
 import logger from '../utils/logger.js';
 import { ConflictError, ValidationError, NotFoundError, ForbiddenError } from '../middleware/errorHandler.js';
@@ -235,8 +236,8 @@ const update = async (userId, updates, requestingUser) => {
         .eq('id', updateData.role_id)
         .single();
       
-      if (requestingUser.role === USER_ROLES.ADMIN && 
-          (targetRole?.slug === USER_ROLES.ADMIN || targetRole?.slug === USER_ROLES.SUPERADMIN)) {
+      // Admin no puede asignar roles de sistema protegidos
+      if (requestingUser.role === USER_ROLES.ADMIN && isSystemRole(targetRole?.slug)) {
         throw new Error('No puedes gestionar usuarios con rol admin o superadmin');
       }
     }

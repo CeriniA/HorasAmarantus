@@ -1,8 +1,12 @@
 import { Navigate } from 'react-router-dom';
 import { useAuthContext } from '../context/AuthContext';
+import { useRoleValidation } from '../hooks/useRoleValidation';
 
 export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { user, loading } = useAuthContext();
+  const { user, loading: authLoading } = useAuthContext();
+  const { hasRole, loading: rolesLoading } = useRoleValidation();
+
+  const loading = authLoading || rolesLoading;
 
   if (loading) {
     return (
@@ -16,7 +20,8 @@ export const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+  // Validar roles usando el hook (soporta roles sistema + DB)
+  if (allowedRoles.length > 0 && !hasRole(user, ...allowedRoles)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

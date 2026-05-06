@@ -8,8 +8,9 @@
  */
 
 import { supabase } from '../config/database.js';
-import logger from '../utils/logger.js';
 import { USER_ROLES } from '../models/constants.js';
+import logger from '../utils/logger.js';
+import { invalidateRolesCache } from './roleCache.service.js';
 
 /**
  * Obtener todos los roles
@@ -115,6 +116,7 @@ const create = async (roleData) => {
   }
 
   logger.info('Rol creado:', data.id);
+  invalidateRolesCache(); // Invalidar cache
   return data;
 };
 
@@ -159,6 +161,7 @@ const update = async (roleId, roleData) => {
     }
 
     logger.info(`Descripción del rol del sistema actualizada: ${role.name}`);
+    invalidateRolesCache(); // Invalidar cache
     return data;
   }
 
@@ -195,6 +198,7 @@ const update = async (roleId, roleData) => {
   }
 
   logger.info('Rol personalizado actualizado:', roleId);
+  invalidateRolesCache(); // Invalidar cache
   return data;
 };
 
@@ -248,6 +252,7 @@ const deleteRole = async (roleId) => {
   }
 
   logger.info(`Rol eliminado exitosamente: ${role.name} (ID: ${roleId})`);
+  invalidateRolesCache(); // Invalidar cache
   return { success: true };
 };
 
@@ -302,6 +307,7 @@ const assignPermission = async (roleId, permissionId) => {
   }
 
   logger.info('Permiso asignado a rol:', { roleId, permissionId });
+  invalidateRolesCache(); // Invalidar cache (permisos cambiaron)
   return data;
 };
 
@@ -330,6 +336,7 @@ const removePermission = async (roleId, permissionId) => {
   }
 
   logger.info('Permiso removido de rol:', { roleId, permissionId });
+  invalidateRolesCache(); // Invalidar cache (permisos cambiaron)
   return { success: true };
 };
 

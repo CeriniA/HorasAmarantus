@@ -9,6 +9,7 @@
 
 import { asyncHandler } from '../middleware/errorHandler.js';
 import rolesService from '../services/roles.service.js';
+import { getValidRoles } from '../services/roleCache.service.js';
 
 /**
  * GET /api/roles
@@ -17,6 +18,15 @@ import rolesService from '../services/roles.service.js';
 const getAll = asyncHandler(async (req, res) => {
   const roles = await rolesService.getAll();
   res.json({ roles });
+});
+
+/**
+ * GET /api/roles/valid
+ * Obtener todos los roles válidos (sistema + DB) para validación
+ */
+const getValidRolesEndpoint = asyncHandler(async (req, res) => {
+  const roles = await getValidRoles();
+  res.json(roles);
 });
 
 /**
@@ -95,6 +105,7 @@ const setPermissions = asyncHandler(async (req, res) => {
 
 export default {
   getAll,
+  getValidRolesEndpoint,
   getById,
   getRolePermissions,
   create,

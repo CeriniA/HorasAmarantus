@@ -28,7 +28,7 @@ import { useRoles } from '../hooks/useRoles';
 import { USER_ROLES } from '../constants';
 
 const RoleManagement = () => {
-  const { isSuperadmin } = usePermissions();
+  const { canManageRoles } = usePermissions();
   const { roles, permissions, loading, error, createRole, updateRole, deleteRole } = useRoles();
   
   const [showRoleModal, setShowRoleModal] = useState(false);
@@ -38,7 +38,7 @@ const RoleManagement = () => {
   const [alert, setAlert] = useState(null);
 
   // Verificar permisos
-  if (!isSuperadmin()) {
+  if (!canManageRoles()) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-md">

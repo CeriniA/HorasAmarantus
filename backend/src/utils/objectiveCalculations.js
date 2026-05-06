@@ -7,29 +7,55 @@ import supabase from '../config/database.js';
 import logger from './logger.js';
 
 /**
- * Calcula las horas completadas para un objetivo
- * @param {string} organizationalUnitId - ID de la unidad organizacional
- * @param {string} startDate - Fecha de inicio del objetivo
- * @param {string} endDate - Fecha de fin del objetivo
- * @param {string} assignedUserId - ID del usuario asignado (opcional, para objetivos personales/asignados)
+ * Calcula las horas completadas para un objetivo según su tipo
+ * @param {Object} objective - Objeto objetivo completo
  * @returns {Promise<number>} Total de horas completadas
  */
-export const calculateCompletedHours = async (organizationalUnitId, startDate, endDate, assignedUserId = null) => {
+export const calculateCompletedHours = async (objective) => {
   try {
+    const { objective_type, organizational_unit_id, assigned_to_user_id, created_by, start_date, end_date } = objective;
+
     let query = supabase
       .from('time_entries')
       .select('total_hours')
-      .gte('start_time', startDate)
-      .lte('start_time', endDate);
+      .gte('start_time', start_date)
+      .lte('start_time', end_date);
 
-    // Si es objetivo de empresa/área, filtrar por unidad organizacional
-    if (organizationalUnitId) {
-      query = query.eq('organizational_unit_id', organizationalUnitId);
-    }
+    // Lógica específica por tipo de objetivo
+    switch (objective_type) {
+      case 'company':
+        // Objetivos de empresa: filtrar por unidad organizacional
+        if (!organizational_unit_id || organizational_unit_id === 'null') {
+          logger.warn('Objetivo de empresa sin organizational_unit_id válido:', { id: objective.id, organizational_unit_id });
+          return 0;
+        }
+        query = query.eq('organizational_unit_id', organizational_unit_id);
+        logger.debug('Calculando horas por área:', { organizational_unit_id, start_date, end_date });
+        break;
 
-    // Si es objetivo asignado/personal, filtrar por usuario
-    if (assignedUserId) {
-      query = query.eq('user_id', assignedUserId);
+      case 'assigned':
+        // Objetivos asignados: filtrar por usuario asignado
+        if (!assigned_to_user_id || assigned_to_user_id === 'null') {
+          logger.warn('Objetivo asignado sin assigned_to_user_id válido:', { id: objective.id, assigned_to_user_id });
+          return 0;
+        }
+        query = query.eq('user_id', assigned_to_user_id);
+        logger.debug('Calculando horas por usuario asignado:', { assigned_to_user_id, start_date, end_date });
+        break;
+
+      case 'personal':
+        // Objetivos personales: filtrar por creador
+        if (!created_by || created_by === 'null') {
+          logger.warn('Objetivo personal sin created_by válido:', { id: objective.id, created_by });
+          return 0;
+        }
+        query = query.eq('user_id', created_by);
+        logger.debug('Calculando horas por creador:', { created_by, start_date, end_date });
+        break;
+
+      default:
+        logger.error('Tipo de objetivo desconocido:', { objective_type, id: objective.id });
+        return 0;
     }
 
     const { data, error } = await query;
@@ -54,12 +80,7 @@ export const calculateCompletedHours = async (organizationalUnitId, startDate, e
  */
 export const calculateObjectiveMetrics = async (objective) => {
   try {
-    const completedHours = await calculateCompletedHours(
-      objective.organizational_unit_id,
-      objective.start_date,
-      objective.end_date,
-      objective.assigned_to_user_id
-    );
+    const completedHours = await calculateCompletedHours(objective);
 
     const targetHours = objective.target_hours || 0;
     const hoursDifference = completedHours - targetHours;
@@ -90,12 +111,7 @@ export const calculateObjectiveMetrics = async (objective) => {
  * @returns {Promise<Object>} Objetivo con completed_hours agregado
  */
 export const enrichObjectiveWithHours = async (objective) => {
-  const completedHours = await calculateCompletedHours(
-    objective.organizational_unit_id,
-    objective.start_date,
-    objective.end_date,
-    objective.assigned_to_user_id
-  );
+  const completedHours = await calculateCompletedHours(objective);
 
   return {
     ...objective,

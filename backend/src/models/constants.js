@@ -148,13 +148,20 @@ export const OBJECTIVE_TYPES = {
 export const OBJECTIVE_STATUS = {
   PLANNED: 'planned',
   IN_PROGRESS: 'in_progress',
+  PENDING_REVIEW: 'pending_review',  // Terminó, requiere evaluación
   COMPLETED: 'completed',
-  OVERDUE: 'overdue',
   FAILED: 'failed',
   CANCELLED: 'cancelled'
 };
 
 export const OBJECTIVE_STATUS_ARRAY = Object.values(OBJECTIVE_STATUS);
+
+// Sub-estados de progreso (para objetivos IN_PROGRESS)
+export const OBJECTIVE_PROGRESS_STATUS = {
+  ON_TRACK: 'on_track',    // Progreso >= esperado
+  BEHIND: 'behind',        // Progreso < esperado
+  AHEAD: 'ahead'           // Progreso > esperado
+};
 
 // Diagnósticos de objetivos (para análisis)
 export const OBJECTIVE_DIAGNOSIS = {

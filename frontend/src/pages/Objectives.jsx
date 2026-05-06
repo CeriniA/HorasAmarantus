@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuthContext } from '../context/AuthContext';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
+import { usePermissions } from '../hooks/usePermissions.v2';
 import { isAdminOrSuperadmin } from '../utils/roleHelpers';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -33,6 +34,7 @@ export const Objectives = () => {
   // 1. Hooks primero
   const { user } = useAuthContext();
   const { units } = useOrganizationalUnits();
+  const { canManageCompanyObjectives, canAssignObjectives } = usePermissions();
   
   // 2. Estados
   const [objectives, setObjectives] = useState([]);

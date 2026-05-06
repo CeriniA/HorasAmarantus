@@ -12,7 +12,8 @@ import supabase from '../config/database.js';
 import logger from '../utils/logger.js';
 import permissionsService from './permissions.service.js';
 import { ValidationError } from '../middleware/errorHandler.js';
-import { OBJECTIVE_STATUS, OBJECTIVE_DIAGNOSIS, OBJECTIVE_TYPES } from '../models/constants.js';
+import { OBJECTIVE_STATUS, OBJECTIVE_DIAGNOSIS, OBJECTIVE_TYPES, USER_ROLES } from '../models/constants.js';
+import { hasRole } from '../utils/roleHelpers.js';
 import { enrichObjectivesWithHours, calculateCompletedHours } from '../utils/objectiveCalculations.js';
 import { updateMultipleObjectivesStatus } from '../utils/objectiveStatus.js';
 
@@ -59,15 +60,37 @@ const getAll = async (user, filters = {}) => {
     // Filtrar según permisos RBAC
     const canViewAll = await permissionsService.userCan(user.id, 'objectives', 'view', 'all');
     const canViewTeam = await permissionsService.userCan(user.id, 'objectives', 'view', 'team');
+    const isSuperadmin = hasRole(user, USER_ROLES.SUPERADMIN);
     
     if (!canViewAll) {
       if (canViewTeam) {
-        // Ver solo objetivos de su equipo
-        query = query.eq('organizational_unit_id', user.organizational_unit_id);
+        // Ver objetivos de su equipo + sus personales propios
+        if (user.organizational_unit_id && user.organizational_unit_id !== 'null') {
+          // Filtro: (org_unit = X) OR (personal Y created_by = user)
+          query = query.or(`organizational_unit_id.eq.${user.organizational_unit_id},and(objective_type.eq.personal,created_by.eq.${user.id})`);
+        } else {
+          logger.warn('Usuario con permiso team pero sin organizational_unit_id válido:', user.id);
+          // Solo ver sus personales
+          query = query.eq('objective_type', 'personal').eq('created_by', user.id);
+        }
       } else {
         // Ver solo objetivos propios (asignados o personales)
-        query = query.eq('assigned_to_user_id', user.id);
+        if (user.id && user.id !== 'null') {
+          query = query.eq('assigned_to_user_id', user.id);
+        } else {
+          logger.error('Usuario sin ID válido:', user);
+          return [];
+        }
       }
+    } else {
+      // Tiene permiso view.all
+      if (!isSuperadmin) {
+        // Admin/otros: Ve TODO EXCEPTO personales de otros
+        // Filtro: (objective_type != 'personal') OR (created_by = user.id)
+        query = query.or(`objective_type.neq.personal,created_by.eq.${user.id}`);
+        logger.debug('Aplicando filtro de privacidad para objetivos personales:', user.id);
+      }
+      // Superadmin: No aplica filtros adicionales, ve TODO
     }
 
     // Filtros opcionales
@@ -85,11 +108,11 @@ const getAll = async (user, filters = {}) => {
       query = query.eq('objective_type', filters.objective_type);
     }
 
-    if (filters.organizational_unit_id) {
+    if (filters.organizational_unit_id && filters.organizational_unit_id !== 'null') {
       query = query.eq('organizational_unit_id', filters.organizational_unit_id);
     }
 
-    if (filters.assigned_to_user_id) {
+    if (filters.assigned_to_user_id && filters.assigned_to_user_id !== 'null') {
       query = query.eq('assigned_to_user_id', filters.assigned_to_user_id);
     }
 
@@ -161,6 +184,32 @@ const getById = async (id) => {
  */
 const create = async (objectiveData, userId) => {
   try {
+    // Validaciones por tipo de objetivo
+    if (objectiveData.objective_type === OBJECTIVE_TYPES.COMPANY) {
+      if (!objectiveData.organizational_unit_id) {
+        throw new ValidationError('Objetivos de empresa requieren organizational_unit_id');
+      }
+    }
+    
+    if (objectiveData.objective_type === OBJECTIVE_TYPES.ASSIGNED) {
+      if (!objectiveData.assigned_to_user_id) {
+        throw new ValidationError('Objetivos asignados requieren assigned_to_user_id');
+      }
+    }
+    
+    if (objectiveData.objective_type === OBJECTIVE_TYPES.PERSONAL) {
+      // Objetivos personales NO deben tener assigned_to_user_id
+      if (objectiveData.assigned_to_user_id) {
+        logger.warn('Objetivo personal no debe tener assigned_to_user_id, se eliminará');
+        delete objectiveData.assigned_to_user_id;
+      }
+      // Tampoco deben tener organizational_unit_id
+      if (objectiveData.organizational_unit_id) {
+        logger.warn('Objetivo personal no debe tener organizational_unit_id, se eliminará');
+        delete objectiveData.organizational_unit_id;
+      }
+    }
+
     // Si es objetivo ASIGNADO, cancelar objetivos personales activos del usuario
     if (objectiveData.objective_type === OBJECTIVE_TYPES.ASSIGNED && 
         objectiveData.assigned_to_user_id) {

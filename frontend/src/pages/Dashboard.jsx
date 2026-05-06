@@ -8,7 +8,7 @@ import Button from '../components/common/Button';
 import { format, startOfWeek, startOfMonth, endOfWeek, endOfMonth, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { isAdminOrSuperadmin, isAdmin, isOperario } from '../utils/roleHelpers';
-import { Clock, TrendingUp, Briefcase, Users } from 'lucide-react';
+import { Clock, TrendingUp, Briefcase, Users, AlertCircle } from 'lucide-react';
 
 // Componentes nuevos
 import { WeeklyTrendChart } from '../components/dashboard/WeeklyTrendChart';
@@ -135,9 +135,10 @@ export const Dashboard = () => {
   // Handler para crear objetivo personal
   const handleCreatePersonal = useCallback(async (objectiveData) => {
     try {
+      // Objetivos personales NO llevan assigned_to_user_id
+      // El backend usará created_by automáticamente
       await objectivesService.createObjective({
-        ...objectiveData,
-        assigned_to_user_id: user.id
+        ...objectiveData
       });
       logger.info('Objetivo personal creado');
       loadUserObjective();
@@ -145,14 +146,9 @@ export const Dashboard = () => {
       logger.error('Error al crear objetivo personal:', error);
       throw error;
     }
-  }, [user?.id, loadUserObjective]);
+  }, [loadUserObjective]);
 
-  // Handler para marcar objetivo como completado
-  const handleCompleteObjective = useCallback(async (objective) => {
-    // Aquí podrías abrir un modal de confirmación
-    // Por ahora solo log
-    logger.info('Marcar objetivo como completado:', objective.id);
-  }, []);
+  // Objetivo se marca completado automáticamente por fecha de finalización
 
   return (
     <div className="space-y-6">
@@ -171,13 +167,43 @@ export const Dashboard = () => {
         <SmartAlerts alerts={alerts} />
       )}
 
+      {/* Alerta de Objetivo Pendiente de Evaluación */}
+      {isOperario(user) && userObjective && userObjective.status === OBJECTIVE_STATUS.PENDING_REVIEW && (
+        <Card className="bg-orange-50 border-orange-200">
+          <div className="flex flex-col sm:flex-row items-start gap-3">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-6 w-6 text-orange-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-orange-900 mb-1">
+                Objetivo Finalizado - Pendiente de Evaluación
+              </h3>
+              <p className="text-sm text-orange-800 mb-2">
+                Tu objetivo &ldquo;{userObjective.name}&rdquo; ha finalizado.
+              </p>
+              <div className="text-sm text-orange-700 mb-3">
+                <strong>Progreso:</strong> {userObjective.completed_hours || 0}h / {userObjective.target_hours}h 
+                ({((userObjective.completed_hours / userObjective.target_hours) * 100).toFixed(0)}%)
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.location.href = '/objectives'}
+                className="border-orange-300 text-orange-700 hover:bg-orange-100"
+              >
+                Ver Detalles →
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Objetivo del Usuario - Solo para operarios */}
       {isOperario(user) && !loadingObjective && (
         <>
           {userObjective ? (
             <AssignedObjectiveWidget
               objective={userObjective}
-              onComplete={handleCompleteObjective}
             />
           ) : (
             <PersonalObjectiveWidget

@@ -125,9 +125,12 @@ export const ORG_UNIT_TYPE_LABELS_PLURAL = {
 
 /**
  * Verificar si un rol es válido
+ * @deprecated Usar isValidRole de services/roles.service.js
  */
-export const isValidRole = (role) => {
-  return USER_ROLES_ARRAY.includes(role);
+export const isValidRole = async (role) => {
+  // Importación dinámica para evitar ciclos
+  const { isValidRole: validate } = await import('../services/roles.service');
+  return validate(role);
 };
 
 /**
@@ -304,8 +307,8 @@ export const DAY_LABELS_SHORT = {
 export const OBJECTIVE_STATUS = {
   PLANNED: 'planned',
   IN_PROGRESS: 'in_progress',
+  PENDING_REVIEW: 'pending_review',  // Terminó, requiere evaluación
   COMPLETED: 'completed',
-  OVERDUE: 'overdue',
   FAILED: 'failed',
   CANCELLED: 'cancelled'
 };
@@ -313,8 +316,8 @@ export const OBJECTIVE_STATUS = {
 export const OBJECTIVE_STATUS_LABELS = {
   [OBJECTIVE_STATUS.PLANNED]: 'Planificado',
   [OBJECTIVE_STATUS.IN_PROGRESS]: 'En Progreso',
+  [OBJECTIVE_STATUS.PENDING_REVIEW]: 'Pendiente de Evaluación',
   [OBJECTIVE_STATUS.COMPLETED]: 'Completado',
-  [OBJECTIVE_STATUS.OVERDUE]: 'Vencido',
   [OBJECTIVE_STATUS.FAILED]: 'No Cumplido',
   [OBJECTIVE_STATUS.CANCELLED]: 'Cancelado'
 };
@@ -322,10 +325,29 @@ export const OBJECTIVE_STATUS_LABELS = {
 export const OBJECTIVE_STATUS_COLORS = {
   [OBJECTIVE_STATUS.PLANNED]: 'bg-gray-100 text-gray-800',
   [OBJECTIVE_STATUS.IN_PROGRESS]: 'bg-blue-100 text-blue-800',
+  [OBJECTIVE_STATUS.PENDING_REVIEW]: 'bg-orange-100 text-orange-800',
   [OBJECTIVE_STATUS.COMPLETED]: 'bg-green-100 text-green-800',
-  [OBJECTIVE_STATUS.OVERDUE]: 'bg-orange-100 text-orange-800',
   [OBJECTIVE_STATUS.FAILED]: 'bg-red-100 text-red-800',
   [OBJECTIVE_STATUS.CANCELLED]: 'bg-gray-200 text-gray-600'
+};
+
+// Sub-estados de progreso (para objetivos IN_PROGRESS)
+export const OBJECTIVE_PROGRESS_STATUS = {
+  ON_TRACK: 'on_track',    // Progreso >= esperado
+  BEHIND: 'behind',        // Progreso < esperado
+  AHEAD: 'ahead'           // Progreso > esperado
+};
+
+export const PROGRESS_STATUS_LABELS = {
+  [OBJECTIVE_PROGRESS_STATUS.ON_TRACK]: 'En Tiempo',
+  [OBJECTIVE_PROGRESS_STATUS.BEHIND]: 'Retrasado',
+  [OBJECTIVE_PROGRESS_STATUS.AHEAD]: 'Adelantado'
+};
+
+export const PROGRESS_STATUS_COLORS = {
+  [OBJECTIVE_PROGRESS_STATUS.ON_TRACK]: 'bg-green-50 text-green-700 border-green-200',
+  [OBJECTIVE_PROGRESS_STATUS.BEHIND]: 'bg-orange-50 text-orange-700 border-orange-200',
+  [OBJECTIVE_PROGRESS_STATUS.AHEAD]: 'bg-blue-50 text-blue-700 border-blue-200'
 };
 
 // NOTA: Los helpers buildPermissionKey y parsePermissionKey
@@ -382,6 +404,10 @@ export default {
   DAY_LABELS_SHORT,
   OBJECTIVE_STATUS,
   OBJECTIVE_STATUS_LABELS,
+  OBJECTIVE_STATUS_COLORS,
+  OBJECTIVE_PROGRESS_STATUS,
+  PROGRESS_STATUS_LABELS,
+  PROGRESS_STATUS_COLORS,
   REPORT_CONSTANTS,
   // buildPermissionKey y parsePermissionKey movidos a utils/permissionHelpers.js
   isValidRole,

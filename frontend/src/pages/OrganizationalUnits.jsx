@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Upload } from 'lucide-react';
 import { useOrganizationalUnits } from '../hooks/useOrganizationalUnits';
+import { usePermissions } from '../hooks/usePermissions.v2';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
@@ -11,7 +12,7 @@ import HierarchicalSelect from '../components/common/HierarchicalSelect';
 import { BulkOrgUnitImport } from '../components/organizationalUnits/BulkOrgUnitImport';
 import { ORG_UNIT_TYPES, ORG_UNIT_TYPE_OPTIONS, getChildType, getUnitStyle, getUnitTypeLabel } from '../constants';
 
-const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
+const TreeNode = ({ node, onEdit, onDelete, onAddChild, canManage }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const hasChildren = node.children && node.children.length > 0;
 
@@ -42,29 +43,31 @@ const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
           <span className="text-xs text-gray-500">Nivel {node.level}</span>
         </div>
 
-        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => onAddChild(node)}
-            className="p-1 text-primary-600 hover:bg-primary-50 rounded"
-            title="Agregar hijo"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => onEdit(node)}
-            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-            title="Editar"
-          >
-            <Edit2 className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => onDelete(node)}
-            className="p-1 text-red-600 hover:bg-red-50 rounded"
-            title="Eliminar"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
+        {canManage && (
+          <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => onAddChild(node)}
+              className="p-1 text-primary-600 hover:bg-primary-50 rounded"
+              title="Agregar hijo"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onEdit(node)}
+              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+              title="Editar"
+            >
+              <Edit2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onDelete(node)}
+              className="p-1 text-red-600 hover:bg-red-50 rounded"
+              title="Eliminar"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {hasChildren && isExpanded && (
@@ -76,6 +79,7 @@ const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
               onEdit={onEdit}
               onDelete={onDelete}
               onAddChild={onAddChild}
+              canManage={canManage}
             />
           ))}
         </div>
@@ -86,6 +90,7 @@ const TreeNode = ({ node, onEdit, onDelete, onAddChild }) => {
 
 export const OrganizationalUnits = () => {
   const { units, loading, createUnit, updateUnit, deleteUnit, buildTree } = useOrganizationalUnits();
+  const { canManageOrgUnits } = usePermissions();
   const [showModal, setShowModal] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [modalMode, setModalMode] = useState('create');
@@ -184,16 +189,18 @@ export const OrganizationalUnits = () => {
             Gestiona la estructura jerárquica de la organización
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-          <Button variant="outline" onClick={() => setShowBulkImport(true)} className="w-full sm:w-auto">
-            <Upload className="h-5 w-5 sm:mr-2" />
-            <span className="ml-2 sm:ml-0">Importar CSV</span>
-          </Button>
-          <Button onClick={handleCreate} className="w-full sm:w-auto">
-            <Plus className="h-5 w-5 sm:mr-2" />
-            <span className="ml-2 sm:ml-0">Nueva Unidad</span>
-          </Button>
-        </div>
+        {canManageOrgUnits() && (
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setShowBulkImport(true)} className="w-full sm:w-auto">
+              <Upload className="h-5 w-5 sm:mr-2" />
+              <span className="ml-2 sm:ml-0">Importar CSV</span>
+            </Button>
+            <Button onClick={handleCreate} className="w-full sm:w-auto">
+              <Plus className="h-5 w-5 sm:mr-2" />
+              <span className="ml-2 sm:ml-0">Nueva Unidad</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {alert && (
@@ -254,6 +261,7 @@ export const OrganizationalUnits = () => {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onAddChild={handleAddChild}
+                canManage={canManageOrgUnits()}
               />
             ))}
           </div>
